@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// 4×4 pads in MPC order (pad 1 bottom-left, 13–16 top row) for the current bank.
 /// Touch-down triggers (multi-touch), velocity from touch height (top 127, bottom 70).
@@ -9,6 +10,8 @@ struct PadGridView: View {
 
     @State private var fingers: [ObjectIdentifier: Int] = [:]
     @State private var liveHits: [Int: Date] = [:]
+    @State private var dropHover = false
+    @State private var pendingChop: ImportedAudio?
 
     var body: some View {
         GeometryReader { geo in
@@ -39,6 +42,44 @@ struct PadGridView: View {
                     handle(phase, id, pt, cw: cw, ch: ch)
                 }
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Theme.blue, lineWidth: 3)
+                    .opacity(dropHover ? 1 : 0)
+                    .allowsHitTesting(false)
+            }
+            .onDrop(of: [UTType.audio.identifier, UTType.fileURL.identifier], isTargeted: $dropHover) { providers, point in
+                let col = min(3, max(0, Int((point.x + gap / 2) / (cw + gap))))
+                let row = min(3, max(0, Int((point.y + gap / 2) / (ch + gap))))
+                let pad = PadID(state.bank, (3 - row) * 4 + col)
+                return AudioImport.receive(providers, at: pad) { result in
+                    switch result {
+                    case .success(let audio):
+                        if audio.duration > 2 { pendingChop = audio }
+                        else { Task { await AudioImport.loadOnPad(audio, state: state) } }
+                    case .failure(let error):
+                        state.addLog("ERR", "Drop: \(error.localizedDescription)", tint: .red)
+                    }
+                }
+            }
+        }
+        .confirmationDialog("Import audio", isPresented: Binding(
+            get: { pendingChop != nil }, set: { if !$0 { pendingChop = nil } }
+        ), titleVisibility: .visible) {
+            if let audio = pendingChop {
+                Button("CHOP 16 into Bank D") {
+                    pendingChop = nil
+                    Task { await AudioImport.chop16(audio, state: state) }
+                }
+                Button("Load on pad \(audio.pad.bank.letter)\(audio.pad.number)") {
+                    pendingChop = nil
+                    Task { await AudioImport.loadOnPad(audio, state: state) }
+                }
+            }
+        } message: {
+            if let audio = pendingChop {
+                Text("\(audio.name) · \(String(format: "%.1f", audio.duration)) s")
+            }
         }
     }
 

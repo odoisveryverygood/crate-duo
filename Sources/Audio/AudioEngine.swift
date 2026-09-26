@@ -107,6 +107,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     var levelBlockDur: Double = 0.01
     var levelSmoothed: Float = 0
     var wavWriter: WavWriter?
+    let bounceLock = NSLock()
+    var bounceWriter: WavWriter?
 
     /// Called on main at each bar start with the absolute bar index.
     var onBar: ((Int) -> Void)?
@@ -547,7 +549,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         let ch = Int(fmt.channelCount)
         let blockLen = max(64, Int(sr * 0.010))
         let writer = wavWriter
-        let wantPCM = writer != nil && !(writer?.isFull ?? true)
+        let bounce = bounceLock.withLock { bounceWriter }
+        let wantPCM = (writer != nil && !(writer?.isFull ?? true)) || bounce != nil
         var pcm = [Int16](repeating: 0, count: wantPCM ? n * 2 : 0)
         var blocks: [Float] = []
         blocks.reserveCapacity(n / blockLen + 1)
@@ -588,6 +591,11 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             levelArrival = arrival
             levelBlockDur = Double(blockLen) / sr
         }
-        if wantPCM, let w = writer { wavQueue.async { w.append(pcm) } }
+        if wantPCM {
+            wavQueue.async {
+                writer?.append(pcm)
+                bounce?.append(pcm)
+            }
+        }
     }
 }
