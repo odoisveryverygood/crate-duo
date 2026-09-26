@@ -56,6 +56,7 @@ The demo runs in the Simulator, so the performer plays with the Mac keyboard, an
 - Global: Space = play/stop, Return = REC, Tab = next bank, Shift+Tab = next mode, `/` = focus the DIG prompt, Esc = leave it.
 - Visuals: held pads look pressed (like a finger press); held piano keys look pressed; each pad/key shows its letter small in the corner (Logic style).
 - Verify: typecheck + run in the Duo Simulator; send keys with `axe key <HIDcode>` (a=4, z=29, space=44) and screenshot.
+- **Wider keys (user feedback, 12:23):** in KEYS mode the keys are too narrow. Show ONE octave, 8 white keys (C to C) + 5 black keys, and let the keyboard use the FULL deck width: hide the right column (banks/level) in KEYS mode and move OCT −, OCT +, SCALE and the MODE buttons into one slim row above the keyboard; keep ▶/■/DIG reachable (small, top-right of that row). The musical-typing map stays the same (A…K = C…C, W E T Y U = black keys).
 
 ### WP13: Drag audio in/out (Duo Split View), ~45 min
 The Duo is the first iPhone with side-by-side multitasking; make CRATE a good neighbour.
