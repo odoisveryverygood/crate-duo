@@ -29,6 +29,7 @@ struct CrateApp: App {
                 .crateIf(!AppConfig.noPaywall) { $0.paywallGate(state: state) }
                 .onOpenURL { Router.handle($0, state: state, hinge: hinge) }
                 .onAppear { commands.start(state: state, hinge: hinge) }
+                .task { await ProjectStore.shared.boot(state: state) }
         }
     }
 }

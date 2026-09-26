@@ -59,6 +59,10 @@ enum Router {
             if let path = q("path") { Task { @MainActor in await AudioImport.importPath(path, state: state) } }
         case "paywall":
             NotificationCenter.default.post(name: Notification.Name("cratePresentPaywall"), object: nil)
+        case "project":
+            // crate://project?cmd=new|save|saveas|open&name=…
+            let cmd = q("cmd") ?? "save", name = q("name")
+            Task { @MainActor in await ProjectStore.shared.handle(cmd: cmd, name: name, state: state) }
         case "rec":
             state.setRecording(q("on") != "0")
         default:
