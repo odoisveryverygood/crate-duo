@@ -143,6 +143,18 @@ struct SeqGridView: View {
             ctx.draw(Text("\(now + 1)").font(Theme.inter(7, 500)).monospacedDigit().foregroundStyle(Theme.lidInk),
                      at: CGPoint(x: cx(now), y: rulerY), anchor: .center)
         }
+        // page marker: which bar of the loop the grid is showing (it flips with the playhead)
+        if f.bars > 1 {
+            let shownBar = f.bar % f.bars
+            ctx.draw(Text("BAR \(shownBar + 1)/\(f.bars)").font(Theme.inter(6.5, 700)).tracking(0.6)
+                        .foregroundStyle(playing ? Theme.lidInk : Theme.lidGrey1),
+                     at: CGPoint(x: 0, y: rulerY - 3), anchor: .leading)
+            let seg: CGFloat = f.bars <= 4 ? 8 : max(2, 36 / CGFloat(f.bars) - 1.5)
+            for b in 0..<min(f.bars, 16) {
+                let r = CGRect(x: CGFloat(b) * (seg + 1.5), y: rulerY + 4, width: seg, height: 2)
+                ctx.fill(Path(r), with: .color(b == shownBar ? Theme.bank(.a) : Theme.lidGrey3))
+            }
+        }
 
         for (r, row) in rows.enumerated() {
             let cy = top + CGFloat(r) * pitch
