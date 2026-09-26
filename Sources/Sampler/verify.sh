@@ -58,7 +58,29 @@ import AVFoundation
         }
         let fileRegions = try SampleChopper.analyze(url: url, chop: .regions16)
         precondition(fileRegions.slices.count == 16)
+        precondition(abs(fileRegions.duration - 44_223.0 / 44_100.0) < 0.000001,
+                     "The partial final RMS window must retain the entire WAV duration")
         checkCoverage(fileRegions.slices, duration: fileRegions.duration)
+        // Also cover the smallest accepted take with a partial window and a short take.
+        let shortURL = url.deletingLastPathComponent().appendingPathComponent("short.wav")
+        do {
+            let file = try AVAudioFile(forWriting: shortURL, settings: format.settings)
+            buffer.frameLength = 3529 // 80ms + one frame: final read is one frame.
+            try file.write(from: buffer)
+        }
+        let shortAnalysis = try SampleChopper.analyze(url: shortURL, chop: .regions16)
+        precondition(shortAnalysis.slices.count == 16)
+        precondition(abs(shortAnalysis.duration - 3529.0 / 44_100.0) < 0.000001)
+        let tinyURL = url.deletingLastPathComponent().appendingPathComponent("tiny.wav")
+        do {
+            let file = try AVAudioFile(forWriting: tinyURL, settings: format.settings)
+            buffer.frameLength = 100
+            try file.write(from: buffer)
+        }
+        do {
+            _ = try SampleChopper.analyze(url: tinyURL, chop: .regions16)
+            preconditionFailure("A too-short take must fail before replacing any bank")
+        } catch SampleChopError.emptyRecording { }
         let fileTransients = try SampleChopper.analyze(url: url, chop: .threshold)
         precondition(fileTransients.slices.count == 3)
         precondition(abs(fileTransients.slices[1].start - 0.2) < 0.011)
@@ -75,3 +97,55 @@ SWIFT
 xcrun swiftc -swift-version 5 Sources/Sampler/SampleChopper.swift "$work/ChopperChecks.swift" -o "$work/checks"
 "$work/checks" "$work"
 echo 'PASS: iOS 27.1 normal and DEBUG typechecks; no simulator or microphone used'
+cat > "$work/LifecycleChecks.swift" <<'SWIFT'
+import Foundation
+@main struct LifecycleChecks {
+    @MainActor static func main() async throws {
+        var hold = SampleHoldState()
+        precondition(!hold.reset())
+        precondition(hold.begin())
+        precondition(!hold.begin())
+        precondition(hold.finish())
+        precondition(!hold.reset(), "Normal release must not cancel the pending stop")
+        precondition(hold.begin())
+        precondition(hold.reset(), "Gesture cancellation must discard, not chop")
+        precondition(!hold.finish(), "A stale end after cancellation must do nothing")
+        precondition(hold.begin())
+        precondition(hold.finish())
+        precondition(!hold.reset())
+
+        let engine = MockEngine()
+        let state = AppState(engine: engine)
+        let url = URL(fileURLWithPath: "/synthetic.wav")
+        let first = PadSound(id: "rec-1", name: "REC 01", category: .chop, fileURL: url)
+        let second = PadSound(id: "rec-2", name: "REC 02", category: .chop, fileURL: url)
+        let old = PadSound(id: "old", name: "OLD", category: .chop, fileURL: url)
+        state.sounds[PadID(.a, 0)] = old
+        state.sounds[PadID(.d, 15)] = old
+        let expected = [0: first, 1: second]
+        try await engine.loadBank(.d, sounds: expected)
+        precondition(SampleBankCommit.publish(expected, to: state))
+        precondition(state.bank == .d && state.selectedPad == PadID(.d, 0))
+        precondition(state.sounds[PadID(.d, 15)] == nil)
+        precondition(state.sounds[PadID(.a, 0)] == old)
+        // Reproduce the engine's silent partial decode: await returns, one pad is absent.
+        state.bank = .b
+        state.selectedPad = PadID(.b, 7)
+        try await engine.loadBank(.d, sounds: [0: first])
+        precondition(!SampleBankCommit.publish(expected, to: state))
+        precondition(state.sounds[PadID(.d, 1)] == nil, "Must not display an unloaded chop")
+        precondition(state.bank == .b && state.selectedPad == PadID(.b, 7))
+        // Another bank loader supersedes this take; preserve the actual newer bank.
+        try await engine.loadBank(.d, sounds: [4: old])
+        precondition(!SampleBankCommit.publish(expected, to: state))
+        precondition(state.sounds[PadID(.d, 4)] == old && state.sounds[PadID(.d, 0)] == nil)
+        precondition(state.sounds[PadID(.a, 0)] == old)
+        try await engine.loadBank(.d, sounds: [:])
+        precondition(!SampleBankCommit.publish(expected, to: state))
+        precondition(state.sounds.keys.allSatisfy { $0.bank != .d })
+        print("PASS: release/cancellation/repeated gestures; successful, partial, empty and superseded bank loads; other banks preserved")
+    }
+}
+SWIFT
+xcrun swiftc -swift-version 5 Sources/Core/*.swift Sources/Sampler/SampleHoldState.swift Sources/Sampler/SampleBankCommit.swift "$work/LifecycleChecks.swift" -o "$work/lifecycle-checks"
+"$work/lifecycle-checks"

@@ -205,6 +205,7 @@ struct DeckView: View {
             }
         case .shift:
             DeckButton(label: "SHIFT", on: ui.shift, toggle: true, id: "mode-shift") { ui.shift.toggle() }
+                .modifier(PadStyleSwitch())
         case .octDown:
             DeckButton(label: "OCT −", id: "oct-down") { state.keysOctave = max(-3, state.keysOctave - 1) }
         case .octUp:

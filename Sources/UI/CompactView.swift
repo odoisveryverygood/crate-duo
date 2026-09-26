@@ -7,7 +7,7 @@ struct CompactView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let inset: CGFloat = 12
+            let inset: CGFloat = 16
             let topInset = max(inset, geo.safeAreaInsets.top)
             Group {
                 if geo.size.width > geo.size.height {
@@ -16,20 +16,19 @@ struct CompactView: View {
                         VStack(spacing: 10) {
                             miniLid
                             Spacer(minLength: 0)
-                            bottomRow.frame(height: 40)
+                            bottomRow(stacked: true)
                         }
                         .frame(width: geo.size.width * 0.44)
-                        PadGridView(state: state, gap: 8)
+                        PadGridView(state: state, gap: 5)
                             .aspectRatio(1, contentMode: .fit)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 } else {
                     VStack(spacing: 10) {
                         miniLid
-                        PadGridView(state: state, gap: 8)
+                        PadGridView(state: state, gap: 5)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        bottomRow
-                            .frame(height: 40)
+                        bottomRow(stacked: false)
                     }
                 }
             }
@@ -38,7 +37,7 @@ struct CompactView: View {
             .padding(.bottom, max(inset, geo.safeAreaInsets.bottom))
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .background(Theme.chassis)
+        .background(OuterField.aluminium)
         .ignoresSafeArea(.keyboard)
         .crateDeferEdgeGestures()
     }
@@ -46,10 +45,10 @@ struct CompactView: View {
     private var miniLid: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("CRATE · CR-16").crateLabel(9).foregroundStyle(Theme.text)
+                Text("CRATE / CR-16").font(OuterField.type(9, weight: 600)).tracking(1.2).foregroundStyle(OuterField.white)
                 Spacer(minLength: 6)
-                let bank = Text(state.bank.letter).foregroundStyle(Theme.orange)
-                Text("BANK \(bank) · \(state.mode.label)").crateLabel(9).foregroundStyle(Theme.mid)
+                let bank = Text(state.bank.letter).foregroundStyle(OuterField.bank(state.bank))
+                Text("BANK \(bank) · \(state.mode.label)").font(OuterField.type(9, weight: 500)).foregroundStyle(OuterField.secondary)
             }
             .lineLimit(1)
             HStack(alignment: .bottom, spacing: 18) {
@@ -58,7 +57,7 @@ struct CompactView: View {
                     let bpm = state.engine.bpm.isFinite ? state.engine.bpm : state.bpm
                     HStack(alignment: .bottom, spacing: 18) {
                         mini(String(format: "%03d", Int(bpm.rounded())), "BPM", id: "bpm")
-                        mini(f.barBeat, "BAR.BEAT", color: Theme.orange, id: "bar-beat")
+                        mini(f.barBeat, "BAR.BEAT", color: OuterField.white, id: "bar-beat")
                     }
                 }
                 Spacer(minLength: 6)
@@ -66,28 +65,61 @@ struct CompactView: View {
                     if state.isDigging {
                         HStack(spacing: 6) {
                             DotSpinner(color: Theme.orange, dot: 2)
-                            Text("DIGGING").crateLabel(11, tracking: 0.14).foregroundStyle(Theme.orange)
+                            Text("DIGGING").font(OuterField.type(11, weight: 600)).tracking(1.1).foregroundStyle(Theme.orange)
                         }
                     } else {
                         Text(state.styleLabel.isEmpty ? "CRATE" : state.styleLabel.uppercased())
-                            .crateLabel(11, tracking: 0.14)
+                            .font(OuterField.type(11, weight: 600)).tracking(1.1)
                             .foregroundStyle(Theme.text)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                     }
                     Text(state.sampleLabel.isEmpty ? "AI SAMPLER" : state.sampleLabel.uppercased())
-                        .crateLabel(8.5, tracking: 0.14)
+                        .font(OuterField.type(9, weight: 500)).tracking(0.9)
                         .foregroundStyle(Theme.mid)
                         .lineLimit(1)
                 }
             }
             logLines
             PromptLine(state: state, fontSize: 11, placeholder: "ask for a beat")
-            ActionChips(state: state, size: 8,
-                        only: ["chip-dilla-nujabes", "chip-house-kit", "chip-flip-it", "chip-ai-perform"])
+            compactChips
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black))
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black))
+    }
+
+    private var compactChips: some View {
+        ChipFlow(spacing: 5, lineSpacing: 5) {
+            ForEach(ActionChips.items.filter { ["chip-dilla-nujabes", "chip-house-kit", "chip-flip-it", "chip-ai-perform"].contains($0.id) }) { item in
+                let on = item.id == "chip-ai-perform" && state.performOn
+                Button {
+                    switch item.id {
+                    case "chip-flip-it":
+                        state.onFlip?()
+                        DebugLog.event("flip")
+                    case "chip-ai-perform":
+                        state.performOn.toggle()
+                        state.onPerformToggle?(state.performOn)
+                        DebugLog.event("perform_toggle", ["on": state.performOn])
+                    default:
+                        if let prompt = item.prompt {
+                            CrateUI.shared.draft = ""
+                            CrateUI.shared.blurRequest += 1
+                            state.dig(prompt)
+                        }
+                    }
+                } label: {
+                    Text(item.label).font(OuterField.type(8, weight: 600)).tracking(0.8)
+                        .foregroundStyle(on ? OuterField.ink : OuterField.white)
+                        .padding(.horizontal, 9).frame(height: 25)
+                        .background(on ? OuterField.white : Color.black, in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(OuterField.secondary.opacity(0.5), lineWidth: 0.5))
+                }
+                .buttonStyle(ChipPressStyle())
+                .accessibilityIdentifier(item.id).accessibilityLabel(item.label)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
     }
 
     private var logLines: some View {
@@ -103,7 +135,7 @@ struct CompactView: View {
                 HStack(spacing: 6) {
                     Text(line.tag.uppercased() + (line.ms.map { " " + UIHelpers.msText($0) } ?? ""))
                         .font(Theme.mono(10, bold: true))
-                        .foregroundStyle(Theme.tint(line.tint))
+                        .foregroundStyle(OuterField.secondary)
                         .fixedSize()
                     Text(line.text)
                         .font(Theme.mono(10))
@@ -119,8 +151,8 @@ struct CompactView: View {
 
     private func mini(_ value: String, _ label: String, color: Color = Theme.text, id: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(value).font(Theme.doto(30)).foregroundStyle(color).fixedSize().frame(height: 30 * 0.74)
-            Text(label).crateLabel(8, tracking: 0.18).foregroundStyle(Theme.mid).fixedSize()
+            Text(value).font(OuterField.type(40, weight: 300)).tracking(-1.6).monospacedDigit().foregroundStyle(color).fixedSize()
+            Text(label).font(OuterField.type(8, weight: 600)).tracking(1.1).foregroundStyle(OuterField.secondary).fixedSize()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier(id)
@@ -128,22 +160,89 @@ struct CompactView: View {
         .accessibilityValue(value)
     }
 
-    private var bottomRow: some View {
-        HStack(spacing: 6) {
-            ForEach(Bank.allCases, id: \.self) { b in
-                BankButton(bank: b, selected: state.bank == b, height: 40) { CrateUI.shared.selectBank(b, state) }
-                    .frame(width: 38)
+    @ViewBuilder
+    private func bottomRow(stacked: Bool) -> some View {
+        if stacked {
+            VStack(spacing: 10) {
+                banks
+                transport
             }
-            Spacer(minLength: 4)
-            TransportRow(state: state, height: 40)
-                .frame(width: 132)
-            DigButton(state: state, height: 40)
-                .frame(maxWidth: 110)
+        } else {
+            HStack(spacing: 16) {
+                banks.frame(width: 160)
+                transport
+            }
         }
     }
+
+    private var banks: some View {
+        HStack(spacing: 0) {
+            ForEach(Bank.allCases, id: \.self) { bank in
+                let selected = state.bank == bank
+                Button { CrateUI.shared.selectBank(bank, state) } label: {
+                    VStack(spacing: 4) {
+                        Circle().fill(selected ? OuterField.ink : OuterField.key)
+                            .overlay(Circle().strokeBorder(OuterField.seam, lineWidth: selected ? 0 : 0.5))
+                            .overlay(Circle().fill(OuterField.bank(bank)).frame(width: 7, height: 7))
+                            .frame(width: 29, height: 29)
+                        Text(bank.letter).font(OuterField.type(8, weight: 600))
+                            .foregroundStyle(selected ? OuterField.ink : OuterField.inkSecondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("bank-\(bank.letter)")
+                .accessibilityLabel("Bank \(bank.letter)")
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+    }
+
+    private var transport: some View {
+        TimelineView(.periodic(from: .now, by: 0.2)) { _ in
+            let playing = state.engine.isPlaying || state.isPlaying
+            HStack(spacing: 5) {
+                control("rec", symbol: "circle.fill", active: state.isRecording) {
+                    state.setRecording(!state.isRecording)
+                }
+                control("play", symbol: "play.fill", active: playing) {
+                    if !state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = true }
+                }
+                control("stop", symbol: "stop.fill", active: false) {
+                    if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
+                    if state.isRecording { state.setRecording(false) }
+                }
+                Button { CrateUI.shared.digPressed(state) } label: {
+                    HStack(spacing: 5) {
+                        SparkShape().fill(OuterField.key).frame(width: 9, height: 9)
+                        Text("DIG").font(OuterField.type(10, weight: 600)).tracking(1)
+                    }
+                    .foregroundStyle(OuterField.key)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(state.isDigging ? Theme.orange : OuterField.ink, in: RoundedRectangle(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("dig-button").accessibilityLabel("Dig")
+            }
+        }
+    }
+
+    private func control(_ id: String, symbol: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 12))
+                .foregroundStyle(active ? OuterField.key : OuterField.ink)
+                .frame(width: 40, height: 44)
+                .background(active ? (id == "rec" ? Theme.orange : OuterField.ink) : OuterField.key,
+                            in: RoundedRectangle(cornerRadius: 4))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id).accessibilityLabel(id.uppercased())
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
 }
 
-/// Tent pose (audience side): the huge name of the last-hit pad in Doto + a dot-matrix level meter.
+/// Legacy tent view, kept in the same Field type language as the accessory card.
 struct CrowdView: View {
     let state: AppState
 
@@ -166,8 +265,8 @@ struct CrowdView: View {
                     }
                     Spacer(minLength: 0)
                     Text(pad.map { UIHelpers.padName(state, $0) ?? "PAD \($0.number)" } ?? "CRATE")
-                        .font(Theme.doto(min(geo.size.height * 0.42, 220)))
-                        .foregroundStyle(pad.map { Theme.bank($0.bank) } ?? Theme.text)
+                        .font(OuterField.type(min(geo.size.height * 0.42, 220), weight: 300))
+                        .foregroundStyle(age < Theme.flash ? Theme.orange : OuterField.white)
                         .opacity(age < Theme.flash ? 1 : max(0.55, 1 - age * 0.8))
                         .lineLimit(1)
                         .minimumScaleFactor(0.2)
@@ -224,4 +323,11 @@ struct LevelMeter: View {
             .frame(width: g.size.width, height: g.size.height)
         }
     }
+}
+
+#Preview("Compact · portrait") {
+    CompactView(state: AppState(engine: MockEngine())).frame(width: 466, height: 678)
+}
+#Preview("Compact · landscape") {
+    CompactView(state: AppState(engine: MockEngine())).frame(width: 678, height: 466)
 }

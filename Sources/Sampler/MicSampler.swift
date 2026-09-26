@@ -144,11 +144,10 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
                     source: "MIC")
             }
             try await state.engine.loadBank(.d, sounds: sounds)
-            // Publish only after the engine's atomic bank load succeeds.
-            state.sounds = state.sounds.filter { $0.key.bank != .d }
-            for (index, sound) in sounds { state.sounds[PadID(.d, index)] = sound }
-            state.bank = .d
-            state.selectedPad = PadID(.d, 0)
+            guard SampleBankCommit.publish(sounds, to: state) else {
+                fail("The engine couldn't load all chops, or a newer bank D load replaced them. The recorded WAV is saved; no successful chop is reported.")
+                return
+            }
             seconds = analysis.duration
             state.addLog("SAMPLE", String(format: "%d chops · %.1f s", sounds.count, analysis.duration), tint: .grey)
             DebugLog.event("sample_chop", ["slices": sounds.count])

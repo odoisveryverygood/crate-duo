@@ -4,7 +4,7 @@ import SwiftUI
 /// chromatically. Multi-touch note on/off, glissando, scale lock (snaps to the loop's key), OCT ± via state.keysOctave.
 struct KeysView: View {
     let state: AppState
-    var gap: CGFloat = 4
+    var gap: CGFloat = 2
 
     /// Offsets from the first C for the white keys, and which white keys have a black key after them.
     static let whiteOffsets = [0, 2, 4, 5, 7, 9, 11, 12]
@@ -94,11 +94,11 @@ struct KeysView: View {
         let played = snap(midi, scale)
         return ZStack(alignment: .bottom) {
             UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6)
-                .fill(held ? Color.white : (ok ? Theme.whiteKey : Theme.whiteKeyOff))
+                .fill(held ? PadFinish.pressed : (ok ? PadFinish.key : PadFinish.pressed))
             UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6)
-                .strokeBorder(Theme.buttonBorder, lineWidth: 1)
+                .strokeBorder(PadFinish.seam, lineWidth: 1)
             if held || sounding {
-                Rectangle().fill(held ? Theme.orange : Theme.ochre)
+                Rectangle().fill(Theme.orange)
                     .frame(height: 4)
                     .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6))
             }
@@ -110,7 +110,7 @@ struct KeysView: View {
                 }
                 Text(Music.name(played).replacingOccurrences(of: "#", with: "♯"))
                     .font(Theme.label(8))
-                    .foregroundStyle(ok ? Theme.mid : Theme.buttonBorder)
+                    .foregroundStyle(ok ? Theme.mid : PadFinish.seam)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
@@ -122,12 +122,11 @@ struct KeysView: View {
     }
 
     private func blackKey(midi: Int, scale: Set<Int>?, held: Bool, sounding: Bool) -> some View {
-        let ok = inScale(midi, scale)
         return ZStack(alignment: .bottom) {
             UnevenRoundedRectangle(bottomLeadingRadius: 4, bottomTrailingRadius: 4)
-                .fill(held ? Theme.padPressed : (ok ? Theme.pad : Theme.blackKeyOff))
+                .fill(held ? Theme.hex(0x333333) : PadFinish.ink)
             if held || sounding {
-                Rectangle().fill(held ? Theme.orange : Theme.ochre)
+                Rectangle().fill(Theme.orange)
                     .frame(height: 3)
                     .padding(.horizontal, 3)
                     .padding(.bottom, 4)
@@ -135,7 +134,7 @@ struct KeysView: View {
         }
         .overlay(alignment: .bottom) {
             Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
-                .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : Theme.padLabel)
+                .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : PadFinish.key)
                 .padding(.bottom, 12)
         }
         .modifier(KeyAccessibility(id: "key-\(midi)", label: Music.name(snap(midi, scale))) {

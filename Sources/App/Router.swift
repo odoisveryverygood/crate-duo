@@ -19,6 +19,8 @@ enum Router {
             }
         case "bank":
             if let b = q("b"), let bank = Bank.allCases.first(where: { $0.letter == b.uppercased() }) { state.bank = bank }
+        case "padstyle":
+            if let value = q("s") { PadStyle.set(value) }
         case "pad":
             let bank = q("b").flatMap { b in Bank.allCases.first { $0.letter == b.uppercased() } } ?? state.bank
             if let i = q("i").flatMap(Int.init) {

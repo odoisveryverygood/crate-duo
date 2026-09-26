@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 /// Pads flash orange ≤ 100 ms when hit live or when the sequencer plays them.
 struct PadGridView: View {
     let state: AppState
-    var gap: CGFloat = 9
+    var gap: CGFloat = 5
 
     @State private var fingers: [ObjectIdentifier: Int] = [:]
     @State private var liveHits: [Int: Date] = [:]
@@ -30,7 +30,7 @@ struct PadGridView: View {
                         let row = 3 - i / 4
                         let col = i % 4
                         let pad = PadID(bank, i)
-                        cell(i, pad: pad, mode: mode, lit: isLit(i, pad: pad, mode: mode, held: held, frame: frame, now: now))
+                        cell(i, pad: pad, mode: mode, lit: isLit(i, pad: pad, mode: mode, held: held, frame: frame, now: now), frame: frame)
                             .frame(width: cw, height: ch)
                             .position(x: CGFloat(col) * (cw + gap) + cw / 2,
                                       y: CGFloat(row) * (ch + gap) + ch / 2)
@@ -104,7 +104,7 @@ struct PadGridView: View {
     }
 
     @ViewBuilder
-    private func cell(_ i: Int, pad: PadID, mode: Mode, lit: Bool) -> some View {
+    private func cell(_ i: Int, pad: PadID, mode: Mode, lit: Bool, frame: LiveFrame) -> some View {
         if mode == .levels16 {
             let sel = state.selectedPad
             PadCell(number: i + 1,
@@ -113,7 +113,10 @@ struct PadGridView: View {
                     barColor: state.sound(sel) != nil ? Theme.bank(sel.bank) : nil,
                     lit: lit,
                     selected: i == 7,
-                    shortcut: MusicalTyping.padKeys[i].uppercased())
+                    shortcut: MusicalTyping.padKeys[i].uppercased(),
+                    category: state.sound(mode == .levels16 ? state.selectedPad : pad)?.category,
+                    bank: pad.bank,
+                    spinning: isSounding(i, pad: pad, frame: frame))
                 .modifier(PadAccessibility(id: "pad-\(pad.bank.letter)-\(pad.number)",
                                            label: "Tune \(i - 7)") { fire(i, velocity: 112) })
         } else {
@@ -124,9 +127,26 @@ struct PadGridView: View {
                     barColor: name != nil ? Theme.bank(pad.bank) : nil,
                     lit: lit,
                     selected: state.selectedPad == pad,
-                    shortcut: MusicalTyping.padKeys[i].uppercased())
+                    shortcut: MusicalTyping.padKeys[i].uppercased(),
+                    category: state.sound(mode == .levels16 ? state.selectedPad : pad)?.category,
+                    bank: pad.bank,
+                    spinning: isSounding(i, pad: pad, frame: frame))
                 .modifier(PadAccessibility(id: "pad-\(pad.bank.letter)-\(pad.number)",
                                            label: name ?? "Pad \(pad.number)") { fire(i, velocity: 110) })
+        }
+    }
+
+    private func isSounding(_ i: Int, pad: PadID, frame: LiveFrame) -> Bool {
+        let sound = state.sound(state.mode == .levels16 ? state.selectedPad : pad)
+        let duration = max(Theme.flash, (sound?.end ?? ((sound?.start ?? 0) + 0.4)) - (sound?.start ?? 0))
+        if fingers.values.contains(i) || state.heldPads.contains(pad) { return true }
+        if let hit = liveHits[i], Date().timeIntervalSince(hit) < duration { return true }
+        if state.lastHitPad == pad, Date().timeIntervalSince(state.lastHitTime) < duration { return true }
+        guard frame.playing else { return false }
+        if !frame.soundingNotes(pad).isEmpty { return true }
+        return (frame.pattern.lanes[pad] ?? []).contains {
+            let time = frame.hitTime($0, pad)
+            return frame.pos >= time && frame.age(time) * frame.stepDur < duration
         }
     }
 
@@ -179,7 +199,7 @@ private struct PadAccessibility: ViewModifier {
     }
 }
 
-/// One pad: number top-left, name bottom-left, 3 pt bank-colour bar when loaded, orange inset when lit.
+/// Direction 05 pad with optional direction 07 vinyl; orange is reserved for live hits.
 struct PadCell: View {
     let number: Int
     let name: String?
@@ -189,43 +209,48 @@ struct PadCell: View {
     var selected = false
     var nameSize: CGFloat = 10
     var shortcut: String = ""
+    var category: Category? = nil
+    var bank: Bank = .a
+    var spinning = false
+    @AppStorage(PadStyle.storageKey) private var padStyle = "plain"
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Rectangle().fill(lit ? Theme.padPressed : Theme.pad)
-            if let barColor {
-                Rectangle().fill(barColor).frame(height: 3)
+            Rectangle().fill(lit ? PadFinish.pressed : PadFinish.key)
+            if lit { Rectangle().fill(Theme.orange).frame(height: 3) }
+            if padStyle == "records" {
+                RecordPad(category: category, bank: bank, active: spinning || lit)
+                    .padding(.horizontal, 18).padding(.top, 19).padding(.bottom, 23)
+                Text("CR-\(100 + number)")
+                    .font(Theme.mono(6)).foregroundStyle(PadFinish.muted)
+                    .frame(maxWidth: .infinity, alignment: .trailing).padding(6)
             }
             Text(String(format: "%02d", number))
-                .font(Theme.label(8))
+                .font(PadFinish.label(8))
                 .tracking(0.8)
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(PadFinish.muted)
                 .padding(.leading, 7)
                 .padding(.top, 8)
             Text(shortcut)
                 .font(Theme.label(9))
-                .foregroundStyle(lit ? Theme.orange : Theme.padLabel)
+                .foregroundStyle(PadFinish.muted)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(7)
+                .offset(y: padStyle == "records" ? 10 : 0)
             Text(name ?? placeholder ?? "")
-                .font(Theme.mono(nameSize, bold: true))
+                .font(PadFinish.label(nameSize))
                 .tracking(nameSize * 0.06)
-                .foregroundStyle(name == nil ? Theme.dim : (lit ? Color.white : Theme.padLabel))
+                .foregroundStyle(name == nil ? PadFinish.muted : PadFinish.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(7)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Theme.padRadius))
+        .clipShape(RoundedRectangle(cornerRadius: 4.5))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.padRadius)
-                .strokeBorder(selected && !lit ? Theme.mid : Theme.padEdge, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 4.5)
+                .strokeBorder(selected && !lit ? PadFinish.muted : PadFinish.seam, lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.padRadius)
-                .inset(by: 1)
-                .strokeBorder(Theme.orange, lineWidth: 2)
-                .opacity(lit ? 1 : 0)
-        )
+
     }
 }
