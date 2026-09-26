@@ -31,8 +31,18 @@ struct PadID: Hashable, Codable {
 
 /// Bank-A slot layout; groove lanes in grooves.json use these names.
 enum BankA {
-    static let slots = ["kick", "kick2", "snare", "clap", "hat", "hat2", "openhat", "rim",
-                        "perc", "perc2", "shaker", "cymbal", "808", "fx", "vocal", "texture"]
+    /// Bottom row (pads 1-4) = kick, snare, hat, open hat, like a finger-drummer's MPC layout.
+    static let defaultSlots = ["kick", "snare", "hat", "openhat", "kick2", "clap", "hat2", "rim",
+                               "perc", "perc2", "shaker", "cymbal", "808", "fx", "vocal", "texture"]
+    /// The user's layout ("put kick snare hat hat on the bottom row"); persisted so later kits land in the same places.
+    private(set) static var slots: [String] = {
+        let saved = UserDefaults.standard.stringArray(forKey: "crateBankASlots") ?? []
+        return Set(saved) == Set(defaultSlots) && saved.count == defaultSlots.count ? saved : defaultSlots
+    }()
+    static func setSlots(_ s: [String]) {
+        slots = s
+        UserDefaults.standard.set(s, forKey: "crateBankASlots")
+    }
     static func index(forLane lane: String) -> Int? { slots.firstIndex(of: lane) }
     static func pad(forLane lane: String) -> PadID? { index(forLane: lane).map { PadID(.a, $0) } }
 }

@@ -181,8 +181,10 @@ final class WaveCache {
 
 enum UIHelpers {
     /// Short MPC-style names for the bank-A slots (BankA.slots order).
-    static let bankANames = ["KICK", "KICK 2", "SNR", "CLAP", "HAT", "HAT 2", "OHAT", "RIM",
-                             "PERC", "PERC 2", "SHKR", "CRSH", "808", "FX", "VOX", "VINYL"]
+    static var bankANames: [String] { BankA.slots.map { slotNames[$0] ?? $0.uppercased() } }
+    private static let slotNames = ["kick": "KICK", "kick2": "KICK 2", "snare": "SNR", "clap": "CLAP", "hat": "HAT",
+                                    "hat2": "HAT 2", "openhat": "OHAT", "rim": "RIM", "perc": "PERC", "perc2": "PERC 2",
+                                    "shaker": "SHKR", "cymbal": "CRSH", "808": "808", "fx": "FX", "vocal": "VOX", "texture": "VINYL"]
 
     static func padName(_ state: AppState, _ pad: PadID) -> String? {
         guard let s = state.sound(pad) else { return nil }

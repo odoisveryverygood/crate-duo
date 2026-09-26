@@ -47,6 +47,8 @@ targets:
       - path: Resources/Assets.xcassets
       - path: Resources/DefaultKit
         type: folder
+      - path: Resources/DefaultProjects
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shuhan.crate

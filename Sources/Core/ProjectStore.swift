@@ -133,6 +133,7 @@ final class ProjectStore {
         guard !booted else { return }
         booted = true
         self.state = state
+        Self.seedDefaults()
         refresh()
         if !UserDefaults.standard.bool(forKey: "crateFresh"),
            let id = UserDefaults.standard.string(forKey: Self.lastKey),
@@ -148,6 +149,22 @@ final class ProjectStore {
                 try? await Task.sleep(for: .milliseconds(500))
                 self?.tick()
             }
+        }
+    }
+
+    /// First launch: the bundled HIP HOP and HOUSE demo projects go into Projects, and HIP HOP opens.
+    private static func seedDefaults() {
+        let flag = "crateSeededDefaultsV1"
+        guard !UserDefaults.standard.bool(forKey: flag),
+              let dir = Bundle.main.url(forResource: "DefaultProjects", withExtension: nil) else { return }
+        let fm = FileManager.default
+        for id in ["default-hiphop", "default-house"] {
+            let src = dir.appendingPathComponent(id + ".json"), dst = url(id)
+            if fm.fileExists(atPath: src.path), !fm.fileExists(atPath: dst.path) { try? fm.copyItem(at: src, to: dst) }
+        }
+        UserDefaults.standard.set(true, forKey: flag)
+        if UserDefaults.standard.string(forKey: lastKey) == nil {
+            UserDefaults.standard.set("default-hiphop", forKey: lastKey)
         }
     }
 

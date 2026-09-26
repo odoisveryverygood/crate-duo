@@ -500,8 +500,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         bankMixers[Bank.c.rawValue].outputVolume = Self.bankGain
         let t = Clock.now()
         q.async {
-            self.liveTrigger(PadID(.a, 11), velocity: 118, semitones: 0, tapTime: t, record: false)
-            self.liveTrigger(PadID(.a, 0), velocity: 124, semitones: 0, tapTime: t, record: false)
+            self.liveTrigger(BankA.pad(forLane: "cymbal") ?? PadID(.a, 11), velocity: 118, semitones: 0, tapTime: t, record: false)
+            self.liveTrigger(BankA.pad(forLane: "kick") ?? PadID(.a, 0), velocity: 124, semitones: 0, tapTime: t, record: false)
         }
         DebugLog.event("drop")
     }

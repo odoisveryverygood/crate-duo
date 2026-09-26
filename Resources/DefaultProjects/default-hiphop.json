@@ -1,0 +1,955 @@
+{
+ "bars": 4,
+ "bpm": 92,
+ "chordsLabel": "Am7\u2013Gm9\u2013C\u2013Cm9",
+ "created": "2026-09-26T22:34:01Z",
+ "id": "default-hiphop",
+ "name": "HIP HOP",
+ "pattern": {
+  "bars": 4,
+  "lanes": {
+   "A1": [
+    {
+     "offset": -0.052000000000000005,
+     "ratchet": 1,
+     "step": 0,
+     "velocity": 120
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 7,
+     "velocity": 90
+    },
+    {
+     "offset": 0.078,
+     "ratchet": 1,
+     "step": 10,
+     "velocity": 110
+    },
+    {
+     "offset": -0.039,
+     "ratchet": 1,
+     "step": 16,
+     "velocity": 118
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 22,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 26,
+     "velocity": 108
+    },
+    {
+     "offset": 0.195,
+     "ratchet": 1,
+     "step": 29,
+     "velocity": 80
+    },
+    {
+     "offset": -0.052000000000000005,
+     "ratchet": 1,
+     "step": 32,
+     "velocity": 120
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 39,
+     "velocity": 90
+    },
+    {
+     "offset": 0.078,
+     "ratchet": 1,
+     "step": 42,
+     "velocity": 110
+    },
+    {
+     "offset": -0.039,
+     "ratchet": 1,
+     "step": 48,
+     "velocity": 118
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 54,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 58,
+     "velocity": 108
+    },
+    {
+     "offset": 0.195,
+     "ratchet": 1,
+     "step": 61,
+     "velocity": 80
+    }
+   ],
+   "A2": [
+    {
+     "offset": 0.28600000000000003,
+     "ratchet": 1,
+     "step": 4,
+     "velocity": 112
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 12,
+     "velocity": 118
+    },
+    {
+     "offset": 0.312,
+     "ratchet": 1,
+     "step": 20,
+     "velocity": 110
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 28,
+     "velocity": 120
+    },
+    {
+     "offset": 0.39,
+     "ratchet": 1,
+     "step": 31,
+     "velocity": 50
+    },
+    {
+     "offset": 0.28600000000000003,
+     "ratchet": 1,
+     "step": 36,
+     "velocity": 112
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 44,
+     "velocity": 118
+    },
+    {
+     "offset": 0.312,
+     "ratchet": 1,
+     "step": 52,
+     "velocity": 110
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 60,
+     "velocity": 120
+    },
+    {
+     "offset": 0.39,
+     "ratchet": 1,
+     "step": 63,
+     "velocity": 50
+    }
+   ],
+   "A3": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 0,
+     "velocity": 70
+    },
+    {
+     "offset": 0.23399999999999999,
+     "ratchet": 1,
+     "step": 2,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 4,
+     "velocity": 64
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 6,
+     "velocity": 96
+    },
+    {
+     "offset": 0.026000000000000002,
+     "ratchet": 1,
+     "step": 8,
+     "velocity": 72
+    },
+    {
+     "offset": 0.20800000000000002,
+     "ratchet": 1,
+     "step": 10,
+     "velocity": 90
+    },
+    {
+     "offset": 0.052000000000000005,
+     "ratchet": 1,
+     "step": 12,
+     "velocity": 66
+    },
+    {
+     "offset": 0.28600000000000003,
+     "ratchet": 1,
+     "step": 14,
+     "velocity": 98
+    },
+    {
+     "offset": 0.13,
+     "ratchet": 1,
+     "step": 15,
+     "velocity": 48
+    },
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 16,
+     "velocity": 72
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 18,
+     "velocity": 94
+    },
+    {
+     "offset": 0.078,
+     "ratchet": 1,
+     "step": 20,
+     "velocity": 62
+    },
+    {
+     "offset": 0.273,
+     "ratchet": 1,
+     "step": 22,
+     "velocity": 98
+    },
+    {
+     "offset": 0.026000000000000002,
+     "ratchet": 1,
+     "step": 24,
+     "velocity": 70
+    },
+    {
+     "offset": 0.22100000000000003,
+     "ratchet": 1,
+     "step": 26,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 28,
+     "velocity": 64
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 30,
+     "velocity": 100
+    },
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 32,
+     "velocity": 70
+    },
+    {
+     "offset": 0.23399999999999999,
+     "ratchet": 1,
+     "step": 34,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 36,
+     "velocity": 64
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 38,
+     "velocity": 96
+    },
+    {
+     "offset": 0.026000000000000002,
+     "ratchet": 1,
+     "step": 40,
+     "velocity": 72
+    },
+    {
+     "offset": 0.20800000000000002,
+     "ratchet": 1,
+     "step": 42,
+     "velocity": 90
+    },
+    {
+     "offset": 0.052000000000000005,
+     "ratchet": 1,
+     "step": 44,
+     "velocity": 66
+    },
+    {
+     "offset": 0.28600000000000003,
+     "ratchet": 1,
+     "step": 46,
+     "velocity": 98
+    },
+    {
+     "offset": 0.13,
+     "ratchet": 1,
+     "step": 47,
+     "velocity": 48
+    },
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 48,
+     "velocity": 72
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 50,
+     "velocity": 94
+    },
+    {
+     "offset": 0.078,
+     "ratchet": 1,
+     "step": 52,
+     "velocity": 62
+    },
+    {
+     "offset": 0.273,
+     "ratchet": 1,
+     "step": 54,
+     "velocity": 98
+    },
+    {
+     "offset": 0.026000000000000002,
+     "ratchet": 1,
+     "step": 56,
+     "velocity": 70
+    },
+    {
+     "offset": 0.22100000000000003,
+     "ratchet": 1,
+     "step": 58,
+     "velocity": 92
+    },
+    {
+     "offset": 0.065,
+     "ratchet": 1,
+     "step": 60,
+     "velocity": 64
+    },
+    {
+     "offset": 0.26,
+     "ratchet": 1,
+     "step": 62,
+     "velocity": 100
+    }
+   ],
+   "A8": [
+    {
+     "offset": 0.13,
+     "ratchet": 1,
+     "step": 9,
+     "velocity": 42
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 25,
+     "velocity": 40
+    },
+    {
+     "offset": 0.13,
+     "ratchet": 1,
+     "step": 41,
+     "velocity": 42
+    },
+    {
+     "offset": 0.156,
+     "ratchet": 1,
+     "step": 57,
+     "velocity": 40
+    }
+   ],
+   "B1": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 0,
+     "velocity": 100
+    }
+   ],
+   "B10": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 36,
+     "velocity": 100
+    }
+   ],
+   "B11": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 40,
+     "velocity": 100
+    }
+   ],
+   "B12": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 44,
+     "velocity": 100
+    }
+   ],
+   "B13": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 48,
+     "velocity": 100
+    }
+   ],
+   "B14": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 52,
+     "velocity": 100
+    }
+   ],
+   "B15": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 56,
+     "velocity": 100
+    }
+   ],
+   "B16": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 60,
+     "velocity": 100
+    }
+   ],
+   "B2": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 4,
+     "velocity": 100
+    }
+   ],
+   "B3": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 8,
+     "velocity": 100
+    }
+   ],
+   "B4": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 12,
+     "velocity": 100
+    }
+   ],
+   "B5": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 16,
+     "velocity": 100
+    }
+   ],
+   "B6": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 20,
+     "velocity": 100
+    }
+   ],
+   "B7": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 24,
+     "velocity": 100
+    }
+   ],
+   "B8": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 28,
+     "velocity": 100
+    }
+   ],
+   "B9": [
+    {
+     "offset": 0,
+     "ratchet": 1,
+     "step": 32,
+     "velocity": 100
+    }
+   ]
+  },
+  "late": {},
+  "notes": {
+   "C1": [
+    {
+     "length": 5,
+     "midi": 33,
+     "step": 0,
+     "velocity": 110
+    },
+    {
+     "length": 2,
+     "midi": 28,
+     "step": 6,
+     "velocity": 84
+    },
+    {
+     "length": 4,
+     "midi": 33,
+     "step": 10,
+     "velocity": 100
+    },
+    {
+     "length": 2,
+     "midi": 31,
+     "step": 14,
+     "velocity": 80
+    },
+    {
+     "length": 5,
+     "midi": 31,
+     "step": 16,
+     "velocity": 110
+    },
+    {
+     "length": 2,
+     "midi": 26,
+     "step": 22,
+     "velocity": 84
+    },
+    {
+     "length": 4,
+     "midi": 31,
+     "step": 26,
+     "velocity": 100
+    },
+    {
+     "length": 2,
+     "midi": 35,
+     "step": 30,
+     "velocity": 80
+    },
+    {
+     "length": 5,
+     "midi": 36,
+     "step": 32,
+     "velocity": 110
+    },
+    {
+     "length": 2,
+     "midi": 31,
+     "step": 38,
+     "velocity": 84
+    },
+    {
+     "length": 4,
+     "midi": 36,
+     "step": 42,
+     "velocity": 100
+    },
+    {
+     "length": 2,
+     "midi": 33,
+     "step": 46,
+     "velocity": 80
+    },
+    {
+     "length": 5,
+     "midi": 36,
+     "step": 48,
+     "velocity": 110
+    },
+    {
+     "length": 2,
+     "midi": 31,
+     "step": 54,
+     "velocity": 84
+    },
+    {
+     "length": 4,
+     "midi": 36,
+     "step": 58,
+     "velocity": 100
+    },
+    {
+     "length": 2,
+     "midi": 33,
+     "step": 62,
+     "velocity": 80
+    }
+   ]
+  },
+  "swing": 56
+ },
+ "sampleLabel": "GRAN PNO \u00b7 C",
+ "scaleKey": "C",
+ "sounds": {
+  "A1": {
+   "category": "kick",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/kick/K075.wav",
+   "gain": 1,
+   "id": "K075",
+   "name": "VNYL KCK",
+   "start": 0
+  },
+  "A10": {
+   "category": "perc",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/perc/P033.wav",
+   "gain": 1,
+   "id": "P033",
+   "name": "PERC 033",
+   "start": 0
+  },
+  "A11": {
+   "category": "shaker",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/shaker/SH04.wav",
+   "gain": 1,
+   "id": "SH04",
+   "name": "WARM SHK",
+   "start": 0
+  },
+  "A12": {
+   "category": "cymbal",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/cymbal/CY13.wav",
+   "gain": 1,
+   "id": "CY13",
+   "name": "BOOM CYM",
+   "start": 0
+  },
+  "A13": {
+   "category": "808",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/808/B8_13.wav",
+   "gain": 1,
+   "id": "B8_13",
+   "name": "808 E",
+   "rootNote": 28,
+   "start": 0
+  },
+  "A14": {
+   "category": "fx",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/fx/FX19.wav",
+   "gain": 1,
+   "id": "FX19",
+   "name": "VNYL FX",
+   "start": 0
+  },
+  "A15": {
+   "category": "vocal",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/vocal/V012.wav",
+   "gain": 1,
+   "id": "V012",
+   "name": "PNCH VOX",
+   "start": 0
+  },
+  "A16": {
+   "category": "texture",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/texture/T010.wav",
+   "gain": 1,
+   "id": "T010",
+   "name": "VNYL TEX",
+   "start": 0
+  },
+  "A2": {
+   "category": "snare",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/snare/S050.wav",
+   "gain": 1,
+   "id": "S050",
+   "name": "SOFT SNR",
+   "start": 0
+  },
+  "A3": {
+   "category": "hat",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/hat/H042.wav",
+   "gain": 1,
+   "id": "H042",
+   "name": "BRT HAT",
+   "start": 0
+  },
+  "A4": {
+   "category": "openhat",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/openhat/O025.wav",
+   "gain": 1,
+   "id": "O025",
+   "name": "OHAT 025",
+   "start": 0
+  },
+  "A5": {
+   "category": "clap",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/clap/C030.wav",
+   "gain": 1,
+   "id": "C030",
+   "name": "VNYL CLP",
+   "start": 0
+  },
+  "A6": {
+   "category": "kick",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/kick/K066.wav",
+   "gain": 1,
+   "id": "K066",
+   "name": "VNYL KCK",
+   "start": 0
+  },
+  "A7": {
+   "category": "hat",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/hat/H047.wav",
+   "gain": 1,
+   "id": "H047",
+   "name": "TITE HAT",
+   "start": 0
+  },
+  "A8": {
+   "category": "rim",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/rim/R016.wav",
+   "gain": 1,
+   "id": "R016",
+   "name": "SOFT RIM",
+   "start": 0
+  },
+  "A9": {
+   "category": "perc",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/perc/P032.wav",
+   "gain": 1,
+   "id": "P032",
+   "name": "DRY PERC",
+   "start": 0
+  },
+  "B1": {
+   "category": "chop",
+   "end": 0.65217375,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#0",
+   "name": "GRAN 1",
+   "rootNote": 60,
+   "start": 0.02322
+  },
+  "B10": {
+   "category": "chop",
+   "end": 6.5217375,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#9",
+   "name": "GRAN 10",
+   "rootNote": 60,
+   "start": 5.86956375
+  },
+  "B11": {
+   "category": "chop",
+   "end": 7.18658,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#10",
+   "name": "GRAN 11",
+   "rootNote": 60,
+   "start": 6.5217375
+  },
+  "B12": {
+   "category": "chop",
+   "end": 7.8019,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#11",
+   "name": "GRAN 12",
+   "rootNote": 60,
+   "start": 7.18658
+  },
+  "B13": {
+   "category": "chop",
+   "end": 8.46367,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#12",
+   "name": "GRAN 13",
+   "rootNote": 60,
+   "start": 7.8019
+  },
+  "B14": {
+   "category": "chop",
+   "end": 9.1304325,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#13",
+   "name": "GRAN 14",
+   "rootNote": 60,
+   "start": 8.46367
+  },
+  "B15": {
+   "category": "chop",
+   "end": 9.78721,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#14",
+   "name": "GRAN 15",
+   "rootNote": 60,
+   "start": 9.1304325
+  },
+  "B16": {
+   "category": "chop",
+   "end": 10.43478,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#15",
+   "name": "GRAN 16",
+   "rootNote": 60,
+   "start": 9.78721
+  },
+  "B2": {
+   "category": "chop",
+   "end": 1.3043475,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#1",
+   "name": "GRAN 2",
+   "rootNote": 60,
+   "start": 0.65217375
+  },
+  "B3": {
+   "category": "chop",
+   "end": 1.95652125,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#2",
+   "name": "GRAN 3",
+   "rootNote": 60,
+   "start": 1.3043475
+  },
+  "B4": {
+   "category": "chop",
+   "end": 2.58902,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#3",
+   "name": "GRAN 4",
+   "rootNote": 60,
+   "start": 1.95652125
+  },
+  "B5": {
+   "category": "chop",
+   "end": 3.26086875,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#4",
+   "name": "GRAN 5",
+   "rootNote": 60,
+   "start": 2.58902
+  },
+  "B6": {
+   "category": "chop",
+   "end": 3.9130425,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#5",
+   "name": "GRAN 6",
+   "rootNote": 60,
+   "start": 3.26086875
+  },
+  "B7": {
+   "category": "chop",
+   "end": 4.56272,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#6",
+   "name": "GRAN 7",
+   "rootNote": 60,
+   "start": 3.9130425
+  },
+  "B8": {
+   "category": "chop",
+   "end": 5.21288,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#7",
+   "name": "GRAN 8",
+   "rootNote": 60,
+   "start": 4.56272
+  },
+  "B9": {
+   "category": "chop",
+   "end": 5.86956375,
+   "filePath": "/Users/shuhanzhang/duo-hack/library/loops/piano/L001.wav",
+   "gain": 1,
+   "id": "L001#8",
+   "name": "GRAN 9",
+   "rootNote": 60,
+   "start": 5.21288
+  },
+  "C1": {
+   "category": "bass",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/bass/BS07.wav",
+   "gain": 1,
+   "id": "BS07",
+   "name": "BASS F#",
+   "rootNote": 30,
+   "start": 0
+  },
+  "C2": {
+   "category": "keys",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/keys/KY22.wav",
+   "gain": 1,
+   "id": "KY22",
+   "name": "KEY A",
+   "rootNote": 69,
+   "start": 0
+  },
+  "C3": {
+   "category": "synth",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/synth/SY13.wav",
+   "gain": 1,
+   "id": "SY13",
+   "name": "SYN E",
+   "rootNote": 76,
+   "start": 0
+  },
+  "C4": {
+   "category": "808",
+   "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/808/B8_13.wav",
+   "gain": 1,
+   "id": "B8_13",
+   "name": "808 E",
+   "rootNote": 28,
+   "start": 0
+  }
+ },
+ "styleLabel": "J DILLA",
+ "swing": 56,
+ "updated": "2026-09-26T22:34:01Z"
+}

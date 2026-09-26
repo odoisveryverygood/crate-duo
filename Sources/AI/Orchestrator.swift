@@ -86,6 +86,11 @@ final class Orchestrator {
         let variant = repeatCount
         let seed = Self.fnv(key) &+ UInt64(variant) &* 0x9E37_79B9
 
+        if let order = Self.reorderRequest(prompt) {
+            await applyPadOrder(order)
+            state.isDigging = false
+            return DigReport(prompt: prompt, plan: KeywordParser.parse(prompt, grooves: library.grooves))
+        }
         var plan = KeywordParser.parse(prompt, grooves: library.grooves)
         let kwScope = plan.scope
         let kwMs = Self.ms(t0)
