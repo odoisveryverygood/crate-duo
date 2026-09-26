@@ -16,8 +16,8 @@ settings:
     DEBUG_INFORMATION_FORMAT: dwarf
 packages:
   RevenueCat:
-    url: https://github.com/RevenueCat/purchases-ios.git
-    exactVersion: 5.39.0
+    url: https://github.com/RevenueCat/purchases-ios-spm.git
+    from: 5.91.0
 targets:
   Crate:
     type: application
