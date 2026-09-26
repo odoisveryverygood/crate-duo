@@ -21,6 +21,10 @@ final class AppState {
     var log: [LogLine] = []
     var prompt = ""
     var isDigging = false
+    /// What the AI is doing with the last prompt (shown next to the prompt).
+    var aiStatus: AIStatus = .idle
+    var aiStatusText = ""
+    var aiStatusAt = Date.distantPast
     var jevMs: Int? = nil
     var gptSeconds: Double? = nil
 
@@ -87,5 +91,15 @@ final class AppState {
     func addLog(_ tag: String, _ text: String, ms: Int? = nil, tint: Tint = .grey) {
         log.append(LogLine(tag: tag, text: text, ms: ms, tint: tint))
         if log.count > 40 { log.removeFirst(log.count - 40) }
+    }
+}
+
+enum AIStatus { case idle, thinking, arranging, done, failed }
+
+extension AppState {
+    func setStatus(_ s: AIStatus, _ text: String = "") {
+        aiStatus = s
+        aiStatusText = text
+        aiStatusAt = Date()
     }
 }

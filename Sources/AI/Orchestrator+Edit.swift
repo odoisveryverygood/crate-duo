@@ -96,6 +96,7 @@ extension Orchestrator {
         EditHistory.shared.pushRedo(snapshot(s.label))
         await restore(s)
         state.addLog("UNDO", s.label, tint: .orange)
+        state.setStatus(.done, "undid \(s.label)")
         DebugLog.event("undo", ["label": s.label, "left": EditHistory.shared.stack.count])
     }
 
@@ -107,6 +108,7 @@ extension Orchestrator {
         EditHistory.shared.push(snapshot(s.label), clearRedo: false)
         await restore(s)
         state.addLog("REDO", s.label, tint: .orange)
+        state.setStatus(.done, "redid \(s.label)")
         DebugLog.event("redo", ["label": s.label])
     }
 
@@ -188,6 +190,7 @@ extension Orchestrator {
     /// A hand edit wins over a GPT rewrite still in flight.
     private func takeOverPattern() {
         digSerial += 1
+        if gptTask != nil, state.aiStatus == .arranging { state.setStatus(.done, "your edit wins") }
         gptTask?.cancel()
         gptTask = nil
     }
@@ -236,6 +239,34 @@ extension Orchestrator {
         DebugLog.event("seq_toggle", ["lane": label, "step": col + 1, "on": !isOn])
     }
 
+    // MARK: Chop editing
+
+    /// Moves the line between slice index-1 and slice index to `t` seconds in the source file.
+    func moveSliceBoundary(bank: Bank, index: Int, to t: Double) {
+        guard index > 0, index < 16,
+              var a = state.sound(PadID(bank, index - 1)), var b = state.sound(PadID(bank, index)),
+              a.fileURL == b.fileURL else { return }
+        let bEnd = b.end ?? .infinity
+        let t = min(bEnd - 0.03, max(a.start + 0.03, t))
+        guard abs(t - b.start) > 0.002 else { return }
+        checkpoint("slice \(index + 1) start")
+        a.end = t
+        b.start = t
+        var sounds: [Int: PadSound] = [:]
+        for i in 0..<16 { if let x = state.sound(PadID(bank, i)) { sounds[i] = x } }
+        sounds[index - 1] = a
+        sounds[index] = b
+        state.sounds[PadID(bank, index - 1)] = a
+        state.sounds[PadID(bank, index)] = b
+        let e = state.engine
+        Task { @MainActor in
+            try? await e.loadBank(bank, sounds: sounds)
+            state.hit(PadID(bank, index))
+        }
+        state.addLog("CHOP", String(format: "slice %d starts at %.2f s", index + 1, t), tint: .blue)
+        DebugLog.event("slice_move", ["bank": bank.letter, "i": index, "t": t])
+    }
+
     // MARK: Removal requests
 
     /// Lanes named in a short "take out / remove / mute … X" prompt (nil = not a removal request).
@@ -244,6 +275,9 @@ extension Orchestrator {
                      "lose the", "no more", "without the"]
         let startsNo = p.hasPrefix("no ") && words.count <= 3
         guard words.count <= 8, startsNo || verbs.contains(where: { p.contains($0) }) else { return nil }
+        // "take out the lead WITH a house synth" / "replace the hats" / "swap the kick" = a swap, not a removal.
+        let swap = ["with", "for", "instead", "replace", "swap", "into", "add", "use", "put"]
+        if words.contains(where: swap.contains) { return nil }
         let pat = state.engine.pattern
         func used(_ pad: PadID) -> Bool { !(pat.lanes[pad]?.isEmpty ?? true) || !(pat.notes[pad]?.isEmpty ?? true) }
         func drums(_ lanes: [String]) -> [PadID] { lanes.compactMap(BankA.pad(forLane:)) }
@@ -258,7 +292,7 @@ extension Orchestrator {
             (["shaker", "shakers", "shake", "shk", "shkr"], "SHAKER", { drums(["shaker"]) }),
             (["crash", "cymbal", "cym", "ride"], "CYMBAL", { drums(["cymbal"]) }),
             (["drums", "drum"], "DRUMS", { (0..<16).map { PadID(.a, $0) } }),
-            (["chop", "chops", "sample", "loop", "piano", "melody"], "CHOPS", { (0..<16).map { PadID(.b, $0) } }),
+            (["chop", "chops", "sample", "loop", "piano", "melody", "lead"], "CHOPS", { (0..<16).map { PadID(.b, $0) } }),
             (["bass", "bassline", "808"], "BASS", { [PadID(.c, 0)] }),
             (["keys", "chords", "stabs", "synth"], "KEYS", { (1..<16).map { PadID(.c, $0) } }),
         ]

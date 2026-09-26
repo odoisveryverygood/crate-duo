@@ -80,6 +80,7 @@ final class Orchestrator {
         gptTask?.cancel()
         gptTask = nil
         state.isDigging = true
+        state.setStatus(.thinking, "reading your prompt")
         DebugLog.event("dig_start", ["prompt": prompt])
         let key = prompt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if key == lastPromptKey { repeatCount += 1 } else { repeatCount = 0; lastPromptKey = key }
@@ -88,6 +89,7 @@ final class Orchestrator {
 
         if await handleCommand(prompt) {
             state.isDigging = false
+            state.setStatus(.done, state.log.last?.text ?? "done")
             return DigReport(prompt: prompt, plan: KeywordParser.parse(prompt, grooves: library.grooves))
         }
         checkpoint(prompt.count > 28 ? String(prompt.prefix(26)) + "…" : prompt)
@@ -130,7 +132,11 @@ final class Orchestrator {
         case .flip: flip(plan, seed: seed, serial: serial)
         }
         report.totalMs = Self.ms(t0)
-        if serial == digSerial { state.isDigging = false }
+        if serial == digSerial {
+            state.isDigging = false
+            if gptTask != nil { state.setStatus(.arranging, "playing · GPT is arranging") }
+            else { state.setStatus(.done, state.log.last?.text ?? "done") }
+        }
         return report
     }
 

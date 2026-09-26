@@ -71,6 +71,12 @@ enum Router {
             if let v = q("v").flatMap(Double.init) { Task { @MainActor in Orchestrator.current?.setTempo(v) } }
         case "bars":
             if let n = q("n").flatMap(Int.init) { Task { @MainActor in Orchestrator.current?.setBars(n) } }
+        case "slice":
+            // crate://slice?b=B&i=5&t=1.23 — same as dragging the line before slice i (1-based) on the CHOP waveform
+            if let i = q("i").flatMap(Int.init), let t = q("t").flatMap(Double.init) {
+                let bank = q("b").flatMap { b in Bank.allCases.first { $0.letter == b.uppercased() } } ?? .b
+                Task { @MainActor in Orchestrator.current?.moveSliceBoundary(bank: bank, index: i - 1, to: t) }
+            }
         case "rec":
             state.setRecording(q("on") != "0")
         default:

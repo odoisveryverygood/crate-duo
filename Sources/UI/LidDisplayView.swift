@@ -29,7 +29,7 @@ struct LidDisplayView: View {
                 .clipped()
                 .padding(.top, narrow ? 22 : 26.5)
                 Group {
-                    if state.punch > 0.01 {
+                    if state.punch > 0.04 {
                         PunchStrip(punch: state.punch, fx: state.fx)
                     } else {
                         LidResultLine(state: state)
@@ -784,9 +784,7 @@ struct LidPromptLine: View {
                         .accessibilityHidden(true)
                 }
             }
-            if state.isDigging {
-                DotSpinner(color: Theme.live, dot: 1.6)
-            }
+            AIStatusPill(state: state)
         }
         .background {
             // TextField consumes raw presses; register Escape with the hosting controller
@@ -909,6 +907,59 @@ struct LidChips: View {
                 ui.blurRequest += 1
                 state.dig(p)
             }
+        }
+    }
+}
+
+/// THINKING… / ARRANGING… while the AI works, then ✓ DONE or × FAILED for a few seconds.
+struct AIStatusPill: View {
+    let state: AppState
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
+            let age = ctx.date.timeIntervalSince(state.aiStatusAt)
+            let s = state.isDigging ? AIStatus.thinking : state.aiStatus
+            let visible = s == .thinking || s == .arranging || ((s == .done || s == .failed) && age < 4)
+            if visible {
+                HStack(spacing: 6) {
+                    switch s {
+                    case .thinking, .arranging:
+                        DotSpinner(color: Theme.live, dot: 1.6)
+                    case .done:
+                        Text("✓").foregroundStyle(Theme.live)
+                    default:
+                        Text("×").foregroundStyle(Color.red)
+                    }
+                    Text(label(s))
+                        .font(Theme.inter(6.8, 700))
+                        .tracking(0.7)
+                        .foregroundStyle(s == .failed ? Color.red : Theme.lidInk)
+                    if !state.aiStatusText.isEmpty, s != .thinking {
+                        Text(state.aiStatusText)
+                            .font(Theme.inter(8.5))
+                            .foregroundStyle(Theme.lidGrey1)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 170, alignment: .leading)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 21)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.06)))
+                .transition(.opacity)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("ai-status")
+            }
+        }
+    }
+
+    private func label(_ s: AIStatus) -> String {
+        switch s {
+        case .thinking: return "THINKING"
+        case .arranging: return "ARRANGING"
+        case .done: return "DONE"
+        case .failed: return "FAILED"
+        case .idle: return ""
         }
     }
 }

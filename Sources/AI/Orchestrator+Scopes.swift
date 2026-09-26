@@ -197,12 +197,16 @@ extension Orchestrator {
                 self.state.gptSeconds = Double(ms) / 1000
                 let what = arr.comment.isEmpty ? arr.title.lowercased() : arr.comment
                 self.state.addLog("GPT", "✓ \(what)", ms: ms, tint: .orange)
+                self.state.setStatus(.done, what)
+                self.gptTask = nil
                 DebugLog.event("gpt", ["model": model, "ms": ms, "ok": true, "title": arr.title, "comment": arr.comment,
                                        "drums": arr.drums.count, "bass": arr.bass.count, "chops": arr.chops?.count ?? 0,
                                        "chords": arr.chords?.count ?? 0])
             case .failure(let err):
                 DebugLog.event("error", ["where": "gpt", "msg": String(err.description.prefix(200))])
                 self.state.addLog("GPT", "× kept the instant version", tint: .grey)
+                self.state.setStatus(.failed, "GPT didn't answer · kept the instant version")
+                self.gptTask = nil
                 DebugLog.event("gpt", ["model": model, "ms": -1, "ok": false])
                 DebugLog.event("error", ["where": "gpt", "msg": String(err.description.prefix(300))])
             }

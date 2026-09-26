@@ -21,7 +21,8 @@ final class HingeFX {
 
     func update(angle: Double) {
         state.hingeAngle = angle
-        let p = min(1, max(0, (restAngle - angle) / (restAngle - closedAngle)))
+        var p = min(1, max(0, (restAngle - angle) / (restAngle - closedAngle)))
+        if p < 0.04 { p = 0 }   // resting jitter around 110° is not an FX move
         apply(p)
     }
 

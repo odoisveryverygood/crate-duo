@@ -221,20 +221,33 @@ struct SeqGridView: View {
 
 struct ChopWaveView: View {
     let state: AppState
+    /// Boundary being dragged (between slice i-1 and i) and its live x.
+    @State private var drag: (i: Int, x: CGFloat)?
+
+    /// The bank holding chops: the selected bank if it has any (B, or D for a dropped song), else B, else D.
+    private var bank: Bank {
+        func has(_ b: Bank) -> Bool { (0..<16).contains { state.sound(PadID(b, $0)) != nil } }
+        if [.b, .d].contains(state.bank), has(state.bank) { return state.bank }
+        return has(.b) || !has(.d) ? .b : .d
+    }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30)) { ctx in
             let f = LiveFrame(state)
-            let slices = (0..<16).map { PadID(.b, $0) }
-            let sounds = slices.map { state.sound($0) }
+            let bank = self.bank
+            let sounds = (0..<16).map { state.sound(PadID(bank, $0)) }
             let loaded = sounds.contains { $0 != nil }
-            let current = currentSlice(f, now: ctx.date)
-            Canvas { g, size in
-                draw(g, size: size, sounds: sounds, current: current, loaded: loaded)
+            let current = currentSlice(f, bank: bank, now: ctx.date)
+            GeometryReader { geo in
+                Canvas { g, size in
+                    draw(g, size: size, bank: bank, sounds: sounds, current: current, loaded: loaded)
+                }
+                .contentShape(Rectangle())
+                .gesture(loaded ? editGesture(size: geo.size, bank: bank, sounds: sounds) : nil)
             }
             .overlay {
                 if !loaded {
-                    Text("NO SAMPLE IN BANK B · PRESS ✦ DIG")
+                    Text("NO SAMPLE · PRESS ✦ DIG OR DROP A SONG ON THE PADS")
                         .fieldLabel()
                         .foregroundStyle(Theme.lidGrey1)
                         .padding(6)
@@ -245,45 +258,92 @@ struct ChopWaveView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("chop-wave")
         .accessibilityLabel("Chop waveform")
+        .accessibilityHint("Drag a slice line to move it. Tap a slice to play it.")
     }
 
-    private func currentSlice(_ f: LiveFrame, now: Date) -> Int? {
-        if let p = state.lastHitPad, p.bank == .b, now.timeIntervalSince(state.lastHitTime) < 1.2 { return p.index }
-        if let c = f.currentChop() { return c }
-        return state.selectedPad.bank == .b ? state.selectedPad.index : nil
+    private func currentSlice(_ f: LiveFrame, bank: Bank, now: Date) -> Int? {
+        if let p = state.lastHitPad, p.bank == bank, now.timeIntervalSince(state.lastHitTime) < 1.2 { return p.index }
+        if bank == .b, let c = f.currentChop() { return c }
+        return state.selectedPad.bank == bank ? state.selectedPad.index : nil
     }
 
-    private func draw(_ g: GraphicsContext, size: CGSize, sounds: [PadSound?], current: Int?, loaded: Bool) {
-        let top: CGFloat = 16
-        let h = size.height - top
-        let cy = top + h / 2
-        let blue = Theme.bank(.b)
-        g.fill(Path(CGRect(x: 0, y: cy - 0.25, width: size.width, height: 0.5)), with: .color(Theme.lidGrey3))
-
-        // slice widths proportional to duration when known
+    /// Slice widths proportional to duration; returns each slice's x and width.
+    private func layout(_ width: CGFloat, _ sounds: [PadSound?]) -> [(x: CGFloat, w: CGFloat)] {
         var durs = sounds.map { s -> Double in
             guard let s, let e = s.end, e > s.start else { return 1 }
             return e - s.start
         }
-        let total = durs.reduce(0, +)
-        if total <= 0 { durs = Array(repeating: 1, count: 16) }
+        if durs.reduce(0, +) <= 0 { durs = Array(repeating: 1, count: 16) }
         let sum = durs.reduce(0, +)
         var x: CGFloat = 0
+        return durs.map { d in
+            let w = width * CGFloat(d / sum)
+            defer { x += w }
+            return (x, w)
+        }
+    }
+
+    /// Drag near a slice line = move that line (the end of slice i-1 / start of slice i). Tap = play that slice.
+    private func editGesture(size: CGSize, bank: Bank, sounds: [PadSound?]) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { g in
+                let cols = layout(size.width, sounds)
+                if drag == nil {
+                    guard abs(g.translation.width) > 3 || abs(g.translation.height) > 3 else { return }
+                    // nearest inner boundary to where the finger went down
+                    let hit = (1..<16).min { abs(cols[$0].x - g.startLocation.x) < abs(cols[$1].x - g.startLocation.x) }
+                    guard let i = hit, abs(cols[i].x - g.startLocation.x) < 16 else { return }
+                    drag = (i, cols[i].x)
+                }
+                if let d = drag {
+                    let lo = cols[d.i - 1].x + 4, hi = cols[d.i].x + cols[d.i].w - 4
+                    drag = (d.i, min(hi, max(lo, g.location.x)))
+                }
+            }
+            .onEnded { g in
+                let cols = layout(size.width, sounds)
+                if let d = drag {
+                    drag = nil
+                    // x → seconds across the two neighbouring slices
+                    guard let a = sounds[d.i - 1], let b = sounds[d.i] else { return }
+                    let bEnd = b.end ?? (b.start + (b.start - a.start))
+                    let x0 = cols[d.i - 1].x, span = cols[d.i - 1].w + cols[d.i].w
+                    guard span > 0, bEnd > a.start else { return }
+                    let t = a.start + Double((d.x - x0) / span) * (bEnd - a.start)
+                    Orchestrator.current?.moveSliceBoundary(bank: bank, index: d.i, to: t)
+                } else if abs(g.translation.width) < 4, abs(g.translation.height) < 4,
+                          let i = cols.firstIndex(where: { g.location.x >= $0.x && g.location.x < $0.x + $0.w }),
+                          sounds[i] != nil {
+                    let pad = PadID(bank, i)
+                    state.selectedPad = pad
+                    state.hit(pad)
+                }
+            }
+    }
+
+    private func draw(_ g: GraphicsContext, size: CGSize, bank: Bank, sounds: [PadSound?], current: Int?, loaded: Bool) {
+        let top: CGFloat = 16
+        let h = size.height - top
+        let cy = top + h / 2
+        let tint = Theme.bank(bank == .d ? .b : bank)
+        g.fill(Path(CGRect(x: 0, y: cy - 0.25, width: size.width, height: 0.5)), with: .color(Theme.lidGrey3))
+        let cols = layout(size.width, sounds)
         for i in 0..<16 {
-            let w = size.width * CGFloat(durs[i] / sum)
+            let (x, w) = cols[i]
             let isCur = current == i
             if isCur {
-                g.fill(Path(CGRect(x: x, y: top, width: w, height: h)), with: .color(blue.opacity(0.12)))
+                g.fill(Path(CGRect(x: x, y: top, width: w, height: h)), with: .color(tint.opacity(0.12)))
             }
-            // marker + number (the playing slice gets bank B's colour, like its lane playhead)
+            // marker + number (the playing slice gets the bank colour, like its lane playhead)
+            let dragging = drag?.i == i
             g.fill(Path(CGRect(x: x, y: top - 2, width: isCur ? 2 : 1, height: h + 2)),
-                   with: .color(isCur ? blue : Theme.lidGrey3))
+                   with: .color((isCur ? tint : Theme.lidGrey3).opacity(dragging ? 0.25 : 1)))
             g.draw(Text("\(i + 1)").font(Theme.inter(7, 500)).monospacedDigit()
                         .foregroundStyle(isCur ? Theme.lidInk : Theme.lidGrey2),
                    at: CGPoint(x: x + 4, y: 6), anchor: .leading)
             if loaded {
                 let pts = max(4, Int(w / 3))
-                let wave = WaveCache.shared.wave(state, PadID(.b, i), points: pts)
+                let wave = WaveCache.shared.wave(state, PadID(bank, i), points: pts)
                 if !wave.isEmpty {
                     var path = Path()
                     for (j, a) in wave.enumerated() {
@@ -295,7 +355,11 @@ struct ChopWaveView: View {
                     g.stroke(path, with: .color(isCur ? Theme.lidInk : Theme.lidInk.opacity(0.55)), lineWidth: 1.5)
                 }
             }
-            x += w
+        }
+        // live drag handle
+        if let d = drag {
+            g.fill(Path(CGRect(x: d.x - 1, y: top - 6, width: 2, height: h + 6)), with: .color(Theme.live))
+            g.fill(Path(ellipseIn: CGRect(x: d.x - 4, y: top - 10, width: 8, height: 8)), with: .color(Theme.live))
         }
     }
 }
