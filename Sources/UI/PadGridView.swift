@@ -12,6 +12,7 @@ struct PadGridView: View {
     @State private var liveHits: [Int: Date] = [:]
     @State private var dropHover = false
     @State private var pendingChop: ImportedAudio?
+    @State private var importing = false
 
     var body: some View {
         GeometryReader { geo in
@@ -49,31 +50,41 @@ struct PadGridView: View {
                     .allowsHitTesting(false)
             }
             .onDrop(of: [UTType.audio.identifier, UTType.fileURL.identifier], isTargeted: $dropHover) { providers, point in
+                guard !importing, pendingChop == nil else { return false }
+                importing = true
                 let col = min(3, max(0, Int((point.x + gap / 2) / (cw + gap))))
                 let row = min(3, max(0, Int((point.y + gap / 2) / (ch + gap))))
                 let pad = PadID(state.bank, (3 - row) * 4 + col)
-                return AudioImport.receive(providers, at: pad) { result in
+                let accepted = AudioImport.receive(providers, at: pad) { result in
                     switch result {
                     case .success(let audio):
-                        if audio.duration > 2 { pendingChop = audio }
-                        else { Task { await AudioImport.loadOnPad(audio, state: state) } }
+                        if audio.duration > 2 { pendingChop = audio; importing = false }
+                        else { Task { await AudioImport.loadOnPad(audio, state: state); importing = false } }
                     case .failure(let error):
+                        importing = false
                         state.addLog("ERR", "Drop: \(error.localizedDescription)", tint: .red)
                     }
                 }
+                if !accepted { importing = false }
+                return accepted
             }
         }
         .confirmationDialog("Import audio", isPresented: Binding(
-            get: { pendingChop != nil }, set: { if !$0 { pendingChop = nil } }
+            get: { pendingChop != nil }, set: { if !$0 {
+                if let audio = pendingChop { try? FileManager.default.removeItem(at: audio.url) }
+                pendingChop = nil
+            } }
         ), titleVisibility: .visible) {
             if let audio = pendingChop {
                 Button("CHOP 16 into Bank D") {
                     pendingChop = nil
-                    Task { await AudioImport.chop16(audio, state: state) }
+                    importing = true
+                    Task { await AudioImport.chop16(audio, state: state); importing = false }
                 }
                 Button("Load on pad \(audio.pad.bank.letter)\(audio.pad.number)") {
                     pendingChop = nil
-                    Task { await AudioImport.loadOnPad(audio, state: state) }
+                    importing = true
+                    Task { await AudioImport.loadOnPad(audio, state: state); importing = false }
                 }
             }
         } message: {

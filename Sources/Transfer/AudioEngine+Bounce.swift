@@ -1,79 +1,48 @@
-import AVFoundation
 import Foundation
 
 extension AudioEngine {
-    /// Records four bars from the existing master-output tap, starting on the next bar.
-    /// The engine keeps playing while the WAV is written.
+    /// Capture from the next bar and publish only a finalized, sample-counted WAV.
     func bounce(bars: Int = 4, title: String) async throws -> URL {
-        guard bars > 0, stateLock.withLock({ shared.running && shared.playing }) else {
-            throw BounceError.notPlaying
-        }
-        guard bounceLock.withLock({ bounceWriter == nil }) else { throw BounceError.inProgress }
-
-        let tempo = max(30, bpm)
-        let step = position().truncatingRemainder(dividingBy: 16)
-        let wait = step < 0.01 ? 0 : (16 - step) * 60 / tempo / 4
-        if wait > 0 { try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
-        try Task.checkCancellation()
-
-        let seconds = Double(bars) * 4 * 60 / tempo
-        let files = FileManager.default
-        let docs = files.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let directory = docs.appendingPathComponent("bounces", isDirectory: true)
-        try files.createDirectory(at: directory, withIntermediateDirectories: true)
-        let slug = String(title.lowercased().map { c in c.isLetter || c.isNumber ? c : "-" })
-            .split(separator: "-").joined(separator: "-")
-        let base = String((slug.isEmpty ? "crate" : slug).prefix(48))
-        var url = directory.appendingPathComponent(base + ".wav")
-        var n = 2
-        while files.fileExists(atPath: url.path) {
-            url = directory.appendingPathComponent("\(base)-\(n).wav")
-            n += 1
-        }
-
-        let sr = engine.mainMixerNode.outputFormat(forBus: 0).sampleRate
-        guard let writer = WavWriter(url: url, sampleRate: sr, maxSeconds: seconds + 0.5) else {
-            throw BounceError.cannotWrite
-        }
-        let installed = bounceLock.withLock { () -> Bool in
-            guard bounceWriter == nil else { return false }
-            bounceWriter = writer
-            return true
-        }
-        guard installed else {
-            try? files.removeItem(at: url)
-            throw BounceError.inProgress
-        }
-        DebugLog.event("bounce_start", ["bars": bars, "path": url.path])
-
-        do {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-        } catch {
-            bounceLock.withLock { bounceWriter = nil }
-            wavQueue.sync {}
-            try? files.removeItem(at: url)
-            throw error
-        }
-        bounceLock.withLock { bounceWriter = nil }
-        wavQueue.sync {}
-        guard writer.dataBytes > 44 else {
-            try? files.removeItem(at: url)
-            throw BounceError.empty
-        }
-        DebugLog.event("bounce_done", ["path": url.path, "bytes": writer.dataBytes])
-        return url
+        let operation = BounceOperation()
+        return try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            return try await withCheckedThrowingContinuation { continuation in
+                do {
+                    let capture = try MasterBounce(engine: self, bars: bars, title: title) { result in
+                        operation.clear()
+                        continuation.resume(with: result)
+                    }
+                    operation.install(capture)
+                } catch { continuation.resume(throwing: error) }
+            }
+        } onCancel: { operation.cancel() }
     }
 
     enum BounceError: LocalizedError {
-        case notPlaying, inProgress, cannotWrite, empty
-
+        case playbackRequired, busy, interrupted, timedOut
         var errorDescription: String? {
             switch self {
-            case .notPlaying: return "Start playback before bouncing."
-            case .inProgress: return "A bounce is already running."
-            case .cannotWrite: return "Could not create the WAV file."
-            case .empty: return "The bounce recorded no audio."
+            case .playbackRequired: return "Start playback before bouncing."
+            case .busy: return "A bounce is already running."
+            case .interrupted: return "Bounce cancelled because playback, tempo, or the audio route changed."
+            case .timedOut: return "No audio arrived. Start playback and try again."
             }
         }
+    }
+}
+
+/// Owns the capture across suspension and handles cancellation before installation.
+private final class BounceOperation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var capture: MasterBounce?
+    private var cancelled = false
+    func install(_ value: MasterBounce) {
+        let shouldCancel = lock.withLock { capture = value; return cancelled }
+        if shouldCancel { value.cancel() }
+    }
+    func clear() { lock.withLock { capture = nil } }
+    func cancel() {
+        let value = lock.withLock { cancelled = true; return capture }
+        value?.cancel()
     }
 }

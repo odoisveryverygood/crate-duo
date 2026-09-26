@@ -39,9 +39,12 @@ enum AudioImport {
         let result: Result<ImportedAudio, Error>
         do {
             if let error { throw error }
-            guard let source else { throw ImportError.noFile }
+            guard let source, source.isFileURL else { throw ImportError.noFile }
             let access = source.startAccessingSecurityScopedResource()
             defer { if access { source.stopAccessingSecurityScopedResource() } }
+            let values = try source.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+            guard values.isRegularFile == true else { throw ImportError.noFile }
+            guard (values.fileSize ?? 0) <= 100 * 1024 * 1024 else { throw ImportError.tooLarge }
 
             let files = FileManager.default
             let docs = files.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -63,6 +66,7 @@ enum AudioImport {
                 let file = try AVAudioFile(forReading: destination)
                 let seconds = Double(file.length) / file.processingFormat.sampleRate
                 guard seconds.isFinite, seconds > 0 else { throw ImportError.emptyAudio }
+                guard seconds <= 300 else { throw ImportError.tooLarge }
                 result = .success(ImportedAudio(url: destination,
                                                name: name.isEmpty ? "IMPORTED" : name,
                                                duration: seconds, pad: pad))
@@ -86,11 +90,11 @@ enum AudioImport {
         let sound = PadSound(id: "import-" + UUID().uuidString,
                              name: audio.name,
                              category: audio.duration > 2 ? .loop : .chop,
-                             fileURL: audio.url)
+                             fileURL: audio.url, rootNote: 60)
         bank[pad.index] = sound
         do {
             try await state.engine.loadBank(pad.bank, sounds: bank)
-            guard state.engine.sound(for: pad) != nil else { throw ImportError.loadFailed }
+            guard state.engine.sound(for: pad)?.id == sound.id else { throw ImportError.loadFailed }
             for (i, item) in bank { state.sounds[PadID(pad.bank, i)] = item }
             state.selectedPad = pad
             state.addLog("SAMPLE", "▸ dropped \(audio.name)", tint: .blue)
@@ -113,7 +117,7 @@ enum AudioImport {
         })
         do {
             try await state.engine.loadBank(.d, sounds: sounds)
-            guard state.engine.sound(for: PadID(.d, 0)) != nil else { throw ImportError.loadFailed }
+            guard sounds.allSatisfy({ state.engine.sound(for: PadID(.d, $0.key))?.id == $0.value.id }) else { throw ImportError.loadFailed }
             state.sounds = state.sounds.filter { $0.key.bank != .d }
             for (i, sound) in sounds { state.sounds[PadID(.d, i)] = sound }
             state.bank = .d
@@ -126,9 +130,10 @@ enum AudioImport {
     }
 
     enum ImportError: LocalizedError {
-        case noFile, emptyAudio, loadFailed
+        case noFile, emptyAudio, loadFailed, tooLarge
         var errorDescription: String? {
             switch self {
+            case .tooLarge: return "Use audio under 100 MB and five minutes."
             case .noFile: return "No audio file was supplied."
             case .emptyAudio: return "The audio file is empty."
             case .loadFailed: return "The audio engine could not load this file."

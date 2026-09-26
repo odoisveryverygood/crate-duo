@@ -389,7 +389,8 @@ private struct CrateProSheet: View {
         }
     }
     #else
-    private func package(for plan: CratePlan) -> Never? { nil }
+    private struct UnavailablePackage { let localizedPriceString: String }
+    private func package(for plan: CratePlan) -> UnavailablePackage? { nil }
     #endif
 
     private var selectedPlan: CratePlan {
@@ -400,7 +401,7 @@ private struct CrateProSheet: View {
     #if canImport(RevenueCat)
     private var selectedPackage: Package? { package(for: selectedPlan) }
     #else
-    private var selectedPackage: Never? { nil }
+    private var selectedPackage: UnavailablePackage? { nil }
     #endif
 
     #if canImport(RevenueCat)

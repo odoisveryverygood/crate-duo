@@ -16,15 +16,20 @@ struct BounceControl: View {
     let state: AppState
 
     @State private var busy = false
+    @State private var bounceTask: Task<Void, Never>?
     @State private var bouncedURL: URL?
     @State private var errorMessage: String?
 
     var body: some View {
         HStack(spacing: 7) {
             Button {
-                Task { await record() }
+                if busy { bounceTask?.cancel() }
+                else {
+                    busy = true
+                    bounceTask = Task { await record() }
+                }
             } label: {
-                Text(busy ? "BOUNCING…" : "↗ BOUNCE")
+                Text(busy ? "CANCEL BOUNCE" : "↗ BOUNCE")
                     .crateLabel(8, tracking: 0.12)
                     .foregroundStyle(Theme.silk)
                     .padding(.horizontal, 8)
@@ -33,7 +38,6 @@ struct BounceControl: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.buttonBorder))
             }
             .buttonStyle(.plain)
-            .disabled(busy)
             .accessibilityIdentifier("bounce-button")
 
             if let bouncedURL {
@@ -53,6 +57,7 @@ struct BounceControl: View {
                 .accessibilityLabel("Share bounced WAV")
             }
         }
+        .onDisappear { bounceTask?.cancel() }
         .alert("Bounce failed", isPresented: Binding(
             get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
         )) {
@@ -63,6 +68,8 @@ struct BounceControl: View {
     }
 
     @MainActor private func record() async {
+        defer { busy = false; bounceTask = nil }
+        guard !Task.isCancelled else { return }
         guard let engine = state.engine as? AudioEngine else {
             errorMessage = "Bounce needs the audio engine."
             return
@@ -79,9 +86,8 @@ struct BounceControl: View {
             bouncedURL = try await engine.bounce(bars: 4, title: title)
             state.addLog("BOUNCE", "↗ \(bouncedURL!.lastPathComponent)", tint: .ochre)
         } catch {
-            errorMessage = error.localizedDescription
+            if !Task.isCancelled { errorMessage = error.localizedDescription }
             state.addLog("ERR", "Bounce: \(error.localizedDescription)", tint: .red)
         }
-        busy = false
     }
 }
