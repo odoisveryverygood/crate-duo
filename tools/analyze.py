@@ -53,6 +53,9 @@ if offline: check("perform: jev fills", None, "offline")
 else:
     pf = ev("perform", perf_t, end_t)
     check("perform: jev decided per bar", len(pf) >= 2, f"{len(pf)} decisions: {[p.get('fill') for p in pf][:6]}")
+fxt = marks.get("fx")
+fxe = [e for e in events if e.get("event") in ("fx", "fx_select", "url") and fxt and e["t"] >= fxt - 0.5 and "fx" in json.dumps(e)]
+check("padfx: effect selected + amount applied", len(fxe) >= 2, f"{len(fxe)} fx events")
 errs = ev("error")
 check("no error events", not errs, "; ".join(str(e)[:80] for e in errs[:3]))
 

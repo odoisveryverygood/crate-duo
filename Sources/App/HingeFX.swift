@@ -7,6 +7,8 @@ final class HingeFX {
     var restAngle: Double = 110
     var closedAngle: Double = 25
     private var lastDrop = Date.distantPast
+    /// Hinge events right after launch (the simulator can start folded) must not fire a DROP.
+    private let born = Date()
 
     init(state: AppState) { self.state = state }
 
@@ -34,7 +36,7 @@ final class HingeFX {
             let fast = now.timeIntervalSince(t) < 0.45
             wasHigh = false
             leftHighAt = nil
-            if fast, now.timeIntervalSince(lastDrop) > 1.0 {
+            if fast, now.timeIntervalSince(lastDrop) > 1.0, now.timeIntervalSince(born) > 2.0 {
                 lastDrop = now
                 state.punch = 0
                 state.engine.drop()

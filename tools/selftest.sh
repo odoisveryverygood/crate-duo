@@ -40,6 +40,7 @@ mark fold; hinge -d "$U" sweep 150 30 3 >/dev/null 2>&1; shot 04-folded; sleep 0
 hinge -d "$U" 150 >/dev/null 2>&1; mark snap; sleep 3; shot 05-drop
 url "mode?m=keys"; url "bank?b=C"; sleep 0.5
 mark keys; for s in 0 3 5 7 10 12; do url "pad?b=C&i=1&semi=$s"; sleep 0.3; done; shot 06-keys
+url "mode?m=padfx"; url "fx?t=beatrepeat"; mark fx; url "fxamt?v=0.8"; sleep 3; shot 07-padfx; url "fxamt?v=0"; url "fx?t=punch"
 url "mode?m=seq"; mark perform; url "perform?on=1"; sleep 12; shot 07-perform
 url "perform?on=0"; mark end; url stop; sleep 1.5
 
