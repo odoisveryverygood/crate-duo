@@ -1,0 +1,18 @@
+# secrets — never commit
+.secrets/
+*.env
+Config/Secrets.xcconfig
+Secrets.plist
+
+# commercial sample-pack audio (regenerable from ~/Documents via tools/), keep JSON indexes
+library/**/*.wav
+assets/**/*.wav
+
+# build / tooling junk
+__pycache__/
+*.pyc
+DerivedData/
+build/
+*.xcodeproj/
+xcuserdata/
+.DS_Store
