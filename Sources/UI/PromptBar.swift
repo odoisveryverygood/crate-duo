@@ -24,6 +24,7 @@ struct PromptLine: View {
                     .focused($focused)
                     .submitLabel(.go)
                     .onSubmit(submit)
+                    .onKeyPress(.escape) { focused = false; state.promptFocused = false; return .handled }
                     .crateNoAutocorrect()
                     .accessibilityIdentifier("prompt-field")
                     .accessibilityLabel("Prompt")
@@ -37,10 +38,19 @@ struct PromptLine: View {
                 DotSpinner(color: Theme.orange, dot: 2)
             }
         }
+        .background {
+            // TextField consumes raw presses; register Escape with the hosting controller
+            // so it also works while UIKit's text editor is first responder.
+            Button { focused = false; state.promptFocused = false } label: { EmptyView() }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityHidden(true)
+        }
         .frame(minHeight: fontSize + 8)
         .onChange(of: ui.focusRequest) { _, _ in focused = true }
         .onChange(of: ui.blurRequest) { _, _ in focused = false }
-        .onChange(of: focused) { _, f in ui.promptFocused = f }
+        .onChange(of: focused) { _, f in ui.promptFocused = f; state.promptFocused = f }
+        .onChange(of: state.promptFocused) { _, f in focused = f }
+        .onDisappear { if focused { state.promptFocused = false; ui.promptFocused = false } }
     }
 
     private var idleText: some View {

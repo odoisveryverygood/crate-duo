@@ -24,6 +24,11 @@ final class AppState {
     var jevMs: Int? = nil
     var gptSeconds: Double? = nil
 
+    var heldPads: Set<PadID> = []
+    var heldNotes: Set<Int> = []
+    var keyVelocity = 110
+    var promptFocused = false
+
     var keysOctave = 0
     var scaleLock = true
     var scaleKey: String? = nil
