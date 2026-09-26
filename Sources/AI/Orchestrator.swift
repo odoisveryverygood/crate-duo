@@ -93,6 +93,7 @@ final class Orchestrator {
         checkpoint(prompt.count > 28 ? String(prompt.prefix(26)) + "…" : prompt)
         var plan = KeywordParser.parse(prompt, grooves: library.grooves)
         let kwScope = plan.scope
+        let kwStyle = plan.drumStyle
         let kwMs = Self.ms(t0)
         var report = DigReport(prompt: prompt, plan: plan)
         if jev.available, plan.scope != .flip {
@@ -107,6 +108,12 @@ final class Orchestrator {
         guard serial == digSerial else { report.superseded = true; return report }
         // An imported song flip keeps its chops: "dilla drums for this" stays drums-only whatever Jev guesses.
         if importedFlip, kwScope == .drumsOnly, [.fullBeat, .sampleOnly].contains(plan.scope) { plan.scope = .drumsOnly }
+        // "make it more rnb": a named style that differs from the current drums restyles the kit + groove (sample stays),
+        // instead of only nudging the swing.
+        if plan.scope == .changeGroove, let ks = kwStyle, let cur = session?.drumStyle, ks != cur {
+            plan.scope = .drumsOnly
+            plan.drumStyle = ks
+        }
         // "a slow sax" / "french jazz piano sample": an instrument and no drums is a sample request, whatever Jev guesses.
         if kwScope == .sampleOnly, [.drumsOnly, .singleSound, .changeGroove, .bassOnly].contains(plan.scope) { plan.scope = .sampleOnly }
         if session == nil, [.sampleOnly, .bassOnly, .changeGroove, .flip].contains(plan.scope) { plan.scope = .fullBeat }

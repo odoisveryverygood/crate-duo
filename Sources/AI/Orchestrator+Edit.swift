@@ -183,6 +183,59 @@ extension Orchestrator {
         DebugLog.event("bars", ["bars": n])
     }
 
+    // MARK: Sequencer edits
+
+    /// A hand edit wins over a GPT rewrite still in flight.
+    private func takeOverPattern() {
+        digSerial += 1
+        gptTask?.cancel()
+        gptTask = nil
+    }
+
+    /// Removes a lane (or the merged CHOP lane) from the beat.
+    func clearLane(_ pads: [PadID], label: String) {
+        var p = state.engine.pattern
+        guard pads.contains(where: { !(p.lanes[$0]?.isEmpty ?? true) || !(p.notes[$0]?.isEmpty ?? true) }) else { return }
+        checkpoint("remove \(label)")
+        takeOverPattern()
+        for pad in pads { p.lanes[pad] = nil; p.notes[pad] = nil; p.late[pad] = nil }
+        state.engine.setPattern(p, timing: .now)
+        lastPattern = p
+        state.addLog("SEQ", "removed \(label) · undo brings it back", tint: .orange)
+        DebugLog.event("seq_clear", ["lane": label])
+    }
+
+    /// Toggles step `col` of the shown bar in every bar of the loop: on → off everywhere, off → on everywhere.
+    func toggleStep(_ pads: [PadID], col: Int, bar: Int, label: String) {
+        var p = state.engine.pattern
+        let bars = max(1, p.bars)
+        let steps = Set((0..<bars).map { $0 * 16 + col })
+        let barStep = (bar % bars) * 16 + col
+        let isOn = pads.contains { pad in
+            (p.lanes[pad] ?? []).contains { $0.step == barStep } || (p.notes[pad] ?? []).contains { $0.step == barStep }
+        }
+        checkpoint("\(label) step \(col + 1)")
+        takeOverPattern()
+        if isOn {
+            for pad in pads {
+                p.lanes[pad] = p.lanes[pad].map { $0.filter { !steps.contains($0.step) } }
+                p.notes[pad] = p.notes[pad].map { $0.filter { !steps.contains($0.step) } }
+            }
+        } else if let pad = pads.first {
+            if let notes = p.notes[pad], let ref = notes.first {
+                // melodic lane: repeat its first note's pitch
+                p.notes[pad] = notes + steps.sorted().map { NoteEvent(step: $0, length: 1, midi: ref.midi, velocity: ref.velocity) }
+            } else {
+                let vel = (p.lanes[pad] ?? []).map(\.velocity).max() ?? 100
+                p.lanes[pad, default: []] += steps.sorted().map { Hit(step: $0, velocity: min(118, vel)) }
+                p.lanes[pad]?.sort { $0.step < $1.step }
+            }
+        }
+        state.engine.setPattern(p, timing: .now)
+        lastPattern = p
+        DebugLog.event("seq_toggle", ["lane": label, "step": col + 1, "on": !isOn])
+    }
+
     // MARK: Prompt commands
 
     /// "undo", "bpm 100", "8 bars", "reset pads", pad layout requests. Returns true when handled (no new beat).

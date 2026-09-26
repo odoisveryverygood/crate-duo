@@ -225,6 +225,13 @@ final class ProjectStore {
     func save(state: AppState, name: String? = nil, asNew: Bool = false) -> Project {
         let now = Date()
         var p: Project
+        // The bundled demo projects are templates: the first change forks a copy so they're never overwritten.
+        var name = name
+        var asNew = asNew
+        if !asNew, let c = current, c.id.hasPrefix("default-") {
+            asNew = true
+            if name == nil { name = c.name + " 2" }
+        }
         if let c = current, !asNew {
             p = c
         } else {

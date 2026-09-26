@@ -65,8 +65,14 @@ struct SeqGridView: View {
         TimelineView(.animation(minimumInterval: 1.0 / 60)) { _ in
             let f = LiveFrame(state)
             let rows = SeqRows.build(state, f.pattern)
-            Canvas { ctx, size in
-                draw(ctx, size: size, frame: f, rows: rows.isEmpty ? SeqRows.placeholder : rows)
+            GeometryReader { geo in
+                Canvas { ctx, size in
+                    draw(ctx, size: size, frame: f, rows: rows.isEmpty ? SeqRows.placeholder : rows)
+                }
+                .contentShape(Rectangle())
+                .gesture(SpatialTapGesture().onEnded { tap in
+                    handleTap(at: tap.location, size: geo.size, rows: rows)
+                })
             }
             .overlay(alignment: .bottomLeading) {
                 if rows.isEmpty {
@@ -79,8 +85,28 @@ struct SeqGridView: View {
             }
         }
         .accessibilityElement(children: .ignore)
+        .accessibilityHint("Tap a step to add or remove it. Tap a lane name to remove that sound.")
         .accessibilityIdentifier("seq-grid")
         .accessibilityLabel("Sequencer")
+    }
+
+    /// Tap a dot = toggle that step (in every bar of the loop); tap a lane name = remove that sound from the beat.
+    private func handleTap(at p: CGPoint, size: CGSize, rows: [SeqRow]) {
+        guard !rows.isEmpty, let orch = Orchestrator.current else { return }
+        let top = Self.firstLane
+        let pitch = min(maxPitch, max(11, (size.height - top - 12) / CGFloat(max(rows.count - 1, 1))))
+        let r = Int(((p.y - top) / pitch).rounded())
+        guard r >= 0, r < rows.count, abs(p.y - (top + CGFloat(r) * pitch)) <= pitch / 2 + 2 else { return }
+        let row = rows[r]
+        if p.x < Self.labelColumn - 4 {
+            orch.clearLane(row.pads, label: row.label)
+            return
+        }
+        let x0 = Self.labelColumn
+        let colW = (size.width - x0 - 3 * Self.groupGap) / 16
+        func cx(_ i: Int) -> CGFloat { x0 + CGFloat(i) * colW + CGFloat(i / 4) * Self.groupGap + colW / 2 }
+        guard let col = (0..<16).min(by: { abs(cx($0) - p.x) < abs(cx($1) - p.x) }), abs(cx(col) - p.x) <= colW else { return }
+        orch.toggleStep(row.pads, col: col, bar: LiveFrame(state).bar, label: row.label)
     }
 
     private func draw(_ ctx: GraphicsContext, size: CGSize, frame f: LiveFrame, rows: [SeqRow]) {
