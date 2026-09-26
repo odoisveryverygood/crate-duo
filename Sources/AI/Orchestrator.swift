@@ -212,8 +212,26 @@ final class Orchestrator {
         return Self.ms(t)
     }
 
-    func apply(_ p: Pattern, bpm: Double?, swing: Double?) {
+    /// Every bass/keys note (bank C) snaps into the loop's key: rule bass and GPT bass both pass through here.
+    func keyGuarded(_ pattern: Pattern) -> Pattern {
+        guard let k = Music.parseKey(state.scaleKey) else { return pattern }
+        var p = pattern
+        var moved = 0
+        for (pad, notes) in p.notes where pad.bank == .c {
+            p.notes[pad] = notes.map { n in
+                var n = n
+                let m = Music.snap(n.midi, keyPC: k.pc, minor: k.minor)
+                if m != n.midi { moved += 1; n.midi = m }
+                return n
+            }
+        }
+        if moved > 0 { DebugLog.event("key_guard", ["moved": moved, "key": state.scaleKey ?? ""]) }
+        return p
+    }
+
+    func apply(_ pattern: Pattern, bpm: Double?, swing: Double?) {
         let e = state.engine
+        let p = keyGuarded(pattern)
         if let b = bpm { if abs(e.bpm - b) > 0.001 { e.bpm = b }; state.bpm = b }
         if let s = swing { e.swing = s; state.swing = s }
         state.bars = p.bars

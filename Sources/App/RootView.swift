@@ -134,8 +134,10 @@ struct RootView: View {
 /// Content for the Duo's outer (audience-facing) screen while the inner screen is in use.
 struct OuterCrowdHost: View {
     let state: AppState
+    /// The outer panel can present rotated relative to the accessory's layout; `-crateCrowdTurn 90` / `crate://crowdrot?deg=` fixes it live.
+    @AppStorage("crateCrowdTurn") private var crowdTurn: Double = 0
     var body: some View {
-        CrowdStageView(state: state)
+        CrowdStageView(state: state, rotate: .degrees(crowdTurn))
             .ignoresSafeArea()
             .onAppear { DebugLog.event("outer_display_content", ["appeared": true]) }
     }

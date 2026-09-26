@@ -167,7 +167,7 @@ struct FaderView: View {
 /// ● REC  ▶ PLAY  ■ STOP. Polls the engine so it stays right even if playback is started elsewhere.
 struct TransportRow: View {
     let state: AppState
-    var height: CGFloat = 34
+    var height: CGFloat = 46
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.2)) { _ in
@@ -178,13 +178,14 @@ struct TransportRow: View {
                 } action: {
                     state.setRecording(!state.isRecording)
                 }
+                .frame(width: height * 0.8)
                 transportButton(id: "play", on: playing, onFill: Theme.silk) {
-                    PlayShape().fill(Theme.orange).frame(width: 9, height: 10)
+                    PlayShape().fill(Theme.orange).frame(width: 16, height: 18)
                 } action: {
                     if !state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = true }
                 }
                 transportButton(id: "stop", on: false, onFill: Theme.silk) {
-                    Rectangle().fill(Theme.silk).frame(width: 9, height: 9)
+                    Rectangle().fill(Theme.silk).frame(width: 15, height: 15)
                 } action: {
                     if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
                     if state.isRecording { state.setRecording(false) }

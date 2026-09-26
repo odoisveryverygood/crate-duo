@@ -41,6 +41,8 @@ enum Router {
             CrowdCam.shared.start()
         case "rot":
             UserDefaults.standard.set(Double(q("deg") ?? "999") ?? 999, forKey: "crateTurn")
+        case "crowdrot":
+            UserDefaults.standard.set(Double(q("deg") ?? "0") ?? 0, forKey: "crateCrowdTurn")
         case "rec":
             state.setRecording(q("on") != "0")
         default:
