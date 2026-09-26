@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// KEYS mode = the MIDI keyboard: 10 white + 7 black keys, F to A (like the mockup), playing the selected pad
+/// KEYS mode = the MIDI keyboard: 8 white + 5 black keys, C to C (matching musical typing), playing the selected pad
 /// chromatically. Multi-touch note on/off, glissando, scale lock (snaps to the loop's key), OCT ± via state.keysOctave.
 struct KeysView: View {
     let state: AppState
     var gap: CGFloat = 4
 
-    /// Offsets from the first F for the white keys, and which white keys have a black key after them.
-    static let whiteOffsets = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16]
-    static let blackAfter = [0, 1, 2, 4, 5, 7, 8]
+    /// Offsets from the first C for the white keys, and which white keys have a black key after them.
+    static let whiteOffsets = [0, 2, 4, 5, 7, 9, 11, 12]
+    static let blackAfter = [0, 1, 3, 4, 5]
 
     /// finger → (key midi as laid out, midi actually played after scale lock)
     @State private var fingers: [ObjectIdentifier: FingerNote] = [:]
@@ -18,29 +18,30 @@ struct KeysView: View {
         var played: Int
     }
 
-    /// MIDI of the leftmost F: the F at or below the pad's root, shifted by the octave buttons.
+    /// Match hardware musical typing so every keyboard note has a visible key.
     static func baseMidi(root: Int, octave: Int) -> Int {
-        let down = ((root - 5) % 12 + 12) % 12
-        return root - down + 12 * octave
+        MusicalTyping.baseMidi(octave: octave)
     }
 
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
-            let whiteW = max(1, (size.width - 9 * gap) / 10)
+            let whiteW = max(1, (size.width - 7 * gap) / 8)
             let stride = whiteW + gap
             let blackW = whiteW * 0.62
             let blackH = size.height * 0.58
             let pad = state.selectedPad
             let root = UIHelpers.rootNote(state, pad)
-            let base = Self.baseMidi(root: root, octave: state.keysOctave)
+            let nominal = Self.baseMidi(root: root, octave: state.keysOctave)
+            // Keep the original extended typing map visible when its upper notes are held.
+            let base = nominal + (state.heldNotes.contains(where: { $0 > nominal + 12 }) ? 12 : 0)
             let scale = scalePCs()
             TimelineView(.animation(minimumInterval: 1.0 / 60)) { _ in
                 let frame = LiveFrame(state)
                 let sounding = frame.soundingNotes(pad)
-                let held = Set(fingers.values.map(\.key))
+                let held = Set(fingers.values.map(\.key)).union(state.heldNotes)
                 ZStack(alignment: .topLeading) {
-                    ForEach(0..<10, id: \.self) { w in
+                    ForEach(0..<8, id: \.self) { w in
                         let midi = base + Self.whiteOffsets[w]
                         whiteKey(midi: midi, root: root, scale: scale,
                                  held: held.contains(midi), sounding: sounding.contains(midi))
@@ -102,6 +103,8 @@ struct KeysView: View {
                     .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6))
             }
             VStack(spacing: 3) {
+                Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
+                    .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : Theme.mid)
                 if played == root {
                     Circle().fill(Theme.orange).frame(width: 4, height: 4)
                 }
@@ -130,6 +133,11 @@ struct KeysView: View {
                     .padding(.bottom, 4)
             }
         }
+        .overlay(alignment: .bottom) {
+            Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
+                .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : Theme.padLabel)
+                .padding(.bottom, 12)
+        }
         .modifier(KeyAccessibility(id: "key-\(midi)", label: Music.name(snap(midi, scale))) {
             tapKey(midi)
         })
@@ -144,7 +152,7 @@ struct KeysView: View {
                 if abs(pt.x - cx) <= blackW / 2 + 1 { return base + Self.whiteOffsets[w] + 1 }
             }
         }
-        let w = min(9, max(0, Int(pt.x / stride)))
+        let w = min(7, max(0, Int(pt.x / stride)))
         return base + Self.whiteOffsets[w]
     }
 
@@ -163,7 +171,7 @@ struct KeysView: View {
         case .ended:
             guard fingers[id] != nil else { return }
             fingers[id] = nil
-            if fingers.isEmpty { state.engine.release(state.selectedPad) }
+            if fingers.isEmpty && state.heldNotes.isEmpty { state.engine.release(state.selectedPad) }
         }
     }
 

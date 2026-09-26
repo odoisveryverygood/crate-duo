@@ -95,7 +95,7 @@ struct PadGridView: View {
     }
 
     private func isLit(_ i: Int, pad: PadID, mode: Mode, held: Set<Int>, frame: LiveFrame, now: Date) -> Bool {
-        if held.contains(i) { return true }
+        if held.contains(i) || state.heldPads.contains(pad) { return true }
         if let t = liveHits[i], now.timeIntervalSince(t) < Theme.flash { return true }
         if mode == .levels16 { return false }
         if state.lastHitPad == pad, now.timeIntervalSince(state.lastHitTime) < Theme.flash { return true }
@@ -111,7 +111,8 @@ struct PadGridView: View {
                     placeholder: nil,
                     barColor: state.sound(sel) != nil ? Theme.bank(sel.bank) : nil,
                     lit: lit,
-                    selected: i == 7)
+                    selected: i == 7,
+                    shortcut: MusicalTyping.padKeys[i].uppercased())
                 .modifier(PadAccessibility(id: "pad-\(pad.bank.letter)-\(pad.number)",
                                            label: "Tune \(i - 7)") { fire(i, velocity: 112) })
         } else {
@@ -121,7 +122,8 @@ struct PadGridView: View {
                     placeholder: pad.bank == .a ? UIHelpers.bankANames[i] : nil,
                     barColor: name != nil ? Theme.bank(pad.bank) : nil,
                     lit: lit,
-                    selected: state.selectedPad == pad)
+                    selected: state.selectedPad == pad,
+                    shortcut: MusicalTyping.padKeys[i].uppercased())
                 .modifier(PadAccessibility(id: "pad-\(pad.bank.letter)-\(pad.number)",
                                            label: name ?? "Pad \(pad.number)") { fire(i, velocity: 110) })
         }
@@ -185,6 +187,7 @@ struct PadCell: View {
     let lit: Bool
     var selected = false
     var nameSize: CGFloat = 10
+    var shortcut: String = ""
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -198,6 +201,11 @@ struct PadCell: View {
                 .foregroundStyle(Theme.mid)
                 .padding(.leading, 7)
                 .padding(.top, 8)
+            Text(shortcut)
+                .font(Theme.label(9))
+                .foregroundStyle(lit ? Theme.orange : Theme.padLabel)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(7)
             Text(name ?? placeholder ?? "")
                 .font(Theme.mono(nameSize, bold: true))
                 .tracking(nameSize * 0.06)

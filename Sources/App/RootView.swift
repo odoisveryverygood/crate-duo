@@ -62,6 +62,7 @@ struct RootView: View {
             }
             .onChange(of: turn) { _, t in DebugLog.event("layout_turn", ["turn": t, "w": size.width, "h": size.height]) }
         }
+        .background(KeyboardControl(state: state).frame(width: 0, height: 0))
         .ignoresSafeArea()
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
