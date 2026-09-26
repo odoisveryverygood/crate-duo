@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Audience-facing Field card. The host still owns the accessory scene and its orientation.
+/// Audience-facing content for the Duo's outer display. The host owns the accessory scene.
 struct CrowdStageView: View {
     let state: AppState
     var rotate: Angle = .zero
@@ -10,24 +10,19 @@ struct CrowdStageView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            // Swap the layout bounds before a quarter turn so explicit rotation cannot crop the card.
-            let quarterTurn = abs(sin(rotate.radians)) > 0.707
-            let size = quarterTurn ? CGSize(width: geometry.size.height, height: geometry.size.width) : geometry.size
+            // The Duo's outer panel presents wide while the device is open: lay out for the real frame,
+            // no automatic rotation (the host can still pass `rotate` if a panel ever presents sideways).
+            let size = geometry.size
             TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
-                ZStack {
-                    stage(size: size, now: timeline.date)
-                    if timeline.date < dropFlashUntil {
-                        Theme.orange
-                        Text("DROP")
-                            .font(OuterField.type(min(size.width, size.height) * 0.28, weight: 300))
-                            .tracking(-4)
-                            .foregroundStyle(OuterField.ink)
-                            .accessibilityIdentifier("crowd-drop")
+                Group {
+                    if size.width > size.height * 1.15 {
+                        wideStage(size: size, now: timeline.date)
+                    } else {
+                        stage(size: size, now: timeline.date)
                     }
                 }
                 .frame(width: size.width, height: size.height)
                 .rotationEffect(rotate)
-                .frame(width: geometry.size.width, height: geometry.size.height)
             }
         }
         .background(Color.black)
@@ -41,99 +36,157 @@ struct CrowdStageView: View {
         }
     }
 
+    /// Wide panel: cover art left, a quiet title block right. Minimal text so it reads from across a room.
+    private func wideStage(size: CGSize, now: Date) -> some View {
+        let inset = max(24, size.height * 0.08)
+        let cover = size.height - inset * 2
+        let level = min(1, max(0, Double(state.engine.level())))
+        return ZStack {
+            Color.black
+            HStack(alignment: .center, spacing: inset) {
+                NowPlayingCard(state: state)
+                    .frame(width: cover, height: cover)
+                VStack(alignment: .leading, spacing: max(10, size.height * 0.035)) {
+                    Text("CRATE")
+                        .font(Theme.doto(min(44, size.height * 0.09)))
+                        .foregroundStyle(Theme.orange)
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                    Text(state.styleLabel.uppercased())
+                        .font(Theme.doto(min(64, size.height * 0.13)))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Text(state.sampleLabel.uppercased())
+                        .font(Theme.label(max(12, size.height * 0.035)))
+                        .foregroundStyle(Theme.mid)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    GeometryReader { bar in
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Theme.dim)
+                            Rectangle().fill(Theme.orange).frame(width: bar.size.width * level)
+                        }
+                    }
+                    .frame(height: 3)
+                }
+                .frame(maxHeight: cover, alignment: .topLeading)
+            }
+            .padding(inset)
+            .frame(width: size.width, height: size.height, alignment: .leading)
+
+            if now < dropFlashUntil {
+                Theme.orange.opacity(0.93)
+                Text("DROP")
+                    .font(Theme.doto(min(size.height * 0.4, 200)))
+                    .foregroundStyle(Color.black)
+                    .minimumScaleFactor(0.5)
+                    .accessibilityIdentifier("crowd-drop")
+            }
+        }
+    }
+
     private func stage(size: CGSize, now: Date) -> some View {
-        let wide = size.width > size.height * 1.15
-        let inset = max(16, min(size.width, size.height) * 0.055)
-        let frame = LiveFrame(state)
-        return VStack(alignment: .leading, spacing: inset) {
-            HStack {
-                Text("CRATE").font(OuterField.type(14, weight: 600)).tracking(2.8)
-                    .foregroundStyle(OuterField.white)
-                Spacer()
-                Circle().fill(frame.playing ? Theme.orange : OuterField.secondary).frame(width: 5, height: 5)
-                Text(frame.playing ? "CR-16 / LIVE" : "CR-16 / READY")
-                    .font(OuterField.type(9, weight: 500)).tracking(1.2)
-                    .foregroundStyle(OuterField.secondary)
-            }
-            if wide {
-                HStack(alignment: .center, spacing: inset * 1.3) {
-                    NowPlayingCover(state: state)
-                        .frame(width: min(size.height - inset * 3 - 18, size.width * 0.46))
-                        .aspectRatio(1, contentMode: .fit)
-                    details(now: now, frame: frame, titleSize: min(48, size.width * 0.065))
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                NowPlayingCover(state: state)
-                    .frame(width: min(size.width - inset * 2, size.height * 0.43),
-                           height: min(size.width - inset * 2, size.height * 0.43))
-                    .frame(maxWidth: .infinity)
-                details(now: now, frame: frame, titleSize: min(48, size.width * 0.105))
-            }
-        }
-        .padding(inset)
-        .frame(width: size.width, height: size.height, alignment: .topLeading)
-    }
+        let inset = max(20, size.width * 0.055)
+        let active = activePads(now: now)
+        let level = min(1, max(0, Double(state.engine.level())))
 
-    private func details(now: Date, frame: LiveFrame, titleSize: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            NowPlayingDetails(state: state, titleSize: titleSize)
-            NowPlayingProgress(state: state)
-            HStack(alignment: .center, spacing: 24) {
-                hitMatrix(now: now, frame: frame).frame(width: 58, height: 58)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("BAR / \(frame.bars)").font(OuterField.type(8, weight: 600)).tracking(1.2)
-                        .foregroundStyle(OuterField.secondary)
-                    Text(frame.barBeat).font(OuterField.type(34, weight: 300)).monospacedDigit()
-                        .foregroundStyle(OuterField.white)
+        return ZStack {
+            Color.black
+            VStack(alignment: .leading, spacing: max(12, size.height * 0.025)) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("CRATE").font(Theme.doto(min(55, size.width * 0.13)))
+                        .foregroundStyle(Theme.orange)
+                    Spacer()
+                    Text("CR-16  /  LIVE").font(Theme.label(max(11, size.width * 0.025)))
+                        .foregroundStyle(Theme.mid)
                 }
-                Spacer(minLength: 0)
-            }
-            OuterLevelLine(level: Double(state.engine.level()))
-                .frame(height: 2).accessibilityIdentifier("crowd-level")
-                .accessibilityLabel("Output level")
-            Text(state.lastPerform.isEmpty ? "PERFORM ▸ \(state.performOn ? "ON" : "READY")" : "PERFORM ▸ \(state.lastPerform.uppercased())")
-                .font(OuterField.type(10, weight: 500)).tracking(1)
-                .foregroundStyle(state.performOn ? OuterField.white : OuterField.secondary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-                .accessibilityIdentifier("crowd-perform")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 
-    private func hitMatrix(now: Date, frame: LiveFrame) -> some View {
-        let active = activePads(now: now, frame: frame)
-        return VStack(spacing: 6) {
-            ForEach(0..<4, id: \.self) { row in
-                HStack(spacing: 6) {
-                    ForEach(0..<4, id: \.self) { column in
-                        let index = (3 - row) * 4 + column
-                        Circle().fill(active.contains(index) ? Theme.orange : OuterField.rule)
+                NowPlayingCard(state: state)
+                    .frame(height: min(size.width + 80, size.height * 0.52))
+
+                Text("\(state.styleLabel.uppercased())  ×  \(state.sampleLabel.uppercased())")
+                    .font(Theme.label(max(15, size.width * 0.039)))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityIdentifier("crowd-style-sample")
+
+                VStack(spacing: max(5, size.width * 0.015)) {
+                    ForEach(0..<4, id: \.self) { row in
+                        HStack(spacing: max(5, size.width * 0.015)) {
+                            ForEach(0..<4, id: \.self) { column in
+                                let index = (3 - row) * 4 + column
+                                Circle()
+                                    .fill(active.contains(index) ? Theme.orange : Theme.dotOff)
+                                    .overlay(Circle().stroke(active.contains(index) ? Theme.text.opacity(0.7) : Theme.dim, lineWidth: 1))
+                            }
+                        }
                     }
                 }
+                .frame(height: min(92, size.height * 0.13))
+                .accessibilityIdentifier("crowd-hit-matrix")
+
+                GeometryReader { bar in
+                    ZStack(alignment: .leading) {
+                        Rectangle().fill(Theme.dim)
+                        Rectangle().fill(Theme.orange).frame(width: bar.size.width * level)
+                    }
+                }
+                .frame(height: max(5, size.height * 0.009))
+                .accessibilityIdentifier("crowd-level")
+
+                Text(state.lastPerform.isEmpty ? "PERFORM  ▸  READY" : "PERFORM  ▸  \(state.lastPerform.uppercased())")
+                    .font(Theme.label(max(11, size.width * 0.028)))
+                    .foregroundStyle(Theme.ochre)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityIdentifier("crowd-perform")
+            }
+            .padding(inset)
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
+
+            if now < dropFlashUntil {
+                Theme.orange.opacity(0.93)
+                Text("DROP")
+                    .font(Theme.doto(min(size.width * 0.32, 170)))
+                    .foregroundStyle(Color.black)
+                    .minimumScaleFactor(0.5)
+                    .accessibilityIdentifier("crowd-drop")
             }
         }
-        .accessibilityIdentifier("crowd-hit-matrix")
-        .accessibilityLabel("Live pad activity")
     }
 
-    private func activePads(now: Date, frame: LiveFrame) -> Set<Int> {
+    private func activePads(now: Date) -> Set<Int> {
         var indices = Set<Int>()
-        if let pad = state.lastHitPad, now.timeIntervalSince(state.lastHitTime) < 0.16 { indices.insert(pad.index) }
-        // Shared sequencer timing includes swing and per-lane offsets, as on the deck.
-        for pad in Set(frame.pattern.lanes.keys).union(frame.pattern.notes.keys) where frame.sequencerFlash(pad) {
+        if let pad = state.lastHitPad, now.timeIntervalSince(state.lastHitTime) < 0.16 {
             indices.insert(pad.index)
+        }
+        guard state.engine.isPlaying else { return indices }
+        let pattern = state.engine.pattern
+        let total = max(1, pattern.totalSteps)
+        let position = state.engine.position()
+        guard position.isFinite else { return indices }
+        let step = ((Int(floor(position)) % total) + total) % total
+        let phase = position - floor(position)
+        if phase < 0.28 {
+            for (pad, hits) in pattern.lanes where hits.contains(where: { $0.step == step }) {
+                indices.insert(pad.index)
+            }
+            for (pad, notes) in pattern.notes where notes.contains(where: { $0.step == step }) {
+                indices.insert(pad.index)
+            }
         }
         return indices
     }
 }
 
 #Preview("Crowd · portrait") {
-    CrowdStageView(state: AppState(engine: MockEngine())).frame(width: 466, height: 678)
+    CrowdStageView(state: AppState(engine: MockEngine()))
+        .frame(width: 466, height: 678)
 }
-#Preview("Crowd · landscape") {
-    CrowdStageView(state: AppState(engine: MockEngine())).frame(width: 678, height: 466)
-}
-#Preview("Crowd · explicit quarter turn") {
-    CrowdStageView(state: AppState(engine: MockEngine()), rotate: .degrees(90)).frame(width: 678, height: 466)
+
+#Preview("Crowd · rotated") {
+    CrowdStageView(state: AppState(engine: MockEngine()))
+        .frame(width: 678, height: 466)
 }
