@@ -8,7 +8,9 @@ struct CrateApp: App {
     private let orchestrator: Orchestrator
 
     init() {
-        let s = AppState(engine: MockEngine())
+        let engine = AudioEngine()
+        try? engine.start()
+        let s = AppState(engine: engine)
         _state = State(initialValue: s)
         hinge = HingeFX(state: s)
         let hingeFX = hinge
