@@ -249,6 +249,8 @@ final class Orchestrator {
             }
         }
         if moved > 0 { DebugLog.event("key_guard", ["moved": moved, "key": state.scaleKey ?? ""]) }
+        // A flip re-orders the chops, so a bass that follows the original chord order clashes: flips get drums, no bass.
+        if p.lanes.keys.contains(where: { $0.bank == .d }) { p.notes = p.notes.filter { $0.key.bank != .c || $0.key.index != 0 } }
         return p
     }
 

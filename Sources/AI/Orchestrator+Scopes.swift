@@ -201,7 +201,8 @@ extension Orchestrator {
                                        "drums": arr.drums.count, "bass": arr.bass.count, "chops": arr.chops?.count ?? 0,
                                        "chords": arr.chords?.count ?? 0])
             case .failure(let err):
-                self.state.addLog("ERR", "GPT " + String(err.description.prefix(60)), tint: .red)
+                DebugLog.event("error", ["where": "gpt", "msg": String(err.description.prefix(200))])
+                self.state.addLog("GPT", "× kept the instant version", tint: .grey)
                 DebugLog.event("gpt", ["model": model, "ms": -1, "ok": false])
                 DebugLog.event("error", ["where": "gpt", "msg": String(err.description.prefix(300))])
             }

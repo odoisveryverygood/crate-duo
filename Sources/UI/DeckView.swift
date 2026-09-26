@@ -76,8 +76,9 @@ struct DeckView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 8) {
                 BrandMark(inline: true)
+                ProjectChip(state: state).padding(.leading, 10)
                 Spacer(minLength: 8)
-                BounceControl(state: state)
+                // BOUNCE hidden from the deck (BounceControl kept in code).
             }
             .frame(height: 24)
         }
@@ -100,8 +101,6 @@ struct DeckView: View {
             VStack(alignment: .leading, spacing: 8) {
                 center
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                BounceControl(state: state)
-                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24, alignment: .leading)
             }
             .frame(height: contentH)
             .padding(.leading, narrow ? 12 : 18)
@@ -134,8 +133,6 @@ struct DeckView: View {
                     BankGrid(state: state, key: 24, spacing: 10)
                         .padding(.top, 11)
                     Spacer(minLength: 6)
-                    GrilleDots()
-                        .padding(.leading, 1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .leading, spacing: 0) {
@@ -156,8 +153,8 @@ struct DeckView: View {
             .padding(.top, 16)
             HStack(alignment: .bottom, spacing: 8) {
                 BrandMark()
+                ProjectChip(state: state).padding(.leading, 10)
                 Spacer(minLength: 8)
-                BounceControl(state: state)
             }
             .padding(.top, 14)
         }
@@ -168,17 +165,14 @@ struct DeckView: View {
 
     /// Landscape left column: mode keys stacked (37 pt pitch, SHIFT set apart), grille + wordmark at the foot.
     private var leftColumn: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 13) {
             ForEach(modeItems.filter { $0 != .shift }, id: \.self) { item in
                 modeButton(item, key: 26, labelBelow: false)
             }
             modeButton(.shift, key: 26, labelBelow: false)
-                .padding(.top, 14)
             Spacer(minLength: 0)
-            GrilleDots()
-                .padding(.leading, 1)
-                .padding(.bottom, 11)
             BrandMark()
+            ProjectChip(state: state)
         }
     }
 

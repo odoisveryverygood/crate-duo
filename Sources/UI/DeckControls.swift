@@ -259,12 +259,12 @@ struct ModeKey: View {
                 if labelBelow {
                     VStack(spacing: 5) {
                         face
-                        DeckLabel(label, size: 6.2, tracking: 0.12, color: on ? Deck05.ink : Deck05.ink2)
+                        DeckLabel(label, size: 5.8, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2.opacity(0.8))
                     }
                 } else {
                     HStack(spacing: 9) {
                         face
-                        DeckLabel(label, size: 7.2, tracking: 0.12, color: Deck05.ink)
+                        DeckLabel(label, size: 6.6, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
                         Spacer(minLength: 0)
                     }
                 }
@@ -342,7 +342,7 @@ struct FaderView: View {
     var value: Double
     var fill = false
     var id = "level-fader"
-    var marks: [String] = FaderView.dbMarks
+    var marks: [String] = []   // LEVEL: no printed scale, just the track + cap
     var onChange: (Double) -> Void
     var onEnd: ((Double) -> Void)? = nil
 
@@ -357,7 +357,7 @@ struct FaderView: View {
             let v = min(1, max(0, value))
             let capY = top + (1 - v) * travel
             // mock: labels end at x 26, ticks end at 43, cap 36 wide from x 44 (slot centre 62)
-            let scaleW: CGFloat = 44
+            let scaleW: CGFloat = marks.isEmpty ? 0 : 44
             let capW = min(36, max(22, g.size.width - scaleW - 4))
             let cx = scaleW + capW / 2
             ZStack(alignment: .topLeading) {
@@ -377,8 +377,8 @@ struct FaderView: View {
                         .frame(width: major ? 12 : 8, height: 0.5)
                         .position(x: 43 - (major ? 6 : 4), y: y)
                 }
-                RoundedRectangle(cornerRadius: 2).fill(Deck05.slot)
-                    .frame(width: 3, height: travel + 2)
+                RoundedRectangle(cornerRadius: 1).fill(Deck05.slot)
+                    .frame(width: marks.isEmpty ? 2 : 3, height: travel + 2)
                     .position(x: cx, y: top + (travel + 2) / 2)
                 if fill {
                     let h = max(0, top + travel + 2 - capY)

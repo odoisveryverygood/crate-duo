@@ -103,6 +103,7 @@ extension AudioEngine {
     static func cuts(_ cutter: PadID, _ victim: PadID) -> Bool {
         switch victim.bank {
         case .b: return cutter.bank == .b
+        case .d: return cutter.bank == .d   // imported/flip chops: one slice at a time
         case .c: return cutter == victim && !isPoly(victim)
         case .a: return victim.index == 6 && cutter.bank == .a && (4...6).contains(cutter.index)
         case .d: return false
@@ -113,11 +114,11 @@ extension AudioEngine {
     static func isPoly(_ pad: PadID) -> Bool { pad.bank == .c && (1...2).contains(pad.index) }
 
     static func canBeCut(_ pad: PadID) -> Bool {
-        pad.bank == .b || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && pad.index == 6)
+        pad.bank == .b || pad.bank == .d || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && pad.index == 6)
     }
 
     static func cutsSomething(_ pad: PadID) -> Bool {
-        pad.bank == .b || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && (4...6).contains(pad.index))
+        pad.bank == .b || pad.bank == .d || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && (4...6).contains(pad.index))
     }
 
     /// Root used for NoteEvents: the pad's rootNote, else 36 for 808/bass and 60 otherwise (BUILD.md §6 convention).
