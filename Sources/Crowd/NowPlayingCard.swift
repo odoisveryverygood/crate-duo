@@ -7,7 +7,7 @@ struct NowPlayingCard: View {
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
-            let cover = max(0, min(size.width, size.height - 116))
+            let cover = max(0, min(size.width, size.height - 180))
             VStack(alignment: .leading, spacing: 16) {
                 NowPlayingCover(state: state)
                     .frame(width: cover, height: cover)

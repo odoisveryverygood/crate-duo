@@ -82,11 +82,44 @@ struct CompactView: View {
             }
             logLines
             PromptLine(state: state, fontSize: 11, placeholder: "ask for a beat")
-            ActionChips(state: state, size: 8,
-                        only: ["chip-dilla-nujabes", "chip-house-kit", "chip-flip-it", "chip-ai-perform"])
+            compactChips
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black))
+    }
+
+    private var compactChips: some View {
+        ChipFlow(spacing: 5, lineSpacing: 5) {
+            ForEach(ActionChips.items.filter { ["chip-dilla-nujabes", "chip-house-kit", "chip-flip-it", "chip-ai-perform"].contains($0.id) }) { item in
+                let on = item.id == "chip-ai-perform" && state.performOn
+                Button {
+                    switch item.id {
+                    case "chip-flip-it":
+                        state.onFlip?()
+                        DebugLog.event("flip")
+                    case "chip-ai-perform":
+                        state.performOn.toggle()
+                        state.onPerformToggle?(state.performOn)
+                        DebugLog.event("perform_toggle", ["on": state.performOn])
+                    default:
+                        if let prompt = item.prompt {
+                            CrateUI.shared.draft = ""
+                            CrateUI.shared.blurRequest += 1
+                            state.dig(prompt)
+                        }
+                    }
+                } label: {
+                    Text(item.label).font(OuterField.type(8, weight: 600)).tracking(0.8)
+                        .foregroundStyle(on ? OuterField.ink : OuterField.white)
+                        .padding(.horizontal, 9).frame(height: 25)
+                        .background(on ? OuterField.white : Color.black, in: RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(OuterField.secondary.opacity(0.5), lineWidth: 0.5))
+                }
+                .buttonStyle(ChipPressStyle())
+                .accessibilityIdentifier(item.id).accessibilityLabel(item.label)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
     }
 
     private var logLines: some View {
