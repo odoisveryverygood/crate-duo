@@ -1,0 +1,218 @@
+{
+  "kit": "boombap",
+  "bpm_target": "88-92",
+  "sampleRate": 44100,
+  "bitDepth": 16,
+  "generated": "2026-09-26",
+  "files": [
+    {
+      "file": "kits/boombap/01_kick.wav",
+      "pad": 1,
+      "name": "KICK",
+      "category": "kick",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.487,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Kicks/Cymatics - Dreams Lofi Kick 1 - C.wav"
+    },
+    {
+      "file": "kits/boombap/02_kick_alt.wav",
+      "pad": 2,
+      "name": "KICK2",
+      "category": "kick",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.214,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Kicks/Cymatics - Dreams Lofi Kick 2 - C.wav"
+    },
+    {
+      "file": "kits/boombap/03_snare.wav",
+      "pad": 3,
+      "name": "SNARE",
+      "category": "snare",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.164,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Snares + Rimshots/Cymatics - Classic Boombap Snare - D#.wav"
+    },
+    {
+      "file": "kits/boombap/04_clap.wav",
+      "pad": 4,
+      "name": "CLAP",
+      "category": "clap",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.392,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Claps/Cymatics - Deluxe Lofi Clap.wav"
+    },
+    {
+      "file": "kits/boombap/05_chat.wav",
+      "pad": 5,
+      "name": "CHAT",
+      "category": "hat",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.384,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Hihats - Closed/Cymatics - Deluxe Lofi Closed Hihat.wav"
+    },
+    {
+      "file": "kits/boombap/06_ohat.wav",
+      "pad": 6,
+      "name": "OHAT",
+      "category": "openhat",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.549,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Hihats - Open/Cymatics - Cassette Open Hihat.wav"
+    },
+    {
+      "file": "kits/boombap/07_rim.wav",
+      "pad": 7,
+      "name": "RIM",
+      "category": "perc",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.584,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Snares + Rimshots/Cymatics - Dreams Rimshot.wav"
+    },
+    {
+      "file": "kits/boombap/08_shaker.wav",
+      "pad": 8,
+      "name": "SHAKE",
+      "category": "perc",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.159,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Shakers/Cymatics - Lofi Shaker.wav"
+    },
+    {
+      "file": "kits/boombap/09_808.wav",
+      "pad": 9,
+      "name": "808 C",
+      "category": "bass",
+      "rootNote": 36,
+      "key": "C",
+      "bpm": null,
+      "durationSec": 2.112,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Bass/Cymatics - Dreams 808 1 - C.wav"
+    },
+    {
+      "file": "kits/boombap/10_crash.wav",
+      "pad": 10,
+      "name": "CRASH",
+      "category": "cymbal",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 0.786,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Cobra Hip Hop Sample Pack/Drum One Shots/Cymbals/Crashes/Cymatics - Cobra Crash 3.wav"
+    },
+    {
+      "file": "kits/boombap/11_vox.wav",
+      "pad": 11,
+      "name": "VOX AH",
+      "category": "vocal",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 1.5,
+      "sourcePath": "/Users/shuhanzhang/Documents/LofiHiphop超值合集/Queen Chameleon Lofi Vocals/Lo-fi Vocal FX Ah_1.wav"
+    },
+    {
+      "file": "kits/boombap/12_fx.wav",
+      "pad": 12,
+      "name": "FX",
+      "category": "fx",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 1.252,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Cobra Hip Hop Sample Pack/FX/Various FX/Cymatics - Cobra Misc FX 6.wav"
+    },
+    {
+      "file": "kits/boombap/13_keys.wav",
+      "pad": 13,
+      "name": "KEYS C",
+      "category": "keys",
+      "rootNote": 60,
+      "key": "C",
+      "bpm": null,
+      "durationSec": 1.5,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/One Shots/Cymatics - Frozen Keys One Shot - C.wav"
+    },
+    {
+      "file": "kits/boombap/14_synth.wav",
+      "pad": 14,
+      "name": "PLUCK C",
+      "category": "synth",
+      "rootNote": 60,
+      "key": "C",
+      "bpm": null,
+      "durationSec": 1.5,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/One Shots/Cymatics - Wisdom Pluck One Shot - C.wav"
+    },
+    {
+      "file": "kits/boombap/15_texture.wav",
+      "pad": 15,
+      "name": "VINYL",
+      "category": "texture",
+      "rootNote": null,
+      "key": null,
+      "bpm": null,
+      "durationSec": 1.5,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Lofi Starter Pack/Noise/Cymatics - Eternity Vinyl Noise 1.wav"
+    },
+    {
+      "file": "kits/boombap/16_loop_chop.wav",
+      "pad": 16,
+      "name": "SAX BM",
+      "category": "loop",
+      "rootNote": null,
+      "key": "Bm",
+      "bpm": 88,
+      "durationSec": 5.455,
+      "sourcePath": "/Users/shuhanzhang/Documents/Jazz Hop合集/Samplestar Jazz Hop Jamz/Kit_05_Duke_(Key_Bm)_(88BPM)/jhj_kit05_duke_sax_lofi_88_Bm.wav"
+    },
+    {
+      "file": "loops/rhodes_88bpm_Bm.wav",
+      "pad": null,
+      "name": "RHODES",
+      "category": "loop",
+      "rootNote": null,
+      "key": "Bm",
+      "bpm": 88,
+      "durationSec": 10.909,
+      "sourcePath": "/Users/shuhanzhang/Documents/Jazz Hop合集/Samplestar Jazz Hop Jamz/Kit_05_Duke_(Key_Bm)_(88BPM)/jhj_kit05_duke_chords_rhodes_key_88_Bm.wav"
+    },
+    {
+      "file": "loops/piano_90bpm_C.wav",
+      "pad": null,
+      "name": "PIANO",
+      "category": "loop",
+      "rootNote": null,
+      "key": "C",
+      "bpm": 90,
+      "durationSec": 10.655,
+      "sourcePath": "/Users/shuhanzhang/Documents/LofiHiphop超值合集/TAKESHIDO Melodies/Processed_Loops/Bpm90_C_OsakaCruise/Bpm90_C_OsakaCruise_Piano.wav"
+    },
+    {
+      "file": "loops/keys_86bpm_Em.wav",
+      "pad": null,
+      "name": "KEYS EM",
+      "category": "loop",
+      "rootNote": null,
+      "key": "Em",
+      "bpm": 86,
+      "durationSec": 11.163,
+      "sourcePath": "/Users/shuhanzhang/Documents/cymatics/Cymatics - Gems Free Teaser Pack/Cymatics Gems Vol 9 - Dreamers - 86 BPM E Min.wav"
+    }
+  ]
+}
