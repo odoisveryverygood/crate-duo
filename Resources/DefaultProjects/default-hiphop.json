@@ -156,7 +156,7 @@
      "velocity": 50
     }
    ],
-   "A3": [
+   "A4": [
     {
      "offset": 0,
      "ratchet": 1,
@@ -696,7 +696,7 @@
    "name": "SOFT SNR",
    "start": 0
   },
-  "A3": {
+  "A4": {
    "category": "hat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/hat/H042.wav",
    "gain": 1,
@@ -704,7 +704,7 @@
    "name": "BRT HAT",
    "start": 0
   },
-  "A4": {
+  "A5": {
    "category": "openhat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/openhat/O025.wav",
    "gain": 1,
@@ -712,7 +712,7 @@
    "name": "OHAT 025",
    "start": 0
   },
-  "A5": {
+  "A3": {
    "category": "clap",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/clap/C030.wav",
    "gain": 1,

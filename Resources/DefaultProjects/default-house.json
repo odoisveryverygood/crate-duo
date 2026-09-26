@@ -486,7 +486,7 @@
      "velocity": 44
     }
    ],
-   "A3": [
+   "A4": [
     {
      "offset": 0,
      "ratchet": 1,
@@ -680,7 +680,7 @@
      "velocity": 92
     }
    ],
-   "A4": [
+   "A5": [
     {
      "offset": 0,
      "ratchet": 1,
@@ -778,7 +778,7 @@
      "velocity": 92
     }
    ],
-   "A5": [
+   "A3": [
     {
      "offset": 0,
      "ratchet": 1,
@@ -881,8 +881,8 @@
   },
   "late": {
    "A11": 0.04,
-   "A3": 0.03,
-   "A4": 0.02,
+   "A4": 0.03,
+   "A5": 0.02,
    "A9": 0.01
   },
   "notes": {
@@ -1401,7 +1401,7 @@
    "name": "CLN SNR",
    "start": 0
   },
-  "A3": {
+  "A4": {
    "category": "hat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/hat/H011.wav",
    "gain": 1,
@@ -1409,7 +1409,7 @@
    "name": "CLN HAT",
    "start": 0
   },
-  "A4": {
+  "A5": {
    "category": "openhat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/openhat/O007.wav",
    "gain": 1,
@@ -1417,7 +1417,7 @@
    "name": "CLN OHAT",
    "start": 0
   },
-  "A5": {
+  "A3": {
    "category": "clap",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/clap/C010.wav",
    "gain": 1,

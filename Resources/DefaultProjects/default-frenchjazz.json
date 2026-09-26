@@ -260,7 +260,7 @@
      "velocity": 118
     }
    ],
-   "A3": [
+   "A4": [
     {
      "offset": 0,
      "ratchet": 1,
@@ -442,7 +442,7 @@
      "velocity": 92
     }
    ],
-   "A4": [
+   "A5": [
     {
      "offset": 0.061349999999999995,
      "ratchet": 1,
@@ -744,7 +744,7 @@
    "name": "DRY SNR",
    "start": 0
   },
-  "A3": {
+  "A4": {
    "category": "hat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/hat/H044.wav",
    "gain": 1,
@@ -752,7 +752,7 @@
    "name": "DRY HAT",
    "start": 0
   },
-  "A4": {
+  "A5": {
    "category": "openhat",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/openhat/O012.wav",
    "gain": 1,
@@ -760,7 +760,7 @@
    "name": "CLN OHAT",
    "start": 0
   },
-  "A5": {
+  "A6": {
    "category": "kick",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/kick/K015.wav",
    "gain": 1,
@@ -768,7 +768,7 @@
    "name": "VNYL KCK",
    "start": 0
   },
-  "A6": {
+  "A3": {
    "category": "clap",
    "filePath": "/Users/shuhanzhang/duo-hack/library/oneshots/clap/C032.wav",
    "gain": 1,
