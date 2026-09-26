@@ -53,7 +53,7 @@ struct DeckView: View {
 
     private func landscape(_ size: CGSize) -> some View {
         let inset: CGFloat = size.width < 560 ? 12 : 16
-        let brandH: CGFloat = 16
+        let brandH: CGFloat = 26
         let contentH = max(100, size.height - inset * 2 - brandH)
         let items = modeItems
         let btnH = min(50, max(28, (contentH - 16 - 8 * CGFloat(items.count - 1)) / CGFloat(items.count)))
@@ -78,7 +78,10 @@ struct DeckView: View {
                     .frame(width: rightW, height: contentH)
             }
             Spacer(minLength: 0)
-            BrandLine()
+            HStack(spacing: 8) {
+                BrandLine().frame(maxWidth: .infinity, alignment: .leading)
+                BounceControl(state: state)
+            }
         }
         .padding(.horizontal, inset)
         .padding(.top, inset)
@@ -120,7 +123,10 @@ struct DeckView: View {
                 .frame(maxWidth: .infinity)
             }
             .frame(height: 104)
-            BrandLine()
+            HStack(spacing: 8) {
+                BrandLine().frame(maxWidth: .infinity, alignment: .leading)
+                BounceControl(state: state)
+            }
         }
         .padding(.horizontal, inset)
         .padding(.top, inset)

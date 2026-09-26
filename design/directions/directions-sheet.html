@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · Design directions</title>
+<!-- Source for directions.png. Render at 2728×2230:
+     Chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=2728,2230 --screenshot=directions.png file://…/directions-sheet.html -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2728px;height:2230px;overflow:hidden;background:#EEEDE9;color:#161616;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;padding:78px 80px}
+header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid #161616;padding-bottom:26px;margin-bottom:46px}
+h1{font:700 46px/1 Inter;letter-spacing:-.03em}
+h1 span{font-weight:400;color:#8A8883}
+.meta{font:400 20px/1 Inter;color:#6E6C67}
+.grid{display:grid;grid-template-columns:repeat(4,600px);column-gap:56px;row-gap:74px}
+.card .hd{display:flex;align-items:baseline;gap:14px;height:40px}
+.card .no{font:500 20px/1 Inter;color:#8A8883;font-feature-settings:'tnum' 1}
+.card .nm{font:700 30px/1 Inter;letter-spacing:-.02em}
+.card .ds{font:400 19px/1.25 Inter;color:#5E5C57;margin:8px 0 22px;height:24px;white-space:nowrap;overflow:hidden}
+.card img{display:block;width:600px;height:825px;border-radius:14px;box-shadow:0 0 0 1px rgba(0,0,0,.14);background:#DDDCD8}
+.notes{padding-top:10px}
+.notes h2{font:700 30px/1 Inter;letter-spacing:-.02em;margin-bottom:8px}
+.notes .ds{font:400 19px/1.25 Inter;color:#5E5C57;margin-bottom:34px;margin-top:12px}
+.notes ol{list-style:none;counter-reset:n}
+.notes li{counter-increment:n;display:grid;grid-template-columns:44px 1fr;padding:20px 0;border-top:1px solid #CFCDC7;font:400 21px/1.35 Inter}
+.notes li:before{content:counter(n,decimal-leading-zero);font:500 17px/1.6 Inter;color:#8A8883}
+.notes li b{font-weight:600}
+.notes .deck{margin-top:42px;font:400 19px/1.45 Inter;color:#5E5C57;border-top:2px solid #161616;padding-top:20px}
+.notes .deck b{color:#161616;font-weight:600}
+</style></head><body>
+<header>
+  <h1>CRATE <span>· seven design directions</span></h1>
+  <div class="meta">iPhone Duo, laptop pose · lid 669×455 pt over deck 669×455 pt · rendered @2× · 26 Sep 2026</div>
+</header>
+<div class="grid">
+  <div class="card"><div class="hd"><span class="no">01</span><span class="nm">FIELD</span></div><div class="ds">Warm aluminium, white pictogram keys, black ink, one orange.</div><img src="01-field.png"></div>
+  <div class="card"><div class="hd"><span class="no">02</span><span class="nm">ANODIZED</span></div><div class="ds">All-black anodized; orange only for what is live.</div><img src="02-anodized.png"></div>
+  <div class="card"><div class="hd"><span class="no">03</span><span class="nm">K.O. GRAPHITE</span></div><div class="ds">Ghost-segment LCD over a graphite calculator keypad.</div><img src="03-ko-graphite.png"></div>
+  <div class="card"><div class="hd"><span class="no">04</span><span class="nm">SWISS</span></div><div class="ds">No chassis: one grid, huge numerals, hairlines.</div><img src="04-swiss.png"></div>
+  <div class="card"><div class="hd"><span class="no">05</span><span class="nm">COLOUR-CODED</span></div><div class="ds" id="d5">The four bank colours are the only colour, like OP-1 knobs.</div><img src="05-colour.png"></div>
+  <div class="card"><div class="hd"><span class="no">06</span><span class="nm">LED FIELD</span></div><div class="ds" id="d6">Every element built from LED dots; warm white + orange.</div><img src="06-led-field.png"></div>
+  <div class="card"><div class="hd"><span class="no">07</span><span class="nm">RECORD CRATE</span></div><div class="ds" id="d7">Vinyl sleeves on the lid, record-label pads on kraft.</div><img src="07-record-crate.png"></div>
+  <div class="notes">
+    <h2>Lid rules, all seven</h2>
+    <div class="ds">Answering "too much text noise" and "hard to see".</div>
+    <ol>
+      <li><span><b>One hero row.</b> BPM 100 · Swing 57 · Bar 4.1. The old header is gone.</span></li>
+      <li><span><b>One title line.</b> Style + sample; chords keep their case (A#m7, not A#M7).</span></li>
+      <li><span><b>The grid.</b> 6 lanes × 16 steps with a playhead you can't miss: a line or an inverted column.</span></li>
+      <li><span><b>One result line + one timing strip.</b> Plain language, no truncation, no ellipses.</span></li>
+      <li><span><b>Prompt + chips</b> at the foot. No log panel, no repeated header.</span></li>
+    </ol>
+    <div class="deck"><b>Deck state in every direction:</b> SEQ mode, bank A, playing, pad 05 BRT HAT pressed, the ✦ DIG key.</div>
+  </div>
+</div>
+</body></html>

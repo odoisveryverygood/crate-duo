@@ -1,0 +1,180 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · 03 K.O. GRAPHITE</title>
+<!-- Direction 03 · K.O. GRAPHITE — EP-133 × Braun ET66. A reflective LCD with ghost segments over a graphite
+     calculator keypad. Everything sits on one key module; DIG is the orange "=" key. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:JB;font-weight:400;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Regular.ttf')}
+@font-face{font-family:JB;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Bold.ttf')}
+:root{
+  --body:#2A2A2D; --bez:#232326; --lcd:#C9CBC0; --ink:#1B1C19; --inkm:rgba(27,28,25,.58); --ghost:rgba(27,28,25,.065);
+  --kpad:#18181A; --kfn:#38383C; --ktr:#434347; --txt:#ECEAE4; --txt2:#8E8E93; --orange:#FA5B1C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{zoom:2}
+body{width:669px;height:920px;overflow:hidden;background:#0B0B0C;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased}
+.half{width:669px;height:455px;position:relative;overflow:hidden}
+.hinge{height:10px;background:#0B0B0C}
+
+/* ============ LID · graphite bezel + reflective LCD ============ */
+.lid{background:var(--bez)}
+.lcd{position:absolute;left:12px;top:12px;width:645px;height:431px;border-radius:9px;background:var(--lcd);color:var(--ink);overflow:hidden;
+     box-shadow:inset 0 0 0 .5px rgba(0,0,0,.35)}
+.title{position:absolute;left:24px;top:22px;font:700 8.5px/1 JB;letter-spacing:.08em;white-space:nowrap}
+.title span{font-weight:400;color:var(--inkm);margin-left:12px;letter-spacing:.02em}
+.hl{position:absolute;top:46px;font:700 6.5px/1 JB;letter-spacing:.16em;color:var(--inkm)}
+.mx{position:absolute;top:60px}
+.icons{position:absolute;right:24px;top:62px;display:grid;grid-template-columns:auto auto;gap:9px 14px;justify-items:end;align-items:center}
+.ic{font:700 6.5px/1 JB;letter-spacing:.14em;color:var(--ghost)}
+.ic.on{color:var(--ink)}
+.segs{display:flex;gap:3px}
+.segs i{width:14px;height:5px;background:var(--ghost)}
+.segs i.on{background:var(--ink)}
+.grid{position:absolute;left:24px;right:24px;top:146px;height:170px}
+.lane{position:absolute;left:0;font:700 7px/1 JB;letter-spacing:.1em}
+.cell{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;background:var(--ghost)}
+.cell.on{background:var(--ink)}
+.cell.gh{background:var(--ghost);box-shadow:inset 0 0 0 2.5px var(--lcd),inset 0 0 0 10px var(--ink)}
+.col{position:absolute;top:-22px;bottom:9px;background:var(--ink)}
+.col span{position:absolute;left:0;right:0;top:6px;text-align:center;font:700 7px/1 JB;color:var(--lcd)}
+.cell.inv{background:rgba(201,203,192,.16)}
+.cell.inv.on{background:var(--lcd)}
+.stepn{position:absolute;top:-16px;font:400 6.5px/1 JB;color:var(--inkm);transform:translateX(-50%)}
+.result{position:absolute;left:24px;top:326px;font:400 10.5px/1 JB;letter-spacing:-.01em}
+.timing{position:absolute;left:24px;top:345px;font:400 7.3px/1 JB;color:var(--inkm);letter-spacing:.04em;white-space:nowrap}
+.timing b{color:var(--ink);font-weight:700}
+.prompt{position:absolute;left:24px;right:24px;top:376px;height:28px;display:flex;align-items:center;border-top:.75px solid var(--ink);padding-top:6px}
+.prompt .caret{font:700 10px/1 JB;margin-right:7px}
+.prompt .ph2{font:400 9.5px/1 JB;color:var(--inkm)}
+.prompt .cur{width:6px;height:11px;background:var(--ink);margin-left:4px}
+.chips{margin-left:auto;display:flex;gap:4px}
+.chip{height:20px;padding:0 8px;display:flex;align-items:center;gap:5px;font:700 6.5px/1 JB;letter-spacing:.08em;box-shadow:inset 0 0 0 .75px var(--ink);white-space:nowrap}
+.chip.ai{background:var(--ink);color:var(--lcd)}
+.chip svg{width:7px;height:7px}
+
+/* ============ DECK · graphite calculator ============ */
+.deck{background:var(--body)}
+.deck:before{content:'';position:absolute;inset:0;opacity:.05;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .8 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.k{position:absolute;border-radius:5px}
+.fn{background:var(--kfn);color:var(--txt);font:500 7.8px/1 Inter;letter-spacing:.02em;padding:7px 8px}
+.fn .led{position:absolute;right:7px;top:7px;width:4px;height:4px;border-radius:50%;background:#26262A}
+.fn.on .led{background:var(--orange)}
+.pad{background:var(--kpad);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pad .num{font:300 25px/1 Inter;color:var(--txt);letter-spacing:-.02em;font-feature-settings:'tnum' 1;margin-top:6px}
+.pad .nm{font:500 6.4px/1 JB;color:var(--txt2);letter-spacing:.1em;margin-top:9px}
+.pad.hit{background:var(--orange)}
+.pad.hit .num,.pad.hit .nm{color:#1B1B1D}
+.tr{background:var(--ktr);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--txt);font:500 7.8px/1 Inter}
+.tr .led{position:absolute;right:8px;top:8px;width:4px;height:4px;border-radius:50%;background:#2C2C30}
+.tr.on .led{background:var(--orange)}
+.bank{background:var(--kfn);display:flex;align-items:center;justify-content:center;font:500 9px/1 Inter;color:var(--txt2)}
+.bank.sel{color:var(--txt)}
+.bank .led{position:absolute;left:8px;top:50%;margin-top:-2px;width:4px;height:4px;border-radius:50%;background:#26262A}
+.bank.sel .led{background:var(--txt)}
+.brand{position:absolute;left:26px;top:31px}
+.brand .w{font:800 10.5px/1 Inter;letter-spacing:.26em;color:var(--txt)}
+.brand .s{font:400 6.5px/1 JB;color:var(--txt2);margin-top:5px;letter-spacing:.04em}
+.grille{position:absolute;left:112px;top:31px;display:grid;grid-template-columns:repeat(8,2.2px);gap:3.6px}
+.grille i{width:2.2px;height:2.2px;border-radius:50%;background:#18181A}
+.fader{position:absolute}
+.fader .slot{position:absolute;left:50%;top:26px;bottom:8px;width:4px;margin-left:-2px;border-radius:2px;background:#161618}
+.fader .cap{position:absolute;left:10px;right:10px;height:24px;border-radius:4px;background:#4A4A4F;top:98px}
+.fader .cap:after{content:'';position:absolute;left:9px;right:9px;top:11.5px;height:1px;background:var(--txt)}
+.fader .lab{position:absolute;left:0;right:0;top:9px;text-align:center;font:500 7.8px/1 Inter;color:var(--txt2)}
+.meter{position:absolute;right:6px;top:30px;bottom:12px;width:3px;display:flex;flex-direction:column;justify-content:space-between}
+.meter i{width:3px;height:3px;border-radius:50%;background:#1C1C1F}
+.meter i.on{background:var(--txt2)}
+.dig{background:var(--orange);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font:600 8.5px/1 Inter;color:#1B1B1D;letter-spacing:.04em}
+.dig svg{width:15px;height:15px}
+</style></head><body>
+
+<section class="half lid">
+  <div class="lcd">
+    <div class="title">J DILLA × JAZZ HOP<span>GRA PNO · G# · A#m7 – G#m9 – C# – Fm7</span></div>
+    <div class="hl" style="left:24px">TEMPO</div>
+    <div class="hl" style="left:168px">SWING</div>
+    <div class="hl" style="left:274px">BAR</div>
+    <svg class="mx" id="m1" style="left:24px"></svg>
+    <svg class="mx" id="m2" style="left:168px"></svg>
+    <svg class="mx" id="m3" style="left:274px"></svg>
+    <div class="icons">
+      <span class="ic on">PLAY ▶</span><span class="ic">REC ●</span>
+      <span class="ic on">LOOP</span><div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on" style="background:none;box-shadow:inset 0 0 0 1px var(--ink)"></i></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="result">Dusty Dilla kit + Nujabes-style piano in G#, 100 BPM</div>
+    <div class="timing"><b>JEV</b> 95 ms &nbsp;·&nbsp; <b>KIT</b> 3 ms &nbsp;·&nbsp; <b>SAMPLE</b> 120 ms &nbsp;·&nbsp; <b>GPT</b> 4.2 s &nbsp;<b>✓</b></div>
+    <div class="prompt">
+      <span class="caret">›</span><span class="ph2">describe a beat, a kit or a flip</span><span class="cur"></span>
+      <div class="chips">
+        <div class="chip">DILLA × NUJABES</div><div class="chip">HOUSE KIT</div><div class="chip">VINTAGE BREAK</div><div class="chip">FLIP IT</div>
+        <div class="chip ai"><svg viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#C9CBC0"/></svg>AI PERFORM</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hinge"></div>
+
+<section class="half deck" id="deck">
+  <div class="brand"><div class="w">CRATE</div><div class="s">cr-16 · ai sampler</div></div>
+  <div class="grille" id="grille"></div>
+</section>
+
+<script>
+// ---------- 5×7 matrix digits with ghost cells ----------
+const F={'0':['.###.','#...#','#...#','#...#','#...#','#...#','.###.'],'1':['..#..','.##..','..#..','..#..','..#..','..#..','.###.'],
+'4':['...#.','..##.','.#.#.','#..#.','#####','...#.','...#.'],'5':['#####','#....','####.','....#','....#','#...#','.###.'],
+'7':['#####','....#','...#.','..#..','.#...','.#...','.#...'],'.':['.','.','.','.','.','.','#']};
+function matrix(id,str,pitch=6.6,dot=5.6){
+  const svg=document.getElementById(id); let x=0, out='';
+  for(const ch of str){const g=F[ch], w=g[0].length;
+    g.forEach((row,r)=>[...row].forEach((c,k)=>{out+=`<rect x="${x+k*pitch}" y="${r*pitch}" width="${dot}" height="${dot}" fill="${c==='#'?'#1B1C19':'rgba(27,28,25,.065)'}"/>`}));
+    x+=w*pitch+pitch;}
+  svg.setAttribute('width',x-pitch+ (dot-pitch)); svg.setAttribute('height',7*pitch); svg.innerHTML=out;
+}
+matrix('m1','100'); matrix('m2','57'); matrix('m3','4.1');
+
+// ---------- LCD grid, inverted playhead column ----------
+const lanes=[["KICK","X......x..x....."],["SNR","....X.......X..g"],["HAT","X.x.X.x.X.x.X.xg"],["RIM",".........x....g."],["CHOP","X.....x...x..x.."],["BASS","X..x...x..x...x."]];
+const NOW=2, G=document.getElementById('grid');
+const X0=44, W=597-X0, BG=9, P=(W-3*BG)/16, cx=i=>X0+i*P+Math.floor(i/4)*BG+P/2, ry=r=>r*28+8;
+G.insertAdjacentHTML('beforeend',`<div class="col" style="left:${cx(NOW)-P/2+1.5}px;width:${P-3}px"><span>03</span></div>`);
+[0,4,8,12].forEach(i=>G.insertAdjacentHTML('beforeend',`<div class="stepn" style="left:${cx(i)}px">${String(i+1).padStart(2,'0')}</div>`));
+lanes.forEach(([n,s],r)=>{
+  G.insertAdjacentHTML('beforeend',`<div class="lane" style="top:${ry(r)-3.5}px">${n}</div>`);
+  [...s].forEach((ch,i)=>{const inv=i===NOW;
+    G.insertAdjacentHTML('beforeend',`<div class="cell${ch==='.'?'':(ch==='g'?' gh':' on')}${inv?' inv':''}" style="left:${cx(i)}px;top:${ry(r)}px"></div>`)});
+});
+
+// ---------- deck: one key module ----------
+const D=document.getElementById('deck');
+const M=83, GP=6, L=26, T=74;            // key module, gap, left, top of pad rows
+const colX=c=>L+c*(M+GP), rowY=r=>T+r*(M+GP);
+const key=(cls,x,y,w,h,html='')=>D.insertAdjacentHTML('beforeend',`<div class="k ${cls}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${html}</div>`);
+// column 0: modes (7 short keys over 4 rows)
+const modes=[["sample",0],["chop",0],["keys",0],["seq",1],["pad fx",0],["16 lvl",0]];
+const mh=(4*M+3*GP-5*GP)/6;
+modes.forEach(([t,on],i)=>key('fn'+(on?' on':''),colX(0),T+i*(mh+GP),M,mh,`${t}<i class="led"></i>`));
+// column 1: transport — same module as the pads
+const ico={rec:`<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FA5B1C"/></svg>`,
+ play:`<svg width="10" height="11" viewBox="0 0 9 10"><path d="M0 0L9 5L0 10Z" fill="#ECEAE4"/></svg>`,
+ stop:`<svg width="9" height="9" viewBox="0 0 8 8"><rect width="8" height="8" fill="#ECEAE4"/></svg>`,
+ shift:`<svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 0.8L11.2 6.3H8.3V11.2H3.7V6.3H0.8Z" fill="none" stroke="#ECEAE4" stroke-width="1.1" stroke-linejoin="round"/></svg>`};
+[["rec",0],["play",1],["stop",0]].forEach(([t,on],r)=>key('tr'+(on?' on':''),colX(1),rowY(r+1),M,M,`${ico[t]}<span>${t}</span><i class="led"></i>`));
+key('tr sh',colX(1),rowY(0),M,M,`${ico.shift}<span>shift</span>`);
+// bank row above pads, aligned to pad columns
+["A","B","C","D"].forEach((b,i)=>key('bank'+(i===0?' sel':''),colX(2+i),T-6-30,M,30,`<i class="led"></i>${b}`));
+// pads (MPC order)
+const names={1:"VNYL KCK",2:"VNYL KCK",3:"WARM SNR",4:"WNKY CLP",5:"BRT HAT",6:"DRY HAT",7:"OHAT 026",8:"SOFT RIM",9:"DRY PERC",10:"DRY PERC",11:"WARM SHK",12:"BOOM CYM",13:"808 E",14:"VNYL FX",15:"PNCH VOX",16:"VNYL TEX"};
+[[13,14,15,16],[9,10,11,12],[5,6,7,8],[1,2,3,4]].forEach((row,r)=>row.forEach((n,c)=>
+  key('pad'+(n===5?' hit':''),colX(2+c),rowY(r),M,M,`<div class="num">${n}</div><div class="nm">${names[n]}</div>`)));
+// column 6: fader over rows 0-2, DIG '=' key on row 3
+const fz=`<div class="lab">level</div><div class="slot"></div><div class="cap"></div><div class="meter">${Array.from({length:14},(_,i)=>`<i class="${i>=4?'on':''}"></i>`).join('')}</div>`;
+D.insertAdjacentHTML('beforeend',`<div class="fader" style="left:${colX(6)}px;top:${T-36}px;width:${M}px;height:${3*M+2*GP+36}px">${fz}</div>`);
+key('dig',colX(6),rowY(3),M,M,`<svg viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#1B1B1D"/></svg>dig`);
+const GR=document.getElementById('grille'); for(let i=0;i<24;i++)GR.insertAdjacentHTML('beforeend','<i></i>');
+</script>
+</body></html>

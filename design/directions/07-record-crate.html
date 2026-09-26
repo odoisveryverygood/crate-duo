@@ -1,0 +1,278 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · 07 RECORD CRATE</title>
+<!-- Direction 07 · RECORD CRATE — literal crate-digging. The lid is a bin of generated sleeves you flip through; the
+     pulled record (GRA PNO · G#) rides half out of the crate, disc sliding free, label showing. The 16-step strip is
+     printed on the crate's kraft front. The deck's pads are company sleeves with die-cut windows; pad 05 = needle drop.
+     Rule: ink is print, colour is cover art, orange means live (playhead, needle, play, DIG). -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:JB;font-weight:400;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Regular.ttf')}
+@font-face{font-family:JB;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Bold.ttf')}
+:root{
+  --paper:#EEEAE2; --sheet:#F7F4EE; --kraft:#D5CAB5; --kraftd:#C4B69C; --ink:#171614; --ink2:#6E685D; --ink3:#A39C8F;
+  --vinyl:#141312; --orange:#FA5B1C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{zoom:2}
+body{width:669px;height:920px;overflow:hidden;background:#0D0C0B;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink)}
+.half{width:669px;height:455px;position:relative;overflow:hidden}
+.hinge{height:10px;background:#0D0C0B}
+.lbl{font:600 6.5px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+
+/* ============ LID · paper, a bin of sleeves ============ */
+.lid{background:var(--paper)}
+.title{position:absolute;left:28px;top:27px;font:600 9px/1 Inter;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.title span{color:var(--ink2);font-weight:500;margin-left:14px;letter-spacing:.05em;text-transform:none}
+.stats{position:absolute;right:28px;top:27px;display:flex;gap:28px}
+.st .v{font:500 34px/1 Inter;letter-spacing:-.045em;margin-top:8px;font-feature-settings:'tnum' 1;display:flex;align-items:baseline;white-space:nowrap}
+.st .v i{font-style:normal;color:var(--ink3)}
+.st .v u{text-decoration:none;font:600 6.5px/1 Inter;letter-spacing:.14em;color:var(--ink2);margin-left:5px}
+
+.bincap{position:absolute;left:28px;top:130px;font:600 5.8px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+.bincap b{color:var(--ink);font-weight:700}
+.bin{position:absolute;left:0;top:0;width:669px;height:300px;overflow:hidden;z-index:1}
+.slv{position:absolute;width:160px;height:160px}
+.slv svg,.disc{display:block}
+.slv.l{filter:drop-shadow(-1px 0 1.2px rgba(40,30,15,.22))}
+.slv.r{filter:drop-shadow(1px 0 1.2px rgba(40,30,15,.22))}
+.slv.pick{filter:drop-shadow(0 7px 9px rgba(40,30,15,.20)) drop-shadow(0 0 .5px rgba(40,30,15,.4))}
+.inner{position:absolute;width:156px;height:156px;background:var(--sheet);box-shadow:inset 0 0 0 .5px rgba(40,30,15,.25)}
+.disc{position:absolute}
+.panel{position:absolute;left:28px;top:226px;width:613px;height:74px;z-index:2;background:var(--kraft);box-shadow:0 -.5px 0 rgba(40,30,15,.28)}
+.lane{position:absolute;left:12px;font:600 5.4px/1 Inter;letter-spacing:.12em;color:var(--ink2)}
+.lane.hot{color:var(--ink)}
+.dot{position:absolute;border-radius:50%}
+.dot.on{width:3.6px;height:3.6px;margin:-1.8px 0 0 -1.8px;background:var(--ink)}
+.dot.gh{width:3.6px;height:3.6px;margin:-1.8px 0 0 -1.8px;box-shadow:inset 0 0 0 .8px var(--ink)}
+.dot.off{width:1.3px;height:1.3px;margin:-.65px 0 0 -.65px;background:rgba(23,22,20,.28)}
+.dot.now{background:var(--orange)}
+.beat{position:absolute;top:9px;font:400 5.6px/1 JB;color:var(--ink2);transform:translateX(-50%)}
+.beat.now{color:var(--orange);font-weight:700}
+.ph{position:absolute;top:18px;bottom:8px;width:1px;margin-left:-.5px;background:var(--orange)}
+.ph:before{content:'';position:absolute;left:-2px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--orange)}
+.pnote{position:absolute;right:12px;top:9px;font:600 5.2px/1 Inter;letter-spacing:.14em;color:var(--ink2);text-transform:uppercase}
+
+.result{position:absolute;left:28px;top:334px;font:400 13px/1.2 Inter;letter-spacing:-.005em}
+.timing{position:absolute;left:28px;top:356px;font:400 7.5px/1 JB;color:var(--ink2);letter-spacing:.04em;white-space:nowrap}
+.timing b{font-weight:400;color:var(--ink)}
+.timing em{font-style:normal;color:var(--ink3);margin:0 7px}
+.timing .ok{color:var(--orange)}
+.prompt{position:absolute;left:28px;right:28px;top:392px;height:36px;display:flex;align-items:center;border-top:.5px solid rgba(23,22,20,.22);padding-top:4px}
+.prompt .caret{font:500 12px/1 Inter;color:var(--orange);margin-right:6px}
+.prompt .ph2{font:400 10.5px/1 Inter;color:var(--ink3)}
+.prompt .cur{width:1.5px;height:13px;background:var(--ink);margin-left:2px}
+.chips{margin-left:auto;display:flex;gap:5px}
+.chip{height:21px;padding:0 9px;border-radius:11px;box-shadow:inset 0 0 0 .6px rgba(23,22,20,.42);display:flex;align-items:center;gap:5px;font:600 6.8px/1 Inter;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.chip.ai{background:var(--ink);color:var(--sheet);box-shadow:none}
+.chip svg{width:7px;height:7px}
+
+/* ============ DECK · kraft crate, company-sleeve pads ============ */
+.deck{background:var(--kraft)}
+.key{background:var(--sheet);border-radius:3px;position:relative;box-shadow:0 .75px 0 rgba(70,52,25,.24),inset 0 0 0 .5px rgba(70,52,25,.07)}
+.col-l{position:absolute;left:28px;top:34px;width:88px;height:388px}
+.mode{position:absolute;left:0;display:flex;align-items:center;gap:9px}
+.mkey{width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.mkey svg{width:12px;height:12px;overflow:visible}
+.mkey.on{background:var(--ink);box-shadow:none}
+.mode .t{font:600 7.2px/1 Inter;letter-spacing:.12em;text-transform:uppercase}
+.brand{position:absolute;left:0;bottom:0}
+.brand .w{display:flex;align-items:center;gap:6px;font:800 11px/1 Inter;letter-spacing:.2em}
+.brand .s{font:500 6px/1 Inter;letter-spacing:.14em;color:var(--ink2);margin-top:5px;text-transform:uppercase}
+
+.pad{position:absolute;width:94px;height:94px}
+.pad svg{position:absolute;left:21px;top:18px}
+.pad .n{position:absolute;left:9px;top:9px;font:500 7px/1 Inter;color:var(--ink3);font-feature-settings:'tnum' 1;letter-spacing:.04em}
+.pad .nm{position:absolute;left:9px;bottom:9px;font:600 7.5px/1 Inter;letter-spacing:.1em}
+.pad .cat{position:absolute;right:9px;top:10px;font:400 5.4px/1 JB;color:var(--ink3);letter-spacing:.02em}
+.pad.hit{background:#F1ECE2;box-shadow:inset 0 0 0 .6px rgba(250,91,28,.55),inset 0 1px 2px rgba(70,52,25,.14)}
+.pad.hit .n{color:var(--orange)}
+
+.col-r{position:absolute;left:536px;top:34px;width:105px;height:388px}
+.tabs{display:flex;align-items:flex-end;gap:6px;height:30px;margin-top:8px;border-bottom:.75px solid var(--ink)}
+.tab{flex:1;height:22px;border-radius:3px 3px 0 0;display:flex;align-items:center;justify-content:center;font:600 8px/1 Inter;box-shadow:inset 0 0 0 .5px rgba(70,52,25,.1)}
+.tab.sel{height:29px;background:var(--ink);color:var(--sheet);box-shadow:none;align-items:flex-start;padding-top:7px}
+.fader{position:absolute;left:0;top:70px;width:105px;height:200px}
+.fader .slot{position:absolute;left:68px;top:20px;bottom:6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--kraftd)}
+.fader .cap{position:absolute;left:50px;width:36px;height:16px;top:70px}
+.fader .cap:after{content:'';position:absolute;left:6px;right:6px;top:7.5px;height:1px;background:var(--ink)}
+.tick{position:absolute;display:flex;align-items:center;gap:5px;font:500 6px/1 Inter;color:var(--ink2);font-feature-settings:'tnum' 1}
+.tick i{display:block;width:8px;height:.5px;background:var(--ink2)}
+.tick.maj i{width:12px;background:var(--ink)}
+.tick span{width:12px;text-align:right}
+.trans{position:absolute;left:0;top:284px;width:105px;display:flex;justify-content:space-between}
+.tkey{width:31px;height:31px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.tlab{position:absolute;left:0;top:322px;width:105px;display:flex;justify-content:space-between}
+.tlab span{width:31px;text-align:center;font:600 5.8px/1 Inter;letter-spacing:.14em;color:var(--ink2)}
+.dig{position:absolute;left:0;bottom:0;width:105px;height:44px;border-radius:4px;background:var(--orange);display:flex;align-items:center;justify-content:center;gap:7px;font:700 8.5px/1 Inter;letter-spacing:.2em;color:var(--ink);box-shadow:0 .75px 0 rgba(120,40,10,.35)}
+</style></head><body>
+
+<!-- ====================== LID ====================== -->
+<section class="half lid">
+  <div class="title">J Dilla × Jazz Hop<span>GRA PNO · G# · A#m7 – G#m9 – C# – Fm7</span></div>
+  <div class="stats">
+    <div class="st"><div class="lbl">Tempo</div><div class="v">100<u>BPM</u></div></div>
+    <div class="st"><div class="lbl">Swing</div><div class="v">57<u>%</u></div></div>
+    <div class="st"><div class="lbl">Bar</div><div class="v">4<i>.1</i><u>of 4</u></div></div>
+  </div>
+
+  <div class="bincap"><b>Bin A</b> · 14 records · keyed to G#</div>
+  <div class="bin" id="bin"></div>
+  <div class="panel" id="panel"></div>
+
+  <div class="result">Dusty Dilla kit + Nujabes-style piano in G#, 100 BPM</div>
+  <div class="timing"><b>JEV</b> 95 ms<em>·</em><b>KIT</b> 3 ms<em>·</em><b>SAMPLE</b> 120 ms<em>·</em><b>GPT</b> 4.2 s <span class="ok">✓</span></div>
+
+  <div class="prompt">
+    <span class="caret">›</span><span class="ph2">Describe a beat, a kit or a flip</span><span class="cur"></span>
+    <div class="chips">
+      <div class="chip">Dilla × Nujabes</div><div class="chip">House kit</div><div class="chip">Vintage break</div><div class="chip">Flip it</div>
+      <div class="chip ai"><svg viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#FA5B1C"/></svg>AI perform</div>
+    </div>
+  </div>
+</section>
+
+<div class="hinge"></div>
+
+<!-- ====================== DECK ====================== -->
+<section class="half deck" id="deck">
+  <div class="col-l" id="modes">
+    <div class="brand">
+      <div class="w"><svg width="13" height="13" viewBox="-6.5 -6.5 13 13"><circle r="6.5" fill="#141312"/><circle r="2.6" fill="#ECE4D3"/><circle r=".8" fill="#141312"/></svg>CRATE</div>
+      <div class="s">CR-16 · AI sampler</div>
+    </div>
+  </div>
+
+  <div id="pads"></div>
+
+  <div class="col-r">
+    <div class="lbl">Bank</div>
+    <div class="tabs">
+      <div class="key tab sel">A</div><div class="key tab">B</div><div class="key tab">C</div><div class="key tab">D</div>
+    </div>
+    <div class="fader" id="fader">
+      <div class="lbl" style="position:absolute;left:0;top:0">Level</div>
+      <div class="slot"></div>
+      <div class="key cap"></div>
+    </div>
+    <div class="trans">
+      <div class="key tkey"><svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.2" fill="none" stroke="#6E685D" stroke-width="1.5"/></svg></div>
+      <div class="key tkey"><svg width="9" height="10" viewBox="0 0 9 10"><path d="M0 0L9 5L0 10Z" fill="#FA5B1C"/></svg></div>
+      <div class="key tkey"><svg width="8" height="8" viewBox="0 0 8 8"><rect width="8" height="8" fill="#171614"/></svg></div>
+    </div>
+    <div class="tlab"><span>REC</span><span style="color:#171614">PLAY</span><span>STOP</span></div>
+    <div class="dig"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#171614"/></svg>DIG</div>
+  </div>
+</section>
+
+<script>
+// ================= LID · the bin =================
+const C={cream:'#ECE4D3',sand:'#DBD1BE',ink:'#171614',ochre:'#C99A3E',ox:'#7A2E27',olive:'#5F6A48',blue:'#203A5E',
+         navy:'#1C2E4A',sage:'#A5B3AD',dusk:'#4E6682',char:'#2A2825',warm:'#8E8677',bone:'#E4DBC9'};
+const BIN=document.getElementById('bin');
+const TOP=146;                       // resting sleeve top; crate front starts at 226
+const hair=`<rect x=".25" y=".25" width="159.5" height="159.5" fill="none" stroke="rgba(40,30,15,.22)" stroke-width=".5"/>`;
+function cover(bg,shapes,name,fg,side){
+  const tx=side==='l'?10:146;
+  return `<svg width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" fill="${bg}"/>${shapes}`+
+   `<text transform="translate(${tx},8) rotate(90)" style="font:600 5.3px Inter;letter-spacing:.16em" fill="${fg}">${name}</text>${hair}</svg>`;
+}
+// flipped-past sleeves (left strips visible)
+const left=[
+ [C.ox,   `<circle cx="2" cy="74" r="12" fill="${C.cream}"/>`,                        'RHDS EP · Fm', C.cream],
+ [C.sand, `<rect width="160" height="5" fill="${C.ink}"/>`,                            'VIBS · C#',    C.ink],
+ [C.char, `<rect y="66" width="160" height="7" fill="${C.ochre}"/>`,                   'UPRT BS · G#', C.cream],
+ [C.ochre,`<rect y="62" width="13" height="13" fill="${C.ink}"/>`,                     'KOTO · G#',    C.ink],
+ [C.bone, `<rect y="68" width="160" height="92" fill="${C.blue}"/>`,                   'FLTE · A#m',   C.ink],
+ [C.olive,`<rect y="64" width="160" height="1.2" fill="${C.cream}"/><rect x="6" y="70" width="6" height="6" fill="${C.cream}"/>`,'STRG · Fm7',C.cream],
+];
+left.forEach(([bg,sh,nm,fg],i)=>BIN.insertAdjacentHTML('beforeend',
+  `<div class="slv l" style="left:${28+i*24}px;top:${TOP}px;z-index:${1+i}">${cover(bg,sh,nm,fg,'l')}</div>`));
+// sleeves still ahead (right strips visible); R0 sits right behind the pulled disc
+const right=[
+ [C.sand, `<rect x="100" width="60" height="34" fill="${C.ox}"/><rect x="80" y="48" width="80" height="1.2" fill="${C.ink}"/><rect x="112" y="58" width="10" height="10" fill="${C.ink}"/>`,'WRLTZR · G#m',C.ink],
+ [C.char, `<rect x="136" y="64" width="12" height="12" fill="${C.cream}"/>`,           'HRN STB · C#', C.cream],
+ [C.sage, `<rect y="66" width="160" height="4" fill="${C.ink}"/>`,                     'CHR PAD · G#m',C.ink],
+ [C.dusk, `<circle cx="160" cy="72" r="11" fill="${C.cream}"/>`,                       'ALTO SAX · A#m',C.cream],
+ [C.cream,`<rect x="136" width="24" height="6" fill="${C.ox}"/>`,                      'NYLN GTR · G#',C.ink],
+ [C.navy, `<rect y="70" width="160" height="4" fill="${C.ochre}"/>`,                   'HARP · C#',    C.cream],
+ [C.warm, `<rect x="136" y="62" width="24" height="98" fill="${C.cream}"/>`,           'CELST · Fm',   C.cream],
+];
+right.forEach(([bg,sh,nm,fg],j)=>BIN.insertAdjacentHTML('beforeend',
+  `<div class="slv r" style="left:${337+j*24}px;top:${TOP}px;z-index:${10-j}">${cover(bg,sh,nm,fg,'r')}</div>`));
+
+// the pulled record: disc (behind), inner sleeve, jacket (front)
+const P={x:172,y:84}, DX=P.x+160+34, DY=P.y+80, R=75;
+BIN.insertAdjacentHTML('beforeend',`<svg class="disc" width="150" height="150" viewBox="-75 -75 150 150" style="left:${DX-R}px;top:${DY-R}px;z-index:20">
+  <circle r="75" fill="#141312"/>
+  <g fill="none" stroke="#2B2926" stroke-width=".5"><circle r="72.5"/><circle r="64"/><circle r="55.5"/><circle r="46"/><circle r="37.5"/></g>
+  <circle r="31" fill="#1C1B19"/>
+  <circle r="24" fill="${C.cream}"/>
+  <path d="M-24 0A24 24 0 0 1 24 0Z" fill="${C.blue}"/>
+  <text y="-10" text-anchor="middle" style="font:800 4.6px Inter;letter-spacing:.24em" fill="${C.cream}">CRATE</text>
+  <text x="-17" y="-3" style="font:600 3.4px Inter;letter-spacing:.12em" fill="${C.cream}" opacity=".7">SIDE A</text>
+  <text x="17" y="-3" text-anchor="end" style="font:400 3.4px JB" fill="${C.cream}" opacity=".7">33⅓</text>
+  <text y="8.5" text-anchor="middle" style="font:700 4.4px Inter;letter-spacing:.1em" fill="${C.ink}">GRA PNO · G#</text>
+  <text y="14" text-anchor="middle" style="font:400 3.3px JB" fill="#6E685D">CR–0405 · 4 CHOPS</text>
+  <circle r="2.1" fill="${C.sand}"/>
+</svg>`);
+BIN.insertAdjacentHTML('beforeend',`<div class="inner" style="left:${P.x+8}px;top:${P.y+2}px;z-index:25"></div>`);
+BIN.insertAdjacentHTML('beforeend',`<div class="slv pick" style="left:${P.x}px;top:${P.y}px;z-index:30"><svg width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" fill="${C.blue}"/>
+  <rect y="40" width="104" height="72" fill="${C.cream}"/>
+  <rect x="104" y="88" width="24" height="24" fill="${C.ochre}"/>
+  <rect x="14" y="54" width="10" height="10" fill="${C.ink}"/>
+  <text x="14" y="21" style="font:700 6.4px Inter;letter-spacing:.16em" fill="${C.cream}">GRA PNO</text>
+  <text x="146" y="21" text-anchor="end" style="font:400 5.2px JB" fill="${C.cream}" opacity=".7">CR–0405</text>
+  <text x="14" y="104" style="font:600 5px Inter;letter-spacing:.14em" fill="${C.blue}">A#m7 – G#m9 – C# – Fm7</text>
+  <rect x="14" y="124" width="132" height=".6" fill="${C.cream}" opacity=".5"/>
+  <text x="14" y="135" style="font:500 5.4px Inter;letter-spacing:.06em" fill="${C.cream}" opacity=".85">Nujabes-style piano · G# · 100 BPM</text>
+  ${hair}</svg></div>`);
+
+// crate front = the 16-step strip, printed on kraft
+const lanes=[["KICK","X......x..x....."],["SNR","....X.......X..g"],["HAT","X.x.X.x.X.x.X.xg"],["RIM",".........x....g."],["CHOP","X.....x...x..x.."],["BASS","X..x...x..x...x."]];
+const NOW=2, PN=document.getElementById('panel');
+const X0=46, X1=601, BG=10, PS=(X1-X0-3*BG)/16, cx=i=>X0+i*PS+Math.floor(i/4)*BG+PS/2, ry=r=>25+r*7.7;
+lanes.forEach(([n,s],r)=>{
+  PN.insertAdjacentHTML('beforeend',`<div class="lane${s[NOW]!=='.'?' hot':''}" style="top:${ry(r)-2.6}px">${n}</div>`);
+  [...s].forEach((ch,i)=>PN.insertAdjacentHTML('beforeend',
+    `<div class="dot ${ch==='.'?'off':(ch==='g'?'gh':'on')}${i===NOW&&ch!=='.'?' now':''}" style="left:${cx(i)}px;top:${ry(r)}px"></div>`));
+});
+[0,4,8,12].forEach(i=>PN.insertAdjacentHTML('beforeend',`<div class="beat" style="left:${cx(i)}px">${String(i+1).padStart(2,'0')}</div>`));
+PN.insertAdjacentHTML('beforeend',`<div class="beat now" style="left:${cx(NOW)}px">03</div><div class="ph" style="left:${cx(NOW)}px"></div>`);
+
+// ================= DECK =================
+const M=document.getElementById('modes');
+const icons=col=>{const st=`fill="none" stroke="${col}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"`;return{
+ Sample:`<path ${st} d="M0 6C1.5 0.5 3 0.5 4 6S6.5 11.5 8 6S10.5 1.5 12 6"/>`,
+ Chop:`<circle ${st} cx="3" cy="9.3" r="1.9"/><circle ${st} cx="9" cy="9.3" r="1.9"/><path ${st} d="M4.3 7.9L10 0.7 M7.7 7.9L2 0.7"/>`,
+ Keys:`<path ${st} d="M0.5 1.5h11v9h-11z M4 6.5v4 M8 6.5v4"/><path fill="${col}" d="M2.9 1.5h2.2v5h-2.2z M6.9 1.5h2.2v5h-2.2z"/>`,
+ Seq:['X.X.','.X..','X..X'].map((row,r)=>[...row].map((ch,c)=>`<circle cx="${1.5+c*3}" cy="${2+r*4}" r="${ch==='X'?1.35:0.55}" fill="${col}"/>`).join('')).join(''),
+ 'Pad FX':`<path ${st} d="M6 0.5L7.3 4.3L11.2 3.2L8.6 6.1L11.2 9L7.3 7.9L6 11.6L4.7 7.9L0.8 9L3.4 6.1L0.8 3.2L4.7 4.3Z"/>`,
+ '16 LVL':`<path fill="none" stroke="${col}" stroke-width="1.6" d="M1.5 11.5v-2 M4.5 11.5v-4 M7.5 11.5v-6.5 M10.5 11.5v-10"/>`,
+ Shift:`<path ${st} d="M6 0.8L11.2 6.3H8.3V11.2H3.7V6.3H0.8Z"/>`}};
+const mode=(t,on,top)=>`<div class="mode" style="top:${top}px"><div class="key mkey${on?' on':''}"><svg viewBox="0 0 12 12">${icons(on?'#F7F4EE':'#171614')[t]}</svg></div><div class="t">${t}</div></div>`;
+[["Sample",0],["Chop",0],["Keys",0],["Seq",1],["Pad FX",0],["16 LVL",0]].forEach(([t,on],i)=>M.insertAdjacentHTML('beforeend',mode(t,on,i*37)));
+M.insertAdjacentHTML('beforeend',mode('Shift',0,6*37+14));
+
+// pads = company sleeves with die-cut windows; label colour = instrument family
+const names={1:"VNYL KCK",2:"VNYL KCK",3:"WARM SNR",4:"WNKY CLP",5:"BRT HAT",6:"DRY HAT",7:"OHAT 026",8:"SOFT RIM",9:"DRY PERC",10:"DRY PERC",11:"WARM SHK",12:"BOOM CYM",13:"808 E",14:"VNYL FX",15:"PNCH VOX",16:"VNYL TEX"};
+const fam={1:C.ochre,2:C.ochre,3:C.ox,4:C.ox,5:C.cream,6:C.cream,7:C.cream,8:C.sand,9:C.olive,10:C.olive,11:C.olive,12:'#B5AC99',13:C.blue,14:C.sage,15:'#D2A08E',16:C.sage};
+const D=document.getElementById('deck'), PX=128, PY=34, PSZ=94, PG=4;
+[[13,14,15,16],[9,10,11,12],[5,6,7,8],[1,2,3,4]].forEach((row,r)=>row.forEach((n,c)=>{
+  const hit=n===5;
+  const rec=`<svg width="52" height="52" viewBox="-26 -26 52 52">
+    <circle r="26" fill="#141312"/>
+    <circle r="21.5" fill="none" stroke="#2B2926" stroke-width=".5"/><circle r="17" fill="none" stroke="#2B2926" stroke-width=".5"/>
+    ${hit?`<circle r="19.2" fill="none" stroke="#FA5B1C" stroke-width="1.1"/><circle cx="13.6" cy="-13.6" r="1.9" fill="#FA5B1C"/>`:''}
+    <circle r="11" fill="${fam[n]}"/><circle r="1.4" fill="${hit?'#F1ECE2':'#F7F4EE'}"/></svg>`;
+  D.insertAdjacentHTML('beforeend',`<div class="key pad${hit?' hit':''}" style="left:${PX+c*(PSZ+PG)}px;top:${PY+r*(PSZ+PG)}px">
+    <div class="n">${String(n).padStart(2,'0')}</div>${rec}<div class="nm">${names[n]}</div><div class="cat">CR-${String(100+n)}</div></div>`);
+}));
+
+// fader ticks
+const F=document.getElementById('fader');
+[["0",1],["",0],["−6",1],["",0],["−12",1],["",0],["−24",1],["",0],["−∞",1]].forEach(([t,maj],i)=>
+  F.insertAdjacentHTML('beforeend',`<div class="tick${maj?' maj':''}" style="top:${20+i*21.5-3}px;left:${maj?16:20}px"><span>${t}</span><i></i></div>`));
+</script>
+</body></html>

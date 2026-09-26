@@ -2,35 +2,6 @@ import Foundation
 import AVFoundation
 import UniformTypeIdentifiers
 
-final class KeyboardSpy: SamplerEngine {
-    var pattern = Pattern.empty
-    var isPlaying = false
-    var bpm = 90.0
-    var swing = 56.0
-    var onBar: ((Int) -> Void)?
-    var sounds: [PadID: PadSound] = [:]
-    var hits: [(PadID, Int, Double)] = []
-    var releases: [PadID] = []
-    func start() throws {}
-    func loadBank(_ bank: Bank, sounds: [Int: PadSound]) async throws {
-        self.sounds = self.sounds.filter { $0.key.bank != bank }
-        for (i, sound) in sounds { self.sounds[PadID(bank, i)] = sound }
-    }
-    func sound(for pad: PadID) -> PadSound? { sounds[pad] }
-    func trigger(_ pad: PadID, velocity: Int, semitones: Double) { hits.append((pad, velocity, semitones)) }
-    func release(_ pad: PadID) { releases.append(pad) }
-    func setPattern(_ p: Pattern, timing: ApplyTiming) { pattern = p }
-    func play() { isPlaying = true }
-    func stop() { isPlaying = false }
-    func position() -> Double { 0 }
-    func queueFill(_ fill: FillDef, atBar: Int) {}
-    func setRecording(_ on: Bool) {}
-    func setPunch(_ amount: Double) {}
-    func drop() {}
-    func level() -> Float { 0 }
-    func waveform(_ pad: PadID, points: Int) -> [Float] { [] }
-}
-
 @MainActor
 enum TeamateChecks {
     static func run() async {
@@ -42,111 +13,58 @@ enum TeamateChecks {
             func check(_ condition: Bool, _ label: String) throws {
                 if !condition { throw NSError(domain: "TeamateChecks", code: 1, userInfo: [NSLocalizedDescriptionKey: label]) }
             }
-            let spy = KeyboardSpy()
-            let state = AppState(engine: spy)
-            let keys = KeyboardPlayer(state: state)
-            for (index, key) in MusicalTyping.padKeys.enumerated() {
-                keys.press(key)
-                try check(spy.hits.last?.0 == PadID(.a, index), "pad map \(key)")
-                try check(state.heldPads.contains(PadID(.a, index)), "held pad \(key)")
-                let count = spy.hits.count
-                keys.press(key)
-                try check(spy.hits.count == count, "key repeat")
-                keys.release(key)
-                try check(state.heldPads.isEmpty, "release pad")
-            }
-            state.mode = .levels16
-            state.selectedPad = PadID(.c, 2)
-            keys.press("z")
-            try check(spy.hits.last?.0 == PadID(.c, 2) && spy.hits.last?.2 == -7, "16 levels target")
-            keys.release("z")
-            state.mode = .keys
-            state.scaleLock = false
-            keys.press("a"); keys.press("w")
-            try check(state.heldNotes == [48, 49], "two keyboard notes")
-            let released = spy.releases.count
-            keys.release("a")
-            try check(spy.releases.count == released, "keep shared pad until final note up")
-            keys.release("w")
-            try check(spy.releases.count == released + 1 && state.heldNotes.isEmpty, "final note release")
-            state.scaleLock = true; state.scaleKey = "C major"
-            keys.press("w")
-            try check(spy.hits.last?.2 == -12, "scale lock C-sharp snaps to C at root 60")
-            keys.releaseAll()
-            keys.press("x"); keys.release("x")
-            keys.press("a")
-            try check(state.heldNotes == [60], "octave shift")
-            keys.releaseAll()
-            for _ in 0..<20 { keys.press("v"); keys.release("v") }
-            try check(state.keyVelocity == 127, "velocity clamp")
-            state.promptFocused = true
-            let hitCount = spy.hits.count
-            keys.press("a"); keys.press(" "); keys.press("\r")
-            try check(spy.hits.count == hitCount && !state.isRecording && !state.isPlaying, "prompt suppresses shortcuts")
-            state.promptFocused = false
-            keys.press(" "); keys.release(" ")
-            try check(state.isPlaying, "transport shortcut")
-            keys.press("\r"); keys.release("\r")
-            try check(state.isRecording, "record shortcut")
-            keys.press("\t"); keys.release("\t")
-            try check(state.bank == .b, "bank shortcut")
-            keys.press("\t", shift: true); keys.release("\t")
-            try check(state.mode == .seq, "mode shortcut")
-            results.append("PASS keyboard: all pads, repeat suppression, held/release, 16 LVL, notes, scale, octave, velocity, prompt and globals")
-
             let fixture = root.appendingPathComponent("tone.wav")
             let format = AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 1)!
             let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48000)!
             pcm.frameLength = 48000
             for i in 0..<48000 { pcm.floatChannelData![0][i] = Float(sin(Double(i) * 2 * .pi * 220 / 48000) * 0.2) }
             do { let file = try AVAudioFile(forWriting: fixture, settings: format.settings); try file.write(from: pcm) }
-            let imported = try AudioImport.copy(fixture, directory: root.appendingPathComponent("imported"))
-            try check(imported.url != fixture && FileManager.default.fileExists(atPath: fixture.path), "copy preserves source")
-            let duplicate = try AudioImport.copy(fixture, directory: root.appendingPathComponent("imported"))
-            try check(imported.url != duplicate.url, "unique imports")
-            let (bank, chops) = AudioImport.sounds(imported, pad: PadID(.a, 2), chop: true)
-            try check(bank == .d && chops.count == 16, "chop bank")
-            try check(chops[0]?.start == 0 && chops[15]?.end == imported.duration, "chop bounds")
-            for i in 1..<16 { try check(chops[i]?.start == chops[i - 1]?.end, "contiguous slices") }
-            let retained = PadSound(id: "keep", name: "KEEP", category: .kick, fileURL: fixture)
-            spy.sounds[PadID(.a, 0)] = retained
-            let importer = AudioImportController()
-            await importer.receive(imported, on: PadID(.a, 2), state: state)
-            try check(spy.sounds[PadID(.a, 0)]?.id == "keep", "preserve other pads")
-            try check(spy.sounds[PadID(.a, 2)]?.fileURL == imported.url, "replace target")
-            let invalid = root.appendingPathComponent("not-audio.wav")
-            try Data("not audio".utf8).write(to: invalid)
-            var rejected = false
-            do { _ = try AudioImport.copy(invalid, directory: root.appendingPathComponent("invalid")) } catch { rejected = true }
-            try check(rejected, "reject invalid audio")
-            try check((try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("invalid").path)).isEmpty, "clean invalid copy")
-            let provider = NSItemProvider(contentsOf: fixture)!
-            let providerResult: Result<ImportedAudio, Error> = await withCheckedContinuation { continuation in
-                AudioDropProvider.load(provider) { continuation.resume(returning: $0) }
+            func receive(_ url: URL, pad: PadID) async throws -> ImportedAudio {
+                let provider = NSItemProvider(contentsOf: url)!
+                let result: Result<ImportedAudio, Error> = await withCheckedContinuation { continuation in
+                    if !AudioImport.receive([provider], at: pad, completion: { continuation.resume(returning: $0) }) {
+                        continuation.resume(returning: .failure(AudioImport.ImportError.noFile))
+                    }
+                }
+                return try result.get()
             }
-            let providerAudio = try providerResult.get()
-            try check(FileManager.default.fileExists(atPath: providerAudio.url.path), "provider temp file copied before callback returns")
-            try check(abs(providerAudio.duration - 1) < 0.001, "provider audio decoded")
-            try? FileManager.default.removeItem(at: providerAudio.url)
-            results.append("PASS import: audio validation, owned copies, unique paths, preserved bank, 16 contiguous chops and invalid-file cleanup")
-
+            let imported = try await receive(fixture, pad: PadID(.a, 2))
+            try check(imported.url != fixture && FileManager.default.fileExists(atPath: imported.url.path), "provider temporary copy persists")
+            try check(FileManager.default.fileExists(atPath: fixture.path), "source preserved")
+            let duplicate = try await receive(fixture, pad: PadID(.a, 2))
+            try check(duplicate.url != imported.url, "unique copies")
+            let invalid = root.appendingPathComponent("invalid.wav")
+            try Data("not audio".utf8).write(to: invalid)
+            let importDirectory = docs.appendingPathComponent("imported")
+            let before = Set(try FileManager.default.contentsOfDirectory(atPath: importDirectory.path))
+            var rejected = false
+            do { _ = try await receive(invalid, pad: PadID(.a, 2)) } catch { rejected = true }
+            try check(rejected, "invalid audio rejected")
+            try check(before == Set(try FileManager.default.contentsOfDirectory(atPath: importDirectory.path)), "invalid copy removed")
             let engine = AudioEngine()
             try engine.start()
             engine.bpm = 89
             try await engine.loadBank(.a, sounds: [0: PadSound(id: "tone", name: "tone", category: .kick, fileURL: fixture)])
+            let state = AppState(engine: engine)
+            await AudioImport.loadOnPad(imported, state: state)
+            try check(engine.sound(for: PadID(.a, 0))?.id == "tone", "neighbour pad preserved")
+            try check(engine.sound(for: PadID(.a, 2))?.fileURL == imported.url, "target replaced")
+            try check(engine.sound(for: PadID(.a, 2))?.rootNote == 60, "import pitch root")
+            await AudioImport.chop16(imported, state: state)
+            try check(state.bank == .d, "chops select bank D")
+            for i in 0..<16 {
+                let sound = engine.sound(for: PadID(.d, i))
+                try check(sound?.start == Double(i) / 16 && sound?.end == Double(i + 1) / 16, "slice bounds and loaded pad \(i)")
+                try check(!engine.waveform(PadID(.d, i), points: 16).isEmpty, "decoded slice \(i)")
+            }
+            results.append("PASS import: NSItemProvider copy lifetime, unique files, invalid cleanup, preserved neighbouring pad, pitch root and all 16 real-engine chops")
             var pattern = Pattern.empty
             pattern.bars = 4
             pattern.lanes[PadID(.a, 0)] = stride(from: 0, to: 64, by: 4).map { Hit(step: $0, velocity: 110) }
             engine.setPattern(pattern, timing: .now)
             engine.play()
             try await Task.sleep(for: .milliseconds(300))
-            var capture: MasterBounce?
-            let bounced: Result<URL, Error> = await withCheckedContinuation { continuation in
-                do { capture = try MasterBounce(engine: engine, title: "verification", directory: root) { continuation.resume(returning: $0) } }
-                catch { continuation.resume(returning: .failure(error)) }
-            }
-            _ = capture
-            let output = try bounced.get()
+            let output = try await engine.bounce(bars: 4, title: "verification")
             let file = try AVAudioFile(forReading: output)
             let seconds = Double(file.length) / file.processingFormat.sampleRate
             try check(abs(seconds - 960.0 / 89) < 0.001, "four bars at 89 BPM, got \(seconds)")
@@ -156,19 +74,39 @@ enum TeamateChecks {
             let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
             try check(peak > 0.01, "bounce not silent, peak \(peak)")
             results.append("PASS bounce: real master tap, finalized WAV, \(seconds) seconds (four bars), peak \(peak)")
-            let cancelled: Result<URL, Error> = await withCheckedContinuation { continuation in
-                do {
-                    capture = try MasterBounce(engine: engine, title: "cancel-test", directory: root) { continuation.resume(returning: $0) }
-                    capture?.cancel()
-                } catch { continuation.resume(returning: .failure(error)) }
+            func bounceFiles() throws -> Set<String> {
+                Set(try FileManager.default.contentsOfDirectory(atPath: docs.appendingPathComponent("bounces").path))
             }
-            if case .success = cancelled { throw AudioTransferError.loadFailed }
-            try check(!(try FileManager.default.contentsOfDirectory(atPath: root.path)).contains(where: { $0.hasPrefix("cancel-test") }), "cancel deletes partial output")
+            let completedFiles = try bounceFiles()
+            let cancellation = Task { try await engine.bounce(title: "cancelled") }
+            try await Task.sleep(for: .milliseconds(300))
+            var duplicateRejected = false
+            do { _ = try await engine.bounce(title: "duplicate") } catch { duplicateRejected = true }
+            try check(duplicateRejected, "concurrent bounce rejected")
+            cancellation.cancel()
+            var cancelled = false
+            do { _ = try await cancellation.value } catch { cancelled = true }
+            try check(cancelled && (try bounceFiles()) == completedFiles, "cancel leaves no partial file")
+            let stopped = Task { try await engine.bounce(title: "stopped") }
+            try await Task.sleep(for: .seconds(3))
             engine.stop()
-            results.append("PASS bounce cancellation: no published partial WAV")
+            var stopRejected = false
+            do { _ = try await stopped.value } catch { stopRejected = true }
+            try check(stopRejected && (try bounceFiles()) == completedFiles, "stop invalidates capture")
+            engine.play()
+            try await Task.sleep(for: .milliseconds(200))
+            let tempo = Task { try await engine.bounce(title: "tempo") }
+            try await Task.sleep(for: .milliseconds(200))
+            engine.bpm = 120
+            var tempoRejected = false
+            do { _ = try await tempo.value } catch { tempoRejected = true }
+            try check(tempoRejected && (try bounceFiles()) == completedFiles, "tempo invalidates capture")
+            results.append("PASS bounce lifecycle: concurrent rejection, task cancellation, playback stop, tempo change; no partial exports")
+            engine.stop()
+
         } catch { results.append("FAIL \(error)") }
         let text = results.joined(separator: "\n")
-        try? text.write(to: docs.appendingPathComponent("teamate1-checks.txt"), atomically: true, encoding: .utf8)
+        try? text.write(to: docs.appendingPathComponent("teamate2-checks.txt"), atomically: true, encoding: .utf8)
         print(text)
     }
 }

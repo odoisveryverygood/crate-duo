@@ -36,6 +36,12 @@ targets:
           - Paywall/Verification
           - Crowd/README.md
           - Paywall/README.md
+          - Sampler/README.md
+          - Sampler/verify.sh
+          - Crowd/verify.sh
+          - Paywall/verify.sh
+          - Transfer/README.md
+          - Transfer/Verification
       - path: Resources/Fonts
       - path: Resources/AI
       - path: Resources/DefaultKit

@@ -1,0 +1,221 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · 01 FIELD</title>
+<!-- Direction 01 · FIELD — OP-1 field. Warm bead-blasted aluminium, flush white keys, black ink, one orange.
+     Rule: ink is printed and never changes; orange means "live" (playhead, pressed pad, active LED, DIG). -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:JB;font-weight:400;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Regular.ttf')}
+@font-face{font-family:JB;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Bold.ttf')}
+:root{
+  --alu:#E6E4DF; --key:#FAF9F6; --seam:#CDC9C1; --ink:#141414; --ink2:#6E6A62; --ink3:#A39F96;
+  --orange:#FA5B1C;
+  --oled:#000; --w:#F4F4F2; --g1:#8E8E8E; --g2:#5E5E5E; --g3:#2C2C2C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{zoom:2}
+body{width:669px;height:920px;overflow:hidden;background:#0A0A0A;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased}
+.half{width:669px;height:455px;position:relative;overflow:hidden}
+.hinge{height:10px;background:#0A0A0A}
+.lbl{font:600 6.5px/1 Inter;letter-spacing:.14em;text-transform:uppercase}
+.tnum{font-feature-settings:'tnum' 1,'case' 1}
+
+/* ============ LID · black OLED, thin white type ============ */
+.lid{background:var(--oled);color:var(--w)}
+.title{position:absolute;left:28px;top:27px;font:600 9px/1 Inter;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.title span{color:var(--g1);font-weight:500;margin-left:16px;letter-spacing:.06em;text-transform:none}
+.hero{position:absolute;left:28px;top:56px;display:flex;gap:40px}
+.hero .v{font:200 60px/1 Inter;letter-spacing:-.035em;font-feature-settings:'tnum' 1;margin-top:8px}
+.hero .v i{font-style:normal;color:var(--g1)}
+.hero .lbl{color:var(--g1)}
+.loop{position:absolute;right:28px;top:56px;width:132px}
+.loop .lbl{color:var(--g1);text-align:right}
+.loop .bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:17px}
+.loop .bars b{height:3px;background:var(--g3);position:relative}
+.loop .bars b.done{background:#6A6A6A}
+.loop .bars b.cur{background:var(--g3)}
+.loop .bars b.cur:after{content:'';position:absolute;left:0;top:0;bottom:0;width:19%;background:var(--orange)}
+.loop .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.loop .nums span{font:500 7px/1 Inter;color:var(--g2);font-feature-settings:'tnum' 1}
+.loop .nums span.cur{color:var(--w)}
+
+.grid{position:absolute;left:28px;right:28px;top:170px;height:150px}
+.lane{position:absolute;left:0;font:500 7.5px/1 Inter;letter-spacing:.1em;color:var(--g1)}
+.lane.hot{color:var(--w)}
+.cell{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%}
+.cell.off{width:2px;height:2px;margin:-1px 0 0 -1px;background:#3A3A3A}
+.cell.on{background:var(--w)}
+.cell.gh{width:6px;height:6px;margin:-3px 0 0 -3px;background:transparent;box-shadow:inset 0 0 0 1px #9A9A9A}
+.cell.now{background:var(--orange)}
+.cell.now.gh{background:transparent;box-shadow:inset 0 0 0 1px var(--orange)}
+.ruler{position:absolute;top:-16px;font:500 7px/1 Inter;color:var(--g2);transform:translateX(-50%);font-feature-settings:'tnum' 1}
+.ph{position:absolute;top:-8px;bottom:-6px;width:1px;background:var(--orange);margin-left:-.5px}
+.ph:before{content:'';position:absolute;left:-2.5px;top:-5px;width:6px;height:6px;border-radius:50%;background:var(--orange)}
+
+.result{position:absolute;left:28px;top:338px;font:400 13px/1.2 Inter;color:var(--w);letter-spacing:-.005em}
+.timing{position:absolute;left:28px;top:360px;font:400 7.5px/1 JB;color:var(--g1);letter-spacing:.04em;white-space:nowrap}
+.timing b{font-weight:400;color:#C8C8C8}
+.timing em{font-style:normal;color:var(--g2);margin:0 7px}
+.timing .ok{color:var(--orange)}
+.prompt{position:absolute;left:28px;right:28px;top:396px;height:32px;display:flex;align-items:center;gap:6px;border-top:.5px solid #262626;padding-top:0}
+.prompt{padding-top:4px}.prompt .caret{font:500 12px/1 Inter;color:var(--orange);margin-right:4px}
+.prompt .ph2{font:400 10.5px/1 Inter;color:#5C5C5C}
+.prompt .cur{width:1.5px;height:13px;background:var(--w);margin-left:1px}
+.chips{margin-left:auto;display:flex;gap:5px}
+.chip{height:21px;padding:0 9px;border-radius:4px;box-shadow:inset 0 0 0 .5px #4A4A4A;display:flex;align-items:center;gap:5px;font:600 6.8px/1 Inter;letter-spacing:.1em;color:#D6D6D6;text-transform:uppercase;white-space:nowrap}
+.chip svg{width:7px;height:7px}
+
+/* ============ DECK · warm aluminium ============ */
+.deck{background:var(--alu);color:var(--ink)}
+.deck:before{content:'';position:absolute;inset:0;opacity:.07;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.col-l{position:absolute;left:28px;top:31px;width:78px;height:392px}
+.mode{position:absolute;left:0;display:flex;align-items:center;gap:9px}
+.key{background:var(--key);box-shadow:0 0 0 .5px var(--seam);border-radius:4px;position:relative}
+.mkey{width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.mkey svg{width:12px;height:12px;overflow:visible}
+.mkey.on:after{content:'';position:absolute;right:3px;top:3px;width:4px;height:4px;border-radius:50%;background:var(--orange)}
+.mode .t{font:600 7.2px/1 Inter;letter-spacing:.12em;text-transform:uppercase}
+.mode .t{color:var(--ink)}
+.brand{position:absolute;left:0;bottom:0}
+.brand .w{font:800 11px/1 Inter;letter-spacing:.2em}
+.brand .s{font:500 6px/1 Inter;letter-spacing:.14em;color:var(--ink2);margin-top:5px;text-transform:uppercase}
+.grille{position:absolute;left:1px;bottom:44px;display:grid;grid-template-columns:repeat(9,2.4px);gap:4.2px}
+.grille i{width:2.4px;height:2.4px;border-radius:50%;background:#BDB9B1}
+
+.pads{position:absolute;left:124px;top:31px;display:grid;grid-template-columns:repeat(4,93px);grid-auto-rows:93px;gap:4px;padding:4px;border-radius:8px;background:#D5D1C9}
+.pads .key{box-shadow:none;border-radius:4.5px}
+.pad{padding:9px 10px;display:flex;flex-direction:column;justify-content:space-between}
+.pad .n{font:500 7px/1 Inter;color:var(--ink3);font-feature-settings:'tnum' 1;letter-spacing:.04em}
+.pad .nm{font:600 8px/1 Inter;letter-spacing:.1em;text-transform:uppercase}
+.pad.hit{background:var(--orange)}
+.pad.hit .n{color:var(--ink)}
+
+.col-r{position:absolute;left:541px;top:31px;width:102px;height:392px}
+.col-r .lbl{color:var(--ink2)}
+.banks{display:grid;grid-template-columns:repeat(4,21px);gap:6px;margin-top:10px}
+.bkey{width:21px;height:21px;display:flex;align-items:center;justify-content:center;font:600 8px/1 Inter}
+.bkey.sel{background:var(--ink);color:var(--key);box-shadow:0 0 0 .5px var(--ink)}
+.fader{position:absolute;left:0;top:66px;width:102px;height:196px}
+.fader .slot{position:absolute;left:62px;top:16px;bottom:6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#C9C5BD}
+.fader .cap{position:absolute;left:44px;width:36px;height:16px;top:51px;border-radius:3px}
+.fader .cap:after{content:'';position:absolute;left:6px;right:6px;top:7.5px;height:1px;background:var(--ink)}
+.tick{position:absolute;left:18px;width:30px;display:flex;align-items:center;gap:5px;font:500 6px/1 Inter;color:var(--ink2);font-feature-settings:'tnum' 1}
+.tick i{display:block;width:8px;height:.5px;background:var(--ink2)}
+.tick.maj i{width:12px;background:var(--ink)}
+.tick span{width:12px;text-align:right}
+.trans{position:absolute;left:0;top:286px;width:102px;display:flex;justify-content:space-between}
+.tkey{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.tkey svg{display:block}
+.tlab{position:absolute;left:0;top:323px;width:102px;display:flex;justify-content:space-between}
+.tlab span{width:30px;text-align:center;font:600 5.8px/1 Inter;letter-spacing:.14em;color:var(--ink2)}
+.dig{position:absolute;left:0;bottom:0;width:102px;height:44px;border-radius:5px;background:var(--orange);display:flex;align-items:center;justify-content:center;gap:7px;font:700 8.5px/1 Inter;letter-spacing:.2em;color:var(--ink)}
+</style></head><body>
+
+<!-- ====================== LID ====================== -->
+<section class="half lid">
+  <div class="title">J Dilla × Jazz Hop<span>GRA PNO · G# · A#m7 – G#m9 – C# – Fm7</span></div>
+
+  <div class="hero">
+    <div><div class="lbl">BPM</div><div class="v">100</div></div>
+    <div><div class="lbl">Swing</div><div class="v">57</div></div>
+    <div><div class="lbl">Bar</div><div class="v">4<i>.1</i></div></div>
+  </div>
+  <div class="loop">
+    <div class="lbl">Loop · 4 bars</div>
+    <div class="bars"><b class="done"></b><b class="done"></b><b class="done"></b><b class="cur"></b></div>
+    <div class="nums"><span>1</span><span>2</span><span>3</span><span class="cur">4</span></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="result">Dusty Dilla kit + Nujabes-style piano in G#, 100 BPM</div>
+  <div class="timing"><b>JEV</b> 95 ms<em>·</em><b>KIT</b> 3 ms<em>·</em><b>SAMPLE</b> 120 ms<em>·</em><b>GPT</b> 4.2 s <span class="ok">✓</span></div>
+
+  <div class="prompt">
+    <span class="caret">›</span><span class="ph2">Describe a beat, a kit or a flip</span><span class="cur"></span>
+    <div class="chips">
+      <div class="chip">Dilla × Nujabes</div><div class="chip">House kit</div><div class="chip">Vintage break</div><div class="chip">Flip it</div>
+      <div class="chip"><svg viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#FA5B1C"/></svg>AI perform</div>
+    </div>
+  </div>
+</section>
+
+<div class="hinge"></div>
+
+<!-- ====================== DECK ====================== -->
+<section class="half deck">
+  <div class="col-l" id="modes">
+    <div class="grille" id="grille"></div>
+    <div class="brand"><div class="w">CRATE</div><div class="s">CR-16 · AI sampler</div></div>
+  </div>
+
+  <div class="pads" id="pads"></div>
+
+  <div class="col-r">
+    <div class="lbl">Bank</div>
+    <div class="banks">
+      <div class="key bkey sel">A</div><div class="key bkey">B</div><div class="key bkey">C</div><div class="key bkey">D</div>
+    </div>
+    <div class="fader" id="fader">
+      <div class="lbl" style="position:absolute;left:0;top:0">Level</div>
+      <div class="slot"></div>
+      <div class="key cap"></div>
+    </div>
+    <div class="trans">
+      <div class="key tkey"><svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#FA5B1C"/></svg></div>
+      <div class="key tkey"><svg width="9" height="10" viewBox="0 0 9 10"><path d="M0 0L9 5L0 10Z" fill="#FA5B1C"/></svg></div>
+      <div class="key tkey"><svg width="8" height="8" viewBox="0 0 8 8"><rect width="8" height="8" fill="#141414"/></svg></div>
+    </div>
+    <div class="tlab"><span>REC</span><span style="color:#141414">PLAY</span><span>STOP</span></div>
+    <div class="dig"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#141414"/></svg>DIG</div>
+  </div>
+</section>
+
+<script>
+// ---------- SEQ grid (bar 4 of 4, playhead on step 3) ----------
+const lanes=[["KICK","X......x..x....."],["SNR","....X.......X..g"],["HAT","X.x.X.x.X.x.X.xg"],["RIM",".........x....g."],["CHOP","X.....x...x..x.."],["BASS","X..x...x..x...x."]];
+const NOW=2, G=document.getElementById('grid');
+const X0=48, W=613-X0, BG=10, P=(W-3*BG)/16; // label column, beat gaps
+const cx=i=>X0+i*P+Math.floor(i/4)*BG+P/2;
+const rowY=r=>r*25+6;
+lanes.forEach(([n,s],r)=>{
+  const hot=s[NOW]!=='.';
+  G.insertAdjacentHTML('beforeend',`<div class="lane${hot?' hot':''}" style="top:${rowY(r)-4}px">${n}</div>`);
+  [...s].forEach((ch,i)=>{
+    const cls=ch==='.'?'off':(ch==='g'?'on gh':'on');
+    G.insertAdjacentHTML('beforeend',`<div class="cell ${cls}${i===NOW&&ch!=='.'?' now':''}" style="left:${cx(i)}px;top:${rowY(r)}px"></div>`);
+  });
+});
+[0,4,8,12].forEach(i=>G.insertAdjacentHTML('beforeend',`<div class="ruler" style="left:${cx(i)}px">${i+1}</div>`));
+G.insertAdjacentHTML('beforeend',`<div class="ph" style="left:${cx(NOW)}px"></div>`);
+
+// ---------- modes ----------
+const M=document.getElementById('modes');
+const st='fill="none" stroke="#141414" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"';
+const ico={
+ Sample:`<path ${st} d="M0 6C1.5 0.5 3 0.5 4 6S6.5 11.5 8 6S10.5 1.5 12 6"/>`,
+ Chop:`<circle ${st} cx="3" cy="9.3" r="1.9"/><circle ${st} cx="9" cy="9.3" r="1.9"/><path ${st} d="M4.3 7.9L10 0.7 M7.7 7.9L2 0.7"/>`,
+ Keys:`<path ${st} d="M0.5 1.5h11v9h-11z M4 6.5v4 M8 6.5v4"/><path fill="#141414" d="M2.9 1.5h2.2v5h-2.2z M6.9 1.5h2.2v5h-2.2z"/>`,
+ Seq:['X.X.','.X..','X..X'].map((row,r)=>[...row].map((ch,c)=>`<circle cx="${1.5+c*3}" cy="${2+r*4}" r="${ch==='X'?1.35:0.55}" fill="#141414"/>`).join('')).join(''),
+ 'Pad FX':`<path ${st} d="M6 0.5L7.3 4.3L11.2 3.2L8.6 6.1L11.2 9L7.3 7.9L6 11.6L4.7 7.9L0.8 9L3.4 6.1L0.8 3.2L4.7 4.3Z"/>`,
+ '16 LVL':`<path fill="none" stroke="#141414" stroke-width="1.6" d="M1.5 11.5v-2 M4.5 11.5v-4 M7.5 11.5v-6.5 M10.5 11.5v-10"/>`,
+ Shift:`<path ${st} d="M6 0.8L11.2 6.3H8.3V11.2H3.7V6.3H0.8Z"/>`};
+const modes=[["Sample",0],["Chop",0],["Keys",0],["Seq",1],["Pad FX",0],["16 LVL",0]];
+const mode=(t,on,top)=>`<div class="mode" style="top:${top}px"><div class="key mkey${on?' on':''}"><svg viewBox="0 0 12 12">${ico[t]}</svg></div><div class="t">${t}</div></div>`;
+modes.forEach(([t,on],i)=>M.insertAdjacentHTML('beforeend',mode(t,on,i*37)));
+M.insertAdjacentHTML('beforeend',mode('Shift',0,6*37+14));
+const GR=document.getElementById('grille'); for(let i=0;i<36;i++)GR.insertAdjacentHTML('beforeend','<i></i>');
+
+// ---------- pads (MPC order) ----------
+const names={1:"VNYL KCK",2:"VNYL KCK",3:"WARM SNR",4:"WNKY CLP",5:"BRT HAT",6:"DRY HAT",7:"OHAT 026",8:"SOFT RIM",9:"DRY PERC",10:"DRY PERC",11:"WARM SHK",12:"BOOM CYM",13:"808 E",14:"VNYL FX",15:"PNCH VOX",16:"VNYL TEX"};
+const PD=document.getElementById('pads');
+[13,14,15,16,9,10,11,12,5,6,7,8,1,2,3,4].forEach(n=>PD.insertAdjacentHTML('beforeend',
+  `<div class="key pad${n===5?' hit':''}"><div class="n">${String(n).padStart(2,'0')}</div><div class="nm">${names[n]}</div></div>`));
+
+// ---------- fader ticks ----------
+const F=document.getElementById('fader');
+[["0",1],["",0],["−6",1],["",0],["−12",1],["",0],["−24",1],["",0],["−∞",1]].forEach(([t,maj],i)=>
+  F.insertAdjacentHTML('beforeend',`<div class="tick${maj?' maj':''}" style="top:${16+i*21.5-3}px;left:${maj?14:18}px"><span>${t}</span><i></i></div>`));
+</script>
+</body></html>

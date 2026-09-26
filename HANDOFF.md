@@ -1,3 +1,14 @@
+# ASSIGNMENTS & TIMELINE (read this first)
+| Who | 1st | 2nd | 3rd |
+|---|---|---|---|
+| **Teammate 1** | WP8 keyboard play (push 13:45) | R3 pads + keys incl. RECORDS pad style (push 14:10) | 14:20 QA run of the demo flow on merged `main`, report bugs to the lead |
+| **Teammate 2** | WP13 drag audio in/out (push 13:45) | R4 compact + back screen (push 14:10) | 14:20 QA run focused on drag-in → chop → flip |
+| **Astra** | R1 theme + lid (push Theme tokens by 13:35, lid by 14:10) | WP4 app icon + wordmark in `Resources/Brand/` (push 14:25) | — |
+| **Local Codex** | R2 deck chrome + show Astra's `SampleRecordButton` in the deck when mode == SAMPLE (push 14:10) | WP3 README + SUBMISSION.md (push 14:30) | — |
+| **Lead (Claude)** | Song import → auto-chop → instant AI flip + DIG locked to the chop's tempo/key | PAD FX grid + hinge knob (agent), all merges + self-test after each | Final video (realistic Duo) after the freeze |
+| **Shuhan** | The demo song file (now) + pick the demo sounds | Rehearse the flow twice (14:45–15:10), the sung melody | Submit (15:15–15:30) + the 20 s RevenueCat pitch |
+**Freeze 14:45** (only bug fixes after). **Submit 15:30.**
+
 # HANDOFF: parallel work on CRATE (Bitrig Hacks: iPhone Duo Edition)
 
 **Deadline:** submit by 15:30; demos 15:30–17:00. **Repo:** github.com/Shuhan-Zhang/crate-duo (private), branch `main`.
@@ -64,3 +75,21 @@ The Duo is the first iPhone with side-by-side multitasking; make CRATE a good ne
 - Drag OUT: a BOUNCE button (lid header or deck) captures the next 4 bars of the master output to `Documents/bounces/<title>.wav` (add `func bounce(bars:completion:)` to AudioEngine by reusing its master tap, or tap `mainMixerNode` from your own file), then shows a draggable chip `↗ <title>.wav` (`.draggable` with a `Transferable` FileRepresentation, plus a ShareLink fallback).
 - Files: NEW `Sources/Transfer/*.swift` (+ the tiny AudioEngine hook if needed; tell the lead).
 - Verify: typecheck; in the Simulator drag a WAV from the Files app in Split View onto a pad.
+
+## REDESIGN (the user picked direction **05 COLOUR-CODED**; the 01-field notes below apply to 05 too): split into 4 non-overlapping packages
+Reference = **`design/directions/05-colour.html`** (exact CSS values: colours, sizes, spacing; copy them) + **`05-colour.png`** (the look). R3 also uses **`07-record-crate.html/.png`** for the optional record pad style. Keep ALL behaviour, accessibility IDs and state bindings; this is a restyle. Pull `main` first; one branch per package; typecheck; push by **14:10**; the lead merges. Fonts: Inter 300/400/500/600 (download TTFs from Google Fonts into `Resources/Fonts/`, add the filenames to `UIAppFonts` in `Resources/Info.plist`; R1 owns this).
+
+### R1: Theme + LID display (`Sources/UI/Theme.swift`, `LidDisplayView.swift`, `LidPanels.swift`, fonts), branch `wp/field-lid`
+**05 specifics:** each lane has a thin tab in its BANK colour (A orange #FA5B1C, B blue #5B8DEF, C ochre #E0A92E, D grey), the playhead is split per lane in that lane's bank colour, a top-right "BANKS" legend with a level bar per bank (A DRUMS / B CHOPS / C BASS·KEYS / D FREE), the result line has small bank-colour tabs before each part, and the AI PERFORM chip is filled white when on. Lid per the mock: no header row; the top-left title line "J DILLA × JAZZ HOP  GRA PNO · G# · chords"; top-right "LOOP · 4 BARS" segment bar; hero numerals BPM / SWING / BAR in thin Inter (300) with small caps labels; the dot sequencer (white hits, tiny dots for rests, hollow for ghosts) with ONE orange vertical playhead line; ONE plain-language result line (Inter 400) + ONE small timing strip "JEV 95 ms · KIT 3 ms · SAMPLE 120 ms · GPT 4.2 s ✓"; the prompt + outlined chips. New Theme tokens for the Field palette (warm aluminium deck, white pads, black ink, orange #FA5B1C only for live). Other packages use these tokens, so push Theme early.
+
+### R2: DECK chrome (`Sources/UI/DeckView.swift`, `DeckControls.swift`), branch `wp/field-deck`
+**05 specifics:** BANK A–D are ROUND knob-style keys with a colour dot (the selected one inverted black), the LEVEL fader cap line is orange, PLAY is the black key when playing, and the DIG key is BLACK (orange only for live state), on a cool pale aluminium background.
+Mode keys as white pictogram keys + labels (SAMPLE CHOP KEYS SEQ PAD FX 16 LVL SHIFT; the active one gets the orange dot), square BANK A–D keys (the selected one inverted black), a LEVEL fader with a printed dB scale, round REC / PLAY / STOP keys with captions, the orange DIG key, and the "CRATE / CR-16 · AI SAMPLER" wordmark bottom-left, on a warm-aluminium background. Note: another agent is adding a PAD FX view switch inside DeckView; keep your edit to DeckView layout-only and tell the lead.
+
+### R3: PADS + KEYS (`Sources/UI/PadGridView.swift`, `KeysView.swift`, new `Sources/UI/RecordPad.swift`), Teammate 1, after WP8 on the same branch or `wp/field-pads`
+**05 pads (default "PLAIN"):** flush white pads, name bottom-left, number top-left; pressed/playing = a thin orange strip along the top edge + slightly darker fill.
+**Configurable "RECORDS" pad style (from 07):** each pad shows a black vinyl disc with a centre label coloured by the sound's category (kick ochre, snare/clap oxblood, hats cream, perc olive, 808/bass blue, fx sage, vox pink, chops by bank colour), a tiny catalogue number (CR-1xx) top-right; when the pad is hit or playing: an orange needle ring appears and the disc SPINS (rotation driven by TimelineView while the sample plays, ~33 rpm, eased stop). Setting: `@AppStorage("cratePadStyle")` = plain | records; toggle by long-pressing SHIFT (show a small toast "PADS · RECORDS") and via `crate://padstyle?s=records`. Keep 60 fps (draw discs with Canvas/shapes, no images).
+Pads = white keys in one seamed keypad (number top-left, name bottom-left, Inter/JetBrains caps), pressed/playing = solid orange #FA5B1C with white text (as pad 05 in the mock); piano keys in the same white/black ink style.
+
+### R4: COMPACT + BACK SCREEN (`Sources/UI/CompactView.swift`, `Sources/Crowd/*`), Teammate 2, after WP13, branch `wp/field-outer`
+The closed-phone compact view and the back-screen crowd/Now-Playing card in the Field language (black lid-style top, white pads, thin Inter numerals, orange only for live).

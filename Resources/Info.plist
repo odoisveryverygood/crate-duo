@@ -53,6 +53,10 @@
 		<string>SpaceMono-Bold.ttf</string>
 		<string>JetBrainsMono-Regular.ttf</string>
 		<string>JetBrainsMono-Bold.ttf</string>
+		<string>Inter-w300.ttf</string>
+		<string>Inter-w400.ttf</string>
+		<string>Inter-w500.ttf</string>
+		<string>Inter-w600.ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

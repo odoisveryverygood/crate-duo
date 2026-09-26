@@ -24,7 +24,7 @@ final class MasterBounce: @unchecked Sendable {
     init(engine: AudioEngine, bars: Int = 4, title: String, directory: URL? = nil,
          completion: @escaping (Result<URL, Error>) -> Void) throws {
         let snapshot = engine.stateLock.withLock { engine.shared }
-        guard snapshot.playing, snapshot.timeline.playing else { throw AudioTransferError.playbackRequired }
+        guard snapshot.playing, snapshot.timeline.playing else { throw AudioEngine.BounceError.playbackRequired }
         self.engine = engine
         self.completion = completion
         bpm = snapshot.bpm
@@ -41,15 +41,15 @@ final class MasterBounce: @unchecked Sendable {
         let name = safeTitle.isEmpty ? "CRATE" : String(safeTitle.prefix(60))
         url = docs.appendingPathComponent("\(name)-\(UUID().uuidString.prefix(8)).wav")
         guard let id = engine.attachMasterCapture({ [weak self] buffer, time in self?.capture(buffer, time: time) }) else {
-            throw AudioTransferError.busy
+            throw AudioEngine.BounceError.busy
         }
         captureID = id
         queue.asyncAfter(deadline: .now() + (start - now) + duration + 5) { [weak self] in
-            self?.finish(.failure(AudioTransferError.timedOut))
+            self?.finish(.failure(AudioEngine.BounceError.timedOut))
         }
     }
 
-    func cancel() { queue.async { self.finish(.failure(AudioTransferError.interrupted)) } }
+    func cancel() { queue.async { self.finish(.failure(AudioEngine.BounceError.interrupted)) } }
 
     private func capture(_ input: AVReadOnlyAudioPCMBuffer, time: AVAudioTime) {
         guard lock.withLock({ accepting }) else { return }
@@ -108,7 +108,7 @@ final class MasterBounce: @unchecked Sendable {
 
     private func finishRecording() {
         let expected = Int((duration * sampleRate).rounded())
-        guard written == expected else { finish(.failure(AudioTransferError.interrupted)); return }
+        guard written == expected else { finish(.failure(AudioEngine.BounceError.interrupted)); return }
         finish(.success(url))
     }
 
