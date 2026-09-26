@@ -108,6 +108,22 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     var levelSmoothed: Float = 0
     var wavWriter: WavWriter?
 
+    // Optional consumer of the EXISTING master tap (WP13). No second tap is installed.
+    private let captureLock = NSLock()
+    private var masterCapture: (UUID, (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void)?
+    func attachMasterCapture(_ handler: @escaping (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void) -> UUID? {
+        captureLock.withLock {
+            guard masterCapture == nil else { return nil }
+            let id = UUID()
+            masterCapture = (id, handler)
+            return id
+        }
+    }
+    func detachMasterCapture(_ id: UUID) {
+        captureLock.withLock { if masterCapture?.0 == id { masterCapture = nil } }
+    }
+
+
     /// Called on main at each bar start with the absolute bar index.
     var onBar: ((Int) -> Void)?
 
@@ -529,8 +545,10 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             DebugLog.event("debug_record", ["path": url.path, "sr": outFmt.sampleRate, "ok": wavWriter != nil])
         }
         do {
-            try main.installAudioTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, _ in
+            try main.installAudioTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, time in
                 self?.handleTap(buf)
+                let capture = self?.captureLock.withLock { self?.masterCapture?.1 }
+                capture?(buf, time)
             }
             tapInstalled = true
         } catch {
@@ -547,7 +565,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         let ch = Int(fmt.channelCount)
         let blockLen = max(64, Int(sr * 0.010))
         let writer = wavWriter
-        let wantPCM = writer != nil && !(writer?.isFull ?? true)
+        let wantPCM = (writer != nil && !(writer?.isFull ?? true))
         var pcm = [Int16](repeating: 0, count: wantPCM ? n * 2 : 0)
         var blocks: [Float] = []
         blocks.reserveCapacity(n / blockLen + 1)
@@ -588,6 +606,10 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             levelArrival = arrival
             levelBlockDur = Double(blockLen) / sr
         }
-        if wantPCM, let w = writer { wavQueue.async { w.append(pcm) } }
+        if wantPCM {
+            wavQueue.async {
+                writer?.append(pcm)
+            }
+        }
     }
 }
