@@ -236,6 +236,41 @@ extension Orchestrator {
         DebugLog.event("seq_toggle", ["lane": label, "step": col + 1, "on": !isOn])
     }
 
+    // MARK: Removal requests
+
+    /// Lanes named in a short "take out / remove / mute … X" prompt (nil = not a removal request).
+    private func removalTargets(_ p: String, words: [String]) -> (pads: [PadID], label: String)? {
+        let verbs = ["take out", "take off", "remove", "delete", "get rid of", "mute", "kill the", "drop the", "cut the",
+                     "lose the", "no more", "without the"]
+        let startsNo = p.hasPrefix("no ") && words.count <= 3
+        guard words.count <= 8, startsNo || verbs.contains(where: { p.contains($0) }) else { return nil }
+        let pat = state.engine.pattern
+        func used(_ pad: PadID) -> Bool { !(pat.lanes[pad]?.isEmpty ?? true) || !(pat.notes[pad]?.isEmpty ?? true) }
+        func drums(_ lanes: [String]) -> [PadID] { lanes.compactMap(BankA.pad(forLane:)) }
+        let table: [([String], String, () -> [PadID])] = [
+            (["kick", "kicks", "bd"], "KICK", { drums(["kick", "kick2"]) }),
+            (["snare", "snares", "snr"], "SNARE", { drums(["snare"]) }),
+            (["clap", "claps", "clp"], "CLAP", { drums(["clap"]) }),
+            (["openhat", "ohat"], "OPEN HAT", { drums(["openhat"]) }),
+            (["hat", "hats", "hihat", "hihats", "hh"], "HATS", { drums(["hat", "hat2"]) }),
+            (["rim", "rims", "rimshot"], "RIM", { drums(["rim"]) }),
+            (["perc", "percs", "percussion", "conga", "congas", "bongo"], "PERC", { drums(["perc", "perc2"]) }),
+            (["shaker", "shakers", "shake", "shk", "shkr"], "SHAKER", { drums(["shaker"]) }),
+            (["crash", "cymbal", "cym", "ride"], "CYMBAL", { drums(["cymbal"]) }),
+            (["drums", "drum"], "DRUMS", { (0..<16).map { PadID(.a, $0) } }),
+            (["chop", "chops", "sample", "loop", "piano", "melody"], "CHOPS", { (0..<16).map { PadID(.b, $0) } }),
+            (["bass", "bassline", "808"], "BASS", { [PadID(.c, 0)] }),
+            (["keys", "chords", "stabs", "synth"], "KEYS", { (1..<16).map { PadID(.c, $0) } }),
+        ]
+        let text = p.replacingOccurrences(of: "open hat", with: "openhat").replacingOccurrences(of: "hi hat", with: "hihat")
+            .replacingOccurrences(of: "hi-hat", with: "hihat")
+        let ws = text.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        for (keys, label, pads) in table where ws.contains(where: keys.contains) {
+            return (pads().filter(used), label)
+        }
+        return nil
+    }
+
     // MARK: Prompt commands
 
     /// "undo", "bpm 100", "8 bars", "reset pads", pad layout requests. Returns true when handled (no new beat).
@@ -256,6 +291,15 @@ extension Orchestrator {
         if ["reset pads", "reset the pads", "default layout", "reset layout", "reset pad layout", "default pads"].contains(p) {
             if BankA.slots != BankA.defaultSlots { checkpoint("pad layout") }
             await applyPadOrder(BankA.defaultSlots)
+            return true
+        }
+        // Remove a sound: "take out the shaker", "remove the hats", "mute the clap", "get rid of the bass", "no chops"
+        if let lanes = removalTargets(p, words: words) {
+            if lanes.pads.isEmpty {
+                state.addLog("SEQ", "\(lanes.label) isn't in the beat", tint: .grey)
+            } else {
+                clearLane(lanes.pads, label: lanes.label)
+            }
             return true
         }
         // Tempo: "bpm 100", "100 bpm", "tempo 110", "set the tempo to 96", "faster" / "slower"
