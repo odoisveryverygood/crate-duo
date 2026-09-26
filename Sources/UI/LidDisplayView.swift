@@ -114,6 +114,14 @@ struct LidHeader: View {
 
     private var logo: some View {
         Text("CRATE · CR-16").crateLabel(size).foregroundStyle(Theme.text)
+            // Long-press cycles the back (outer) screen's rotation 0 → 90 → 180 → 270, for whichever way the Duo is held.
+            .onLongPressGesture(minimumDuration: 0.6) {
+                let d = UserDefaults.standard
+                let next = (d.double(forKey: "crateCrowdTurn") + 90).truncatingRemainder(dividingBy: 360)
+                d.set(next, forKey: "crateCrowdTurn")
+                state.addLog("CROWD", "back screen rotated \(Int(next))°", tint: .grey)
+            }
+            .accessibilityIdentifier("logo")
     }
 
     private var middle: some View {

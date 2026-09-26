@@ -12,6 +12,7 @@ struct RootView: View {
     @Bindable var state: AppState
     let hinge: HingeFX
     @Environment(\.horizontalSizeClass) private var hSize
+    @Environment(\.verticalSizeClass) private var vSize
     @State private var deviceOrientation = UIDevice.current.orientation
     /// Debug override: -crateTurn 90 / -90 / 0 (also `crate://rot?deg=`), 999 = automatic.
     @AppStorage("crateTurn") private var turnOverride: Double = 999
@@ -19,33 +20,36 @@ struct RootView: View {
     var body: some View {
         GeometryReader { proxy in
             let division = proxy.reservedRegions(kind: .division).map(\.frame).first
+            let anyFold = proxy.reservedRegions(kind: .division, options: .includeInactive).map(\.frame).first
             let size = proxy.size
-            let turn = counterRotation(size: size)
+            // Apple: branch on size classes, not orientation. Outer display = compact in either orientation;
+            // the inner display is regular/regular in every pose.
+            let outer = hSize == .compact || vSize == .compact
+            let turn = outer ? 0 : counterRotation(size: size)
             ZStack {
                 Color.black
-                if turn != 0 {
+                if outer {
+                    compact
+                } else if turn != 0 {
                     // Physically upright device, landscape interface: build the portrait (laptop) layout and rotate it.
                     let portrait = CGSize(width: size.height, height: size.width)
-                    laptop(size: portrait, fold: rotatedFold(division, size: size, turn: turn))
+                    laptop(size: portrait, fold: rotatedFold(division ?? anyFold, size: size, turn: turn))
                         .frame(width: portrait.width, height: portrait.height)
                         .rotationEffect(.degrees(turn))
                         .frame(width: size.width, height: size.height)
                 } else if let fold = division, fold.width > 0 || fold.height > 0 {
+                    // Folded: book (vertical fold) or laptop/tent (horizontal fold) — split exactly at the fold.
                     if fold.width >= fold.height {
                         laptop(size: size, fold: (fold.minY, fold.height))
                     } else {
-                        HStack(spacing: 0) {
-                            lid.frame(width: fold.minX)
-                            Color.black.frame(width: fold.width)
-                            deck.frame(maxWidth: .infinity)
-                        }
+                        book(fold: (fold.minX, fold.width))
                     }
-                } else if hSize == .compact && size.width < 520 {
-                    compact
-                } else if size.height >= size.width {
-                    VStack(spacing: 6) { lid; deck }
+                } else if size.height > size.width {
+                    // Flat, held upright: lid over deck, split where the fold would be.
+                    laptop(size: size, fold: anyFold.map { ($0.midY - 6, 12) })
                 } else {
-                    HStack(spacing: 6) { lid; deck }
+                    // Flat, held wide: lid beside deck, split where the fold would be.
+                    book(fold: anyFold.map { ($0.midX - 6, 12) } ?? (size.width / 2 - 6, 12))
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -102,6 +106,15 @@ struct RootView: View {
         }
     }
 
+    /// Lid beside deck with the fold gap between them.
+    private func book(fold: (x: CGFloat, width: CGFloat)) -> some View {
+        HStack(spacing: 0) {
+            lid.frame(width: max(0, fold.x))
+            Color.black.frame(width: fold.width)
+            deck.frame(maxWidth: .infinity)
+        }
+    }
+
     /// A vertical fold at x in landscape view space becomes a horizontal fold in the rotated portrait layout.
     private func rotatedFold(_ fold: CGRect?, size: CGSize, turn: Double) -> (y: CGFloat, height: CGFloat)? {
         guard let f = fold, f.width > 0 else { return nil }
@@ -137,8 +150,16 @@ struct OuterCrowdHost: View {
     /// The outer panel can present rotated relative to the accessory's layout; `-crateCrowdTurn 90` / `crate://crowdrot?deg=` fixes it live.
     @AppStorage("crateCrowdTurn") private var crowdTurn: Double = 0
     var body: some View {
-        CrowdStageView(state: state, rotate: .degrees(crowdTurn))
-            .ignoresSafeArea()
+        GeometryReader { g in
+            let quarter = Int(crowdTurn) % 180 != 0
+            let size = quarter ? CGSize(width: g.size.height, height: g.size.width) : g.size
+            CrowdStageView(state: state)
+                .frame(width: size.width, height: size.height)
+                .rotationEffect(.degrees(crowdTurn))
+                .frame(width: g.size.width, height: g.size.height)
+        }
+        .background(Color.black)
+        .ignoresSafeArea()
             .onAppear { DebugLog.event("outer_display_content", ["appeared": true]) }
     }
 }
