@@ -1,0 +1,220 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · 06 LED FIELD</title>
+<!-- Direction 06 · LED FIELD — the whole instrument is ONE continuous LED dot-matrix panel on pure black
+     (Nothing glyph lights × EP-133 segment display × Buchla panel).
+     Rule: one grid, one pitch (5 px @2x, 267 × 367 dots). Nothing is drawn that is not a dot — pads, type,
+     readouts, sequencer, even the fold line. Warm white #F2EDE4 at four intensities carries all hierarchy;
+     orange #FA5B1C means "live" (playhead, pad 05, play, DIG). Pressed pad blooms; labels on lit fields are knocked out. -->
+<style>
+@font-face{font-family:Doto;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/Doto-w700.ttf')}
+@font-face{font-family:Doto;font-weight:900;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/Doto-w900.ttf')}
+@font-face{font-family:JB;font-weight:400;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Regular.ttf')}
+@font-face{font-family:JB;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Bold.ttf')}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1338px;height:1840px;overflow:hidden;background:#000}
+canvas{display:block;width:1338px;height:1840px}
+</style></head><body>
+<canvas id="cv" width="1338" height="1840"></canvas>
+<script>
+// ================= the panel =================
+const P=5, OX=4, OY=5, COLS=267, ROWS=367, FOLD=183;       // fold row sits exactly on the hinge (y=920)
+const N=COLS*ROWS, A=new Float32Array(N), C=new Uint8Array(N), G=new Float32Array(N), K=new Uint8Array(N);
+const WH=[242,237,228], OR=[250,91,28], UN=[31,29,26];
+const L=11, R=256;                                            // 28pt margins, same as siblings
+function set(c,r,a,col=0,g=0){c=Math.round(c);r=Math.round(r);if(c<0||r<0||c>=COLS||r>=ROWS)return;const i=r*COLS+c;if(a>=A[i]){A[i]=a;C[i]=col;G[i]=g;}}
+function knock(c,r){if(c<0||r<0||c>=COLS||r>=ROWS)return;K[r*COLS+c]=1;}
+function fill(c,r,w,h,a,col=0,g=0){for(let y=r;y<r+h;y++)for(let x=c;x<c+w;x++){if((x===c||x===c+w-1)&&(y===r||y===r+h-1))continue;set(x,y,a,col,g);}}
+function outline(c,r,w,h,a,col=0){for(let x=c+1;x<c+w-1;x++){set(x,r,a,col);set(x,r+h-1,a,col);}for(let y=r+1;y<r+h-1;y++){set(c,y,a,col);set(c+w-1,y,a,col);}}
+function corners(c,r,w,h,a){const b=[[0,1],[0,2],[1,0],[2,0]];b.forEach(([dx,dy])=>{set(c+dx,r+dy,a);set(c+w-1-dx,r+dy,a);set(c+dx,r+h-1-dy,a);set(c+w-1-dx,r+h-1-dy,a);});}
+
+// ================= 3×5 dot type (variable width) =================
+const F={A:'.X./X.X/XXX/X.X/X.X',B:'XX./X.X/XX./X.X/XX.',C:'.XX/X../X../X../.XX',D:'XX./X.X/X.X/X.X/XX.',E:'XXX/X../XX./X../XXX',
+F:'XXX/X../XX./X../X..',G:'.XX/X../X.X/X.X/.XX',H:'X.X/X.X/XXX/X.X/X.X',I:'X/X/X/X/X',J:'..X/..X/..X/X.X/.X.',K:'X.X/XX./X../XX./X.X',
+L:'X../X../X../X../XXX',M:'X...X/XX.XX/X.X.X/X...X/X...X',N:'X..X/XX.X/X.XX/X..X/X..X',O:'.X./X.X/X.X/X.X/.X.',P:'XX./X.X/XX./X../X..',
+Q:'.X./X.X/X.X/XX./.XX',R:'XX./X.X/XX./X.X/X.X',S:'.XX/X../.X./..X/XX.',T:'XXX/.X./.X./.X./.X.',U:'X.X/X.X/X.X/X.X/XXX',
+V:'X.X/X.X/X.X/.X./.X.',W:'X...X/X...X/X.X.X/XX.XX/X...X',X:'X.X/X.X/.X./X.X/X.X',Y:'X.X/X.X/.X./.X./.X.',Z:'XXX/..X/.X./X../XXX',
+'0':'XXX/X.X/X.X/X.X/XXX','1':'.X./XX./.X./.X./XXX','2':'XX./..X/.X./X../XXX','3':'XX./..X/.X./..X/XX.','4':'X.X/X.X/XXX/..X/..X',
+'5':'XXX/X../XX./..X/XX.','6':'.XX/X../XXX/X.X/XXX','7':'XXX/..X/.X./.X./.X.','8':'XXX/X.X/XXX/X.X/XXX','9':'XXX/X.X/XXX/..X/XX.',
+' ':'./././././'.slice(0,9),'·':'././X/./.','.':'././././X',',':'./././X/X','-':'.../.../XXX/.../...','+':'.../.X./XXX/.X./...',
+'#':'.X.X./XXXXX/.X.X./XXXXX/.X.X.','×':'.../X.X/.X./X.X/...','›':'X../.X./..X/.X./X..','✓':'....X/...X./X.X../.X.../.....',
+'✦':'..X../.XXX./XXXXX/.XXX./..X..','∞':'...../.X.X./X.X.X/.X.X./.....','m':'...../XXXX./X.X.X/X.X.X/X.X.X','s':'.../.XX/X../..X/XX.',
+'?':'XX./..X/.X./.../.X.'};
+F['–']=F['-'];F['−']=F['-'];
+const glyph=ch=>(F[ch]??F[ch.toUpperCase()]??F['?']).split('/');
+function tw(s,sc=1){let w=0;for(const ch of s)w+=(glyph(ch)[0].length+1)*sc;return w-sc;}
+function text(s,c,r,a,col=0,g=0,sc=1,mode){let x=c;for(const ch of s){const rows=glyph(ch),w=rows[0].length;
+  rows.forEach((row,yy)=>{for(let xx=0;xx<w;xx++)if(row[xx]==='X')for(let sy=0;sy<sc;sy++)for(let sx=0;sx<sc;sx++){
+    const cc=x+xx*sc+sx,rr=r+yy*sc+sy;mode==='k'?knock(cc,rr):set(cc,rr,a,col,g);}});x+=(w+1)*sc;}return x;}
+function runs(list,c,r){let x=c;list.forEach(([s,a,col=0,g=0])=>{x=text(s,x,r,a,col,g);});return x;}
+
+// ================= segment numerals (EP-133 style, single-dot stroke, open junctions) =================
+const SEG={'0':'abcdef','4':'bcfg','5':'acdfg','7':'abc'};
+function digit(d,c,r,a,g){const W=11,H=19,M=9;
+  if(d==='1'){for(let y=0;y<H;y++)set(c+4,r+y,a,0,g);[[3,1],[2,2],[1,3],[0,4]].forEach(([x,y])=>set(c+x,r+y,a,0,g));return 5;}
+  if(d==='.'){[[0,H-2],[1,H-2],[0,H-1],[1,H-1]].forEach(([x,y])=>set(c+x,r+y,a,0,g));return 2;}
+  const s=SEG[d];const h=(y,x0,x1)=>{for(let x=x0;x<=x1;x++)set(c+x,r+y,a,0,g)};const v=(x,y0,y1)=>{for(let y=y0;y<=y1;y++)set(c+x,r+y,a,0,g)};
+  if(s.includes('a'))h(0,1,W-2);if(s.includes('b'))v(W-1,1,M-1);if(s.includes('c'))v(W-1,M+1,H-2);if(s.includes('d'))h(H-1,1,W-2);
+  if(s.includes('e'))v(0,M+1,H-2);if(s.includes('f'))v(0,1,M-1);if(s.includes('g'))h(M,1,W-2);return W;}
+function bigNum(str,c,r,as){let x=c;[...str].forEach((d,k)=>{const a=as[k];x+=digit(d,x,r,a,a>.9?.42:0)+(d==='.'?2:4);});}
+
+// ================================= LID =================================
+// title
+let tx=text('J DILLA × JAZZ HOP',L,9,1,0,.16);
+text('GRA PNO · G# · A#m7 – G#m9 – C# – Fm7',tx+9,9,.55);
+
+// hero readouts
+text('BPM',L,21,.56);text('SWING',70,21,.56);text('BAR',116,21,.56);
+bigNum('100',L,29,[1,1,1]);bigNum('57',70,29,[1,1]);bigNum('4.1',116,29,[1,.62,.62]);
+
+// loop · 4 bars
+const lt='LOOP · 4 BARS';text(lt,R-tw(lt)+1,21,.56);
+const S0=R-53+1;
+for(let k=0;k<4;k++){for(let x=0;x<11;x++){const c=S0+k*14+x;
+  if(k<3)set(c,31,.5);else if(x<2)set(c,31,1,1,.45);else set(c,31,.13);}
+  text(String(k+1),S0+k*14,35,k===3?1:.45);}
+
+// sequencer · bar 4 of 4, playhead on step 3
+const lanes=[["KICK","X......x..x....."],["SNR","....X.......X..g"],["HAT","X.x.X.x.X.x.X.xg"],["RIM",".........x....g."],["CHOP","X.....x...x..x.."],["BASS","X..x...x..x...x."]];
+const NOW=2, cc=i=>42+13*i+5*Math.floor(i/4)+2, rc=l=>70+10*l;
+[0,4,8,12].forEach(i=>{const s=String(i+1);text(s,cc(i)-Math.floor(tw(s)/2),56,.48);});
+// beat rails under each group of four
+for(let b=0;b<4;b++)for(let x=cc(b*4)-2;x<=cc(b*4+3)+2;x++)set(x,129,.1);
+// playhead
+const PH=cc(NOW);
+[[0,62],[-1,63],[0,63],[1,63],[0,64]].forEach(([dx,y])=>set(PH+dx,y,1,1,.55));
+for(let y=65;y<=127;y++)set(PH,y,.36,1);
+for(let x=cc(0)-2;x<=cc(3)+2;x++)if(x<=PH)set(x,129,.55,1);   // position within the beat rail
+lanes.forEach(([n,s],l)=>{
+  const hot=s[NOW]!=='.';
+  text(n,L,rc(l)-2,hot?1:.58,0,hot?.16:0);
+  [...s].forEach((ch,i)=>{
+    const x=cc(i),y=rc(l),now=i===NOW,col=now?1:0;
+    if(ch==='.'){set(x,y,now?.55:.22,col);return;}
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const ax=Math.abs(dx),ay=Math.abs(dy);if(ax===2&&ay===2)continue;
+      const ring=ax===2||ay===2;
+      if(ch==='g'){if(ring)set(x+dx,y+dy,.46,col);}
+      else set(x+dx,y+dy,ring?.72:1,col,now?.6:.3);
+    }
+  });
+});
+
+// result + timing
+text('DUSTY DILLA KIT + NUJABES-STYLE PIANO IN G#, 100 BPM',L,137,1,0,.2);
+runs([['JEV',.78],[' 95 ms',.55],['  ·  ',.3],['KIT',.78],[' 3 ms',.55],['  ·  ',.3],['SAMPLE',.78],[' 120 ms',.55],['  ·  ',.3],['GPT',.78],[' 4.2 s',.55],['  ',0],['✓',1,1,.4]],L,146);
+
+// divider — a hairline of dots
+for(let x=L;x<=R;x++)set(x,156,.13);
+
+// prompt
+let px=text('›',L,161,1,1,.45);
+px=text('DESCRIBE A BEAT, A KIT OR A FLIP',px+3,161,.5);
+for(let y=160;y<=166;y++)set(px+2,y,1,0,.35);
+
+// chips
+const chips=['DILLA × NUJABES','HOUSE KIT','VINTAGE BREAK','FLIP IT','✦ AI PERFORM'];
+const cw=chips.map(s=>tw(s)+6), tot=cw.reduce((a,b)=>a+b,0), gap=Math.floor((R-L+1-tot)/4);
+let chx=L;
+chips.forEach((s,k)=>{outline(chx,170,cw[k],9,.3);
+  if(k===4){const x=text('✦',chx+3,172,1,1,.45);text(s.slice(2),x+1,172,.82);}else text(s,chx+3,172,.82);
+  chx+=cw[k]+gap;});
+
+// ================================= FOLD =================================
+for(let x=0;x<COLS;x++)set(x,FOLD,.2);
+for(let x=L;x<L+4;x++){set(x,FOLD,.55);set(R-(x-L),FOLD,.55);}
+
+// ================================= DECK =================================
+const ICON={
+ 'SAMPLE':['.X.....','X.X....','X.X....','X..X..X','....X.X','....X.X','.....X.'],
+ 'CHOP':['X.....X','.X...X.','..X.X..','...X...','..X.X..','XX...XX','XX...XX'],
+ 'KEYS':['XXXXXXX','X.X.X.X','X.X.X.X','X.X.X.X','X..X..X','X..X..X','XXXXXXX'],
+ 'SEQ':['X.o.X.o','.......','.......','o.X.o.o','.......','.......','X.o.o.X'],
+ 'PAD FX':['...X...','.X.X.X.','..XXX..','XXX.XXX','..XXX..','.X.X.X.','...X...'],
+ '16 LVL':['......X','......X','....X.X','....X.X','..X.X.X','..X.X.X','X.X.X.X'],
+ 'SHIFT':['...X...','..X.X..','.X...X.','XXX.XXX','..X.X..','..X.X..','..XXX..']};
+function mode(t,on,r){const c=L;outline(c,r,11,11,on?.5:.22);
+  ICON[t].forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='X')set(c+2+x,r+2+y,on?1:.72,0,on?.3:0);else if(ch==='o')set(c+2+x,r+2+y,on?.34:.26);}));
+  if(on)set(c+9,r+1,1,1,.55);
+  text(t,c+15,r+3,on?1:.66,0,on?.14:0);}
+['SAMPLE','CHOP','KEYS','SEQ','PAD FX','16 LVL'].forEach((t,i)=>mode(t,t==='SEQ',197+15*i));
+mode('SHIFT',0,197+15*6+6);
+
+// brand
+text('CRATE',L,324,1,0,.2,2);
+text('CR-16',L,339,.5);text('AI SAMPLER',L,345,.5);
+
+// pads — MPC order, 36×36-dot clusters
+const names={1:"VNYL KCK",2:"VNYL KCK",3:"WARM SNR",4:"WNKY CLP",5:"BRT HAT",6:"DRY HAT",7:"OHAT 026",8:"SOFT RIM",9:"DRY PERC",10:"DRY PERC",11:"WARM SHK",12:"BOOM CYM",13:"808 E",14:"VNYL FX",15:"PNCH VOX",16:"VNYL TEX"};
+const PC0=55, PR0=197, PS=35, PG=3; let BLOOM=null;
+function bloom(c0,r0){const cx=c0+(PS-1)/2,cy=r0+(PS-1)/2;BLOOM=[OX+P*cx,OY+P*cy];
+  for(let y=r0-7;y<r0+PS+7;y++)for(let x=c0-7;x<c0+PS+7;x++){
+    const inside=x>=c0&&x<c0+PS&&y>=r0&&y<r0+PS;
+    if(inside){if((x===c0||x===c0+PS-1)&&(y===r0||y===r0+PS-1))continue;
+      const dx=(x-cx)/17.5,dy=(y-cy)/17.5,d=Math.pow(dx**4+dy**4,.25);
+      set(x,y,1-.34*d*d,1,.16*(1-.5*d));}
+    else{const ex=Math.max(c0-x,x-(c0+PS-1),0),ey=Math.max(r0-y,y-(r0+PS-1),0);set(x,y,.36*Math.exp(-Math.hypot(ex,ey)/2),1,0);}
+  }
+  text('05',c0+3,r0+3,0,0,0,1,'k');text('BRT HAT',c0+3,r0+PS-8,0,0,0,1,'k');}
+[13,14,15,16,9,10,11,12,5,6,7,8,1,2,3,4].forEach((n,k)=>{
+  const c0=PC0+(k%4)*(PS+PG), r0=PR0+Math.floor(k/4)*(PS+PG);
+  if(n===5)return bloom(c0,r0);
+  fill(c0,r0,PS,PS,.1);corners(c0,r0,PS,PS,.45);
+  text(String(n).padStart(2,'0'),c0+2,r0+3,.5);
+  text(names[n],c0+2,r0+PS-8,.84);
+});
+
+// right column
+const RC=209;
+text('BANK',RC,197,.56);
+['A','B','C','D'].forEach((b,k)=>{const c=RC+k*13,r=206;
+  if(k===0){fill(c,r,9,9,1,0,.1);text(b,c+3,r+2,0,0,0,1,'k');}
+  else{outline(c,r,9,9,.3);text(b,c+3,r+2,.62);}});
+
+// level — LED fader/meter
+text('LEVEL',RC,224,.56);
+const TK=[['0',233],['−6',250],['−12',267],['−24',284],['−∞',301]], LV=244;
+TK.forEach(([t,y])=>{text(t,RC+17-tw(t)+1,y-2,.56);for(let x=RC+20;x<=RC+23;x++)set(x,y,.55);});
+[241,258,275,292].forEach(y=>{set(RC+22,y,.3);set(RC+23,y,.3);});
+for(let y=233;y<=301;y++){if((y-233)%3===2)continue;for(let x=RC+29;x<=RC+35;x++)set(x,y,y>LV+1?.5:.12);}
+for(let x=RC+26;x<=RC+38;x++){set(x,LV,1,0,.3);set(x,LV+1,1,0,.3);}
+
+// transport
+const TR=311;
+for(let y=0;y<11;y++)for(let x=0;x<11;x++){if(Math.hypot(x-5,y-5)<=5.1)set(RC+x,TR+y,.55);}          // REC
+for(let y=0;y<11;y++){const dy=Math.abs(y-5),w=Math.round((5-dy)*1.7);for(let x=0;x<=w;x++)set(226+x,TR+y,1,1,.35);} // PLAY (live)
+fill(245,TR+1,9,9,.55);                                                                                // STOP
+text('REC',RC,325,.56);text('PLAY',223,325,1,0,.16);text('STOP',R-tw('STOP')+1,325,.56);
+
+// DIG
+fill(RC,334,R-RC+1,15,.94,1,.09);
+const dw=tw('✦ DIG');text('✦ DIG',RC+Math.floor((R-RC+1-dw)/2),339,0,0,0,1,'k');
+
+// ================================= RENDER =================================
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+ctx.fillStyle='#000';ctx.fillRect(0,0,1338,1840);
+const X=c=>OX+P*c, Y=r=>OY+P*r, rgb=(k,a)=>{const s=k?OR:WH;return `rgb(${Math.round(UN[0]+(s[0]-UN[0])*a)},${Math.round(UN[1]+(s[1]-UN[1])*a)},${Math.round(UN[2]+(s[2]-UN[2])*a)})`;};
+// 1 · unlit LEDs
+ctx.fillStyle=`rgb(${UN})`;ctx.beginPath();
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=r*COLS+c;if(A[i]>0&&!K[i])continue;ctx.moveTo(X(c)+1.2,Y(r));ctx.arc(X(c),Y(r),1.2,0,Math.PI*2);}
+ctx.fill();
+// 2 · light spill (additive)
+function sprite(s,rad,a0,a1){const cv2=document.createElement('canvas');cv2.width=cv2.height=rad*2;const g=cv2.getContext('2d');
+  const gr=g.createRadialGradient(rad,rad,0,rad,rad,rad);gr.addColorStop(0,`rgba(${s},${a0})`);gr.addColorStop(.35,`rgba(${s},${a1})`);gr.addColorStop(1,`rgba(${s},0)`);
+  g.fillStyle=gr;g.fillRect(0,0,rad*2,rad*2);return cv2;}
+const SPR=[sprite(WH,11,.5,.14),sprite(OR,11,.6,.18)];
+ctx.globalCompositeOperation='lighter';
+if(BLOOM){const [bx,by]=BLOOM,gr=ctx.createRadialGradient(bx,by,0,bx,by,170);
+  gr.addColorStop(0,'rgba(250,91,28,.16)');gr.addColorStop(.55,'rgba(250,91,28,.07)');gr.addColorStop(1,'rgba(250,91,28,0)');
+  ctx.fillStyle=gr;ctx.fillRect(bx-170,by-170,340,340);}
+for(let i=0;i<N;i++){if(G[i]<=0||A[i]<=0||K[i])continue;const c=i%COLS,r=(i/COLS)|0;ctx.globalAlpha=Math.min(1,G[i]*A[i]*1.6);ctx.drawImage(SPR[C[i]],X(c)-11,Y(r)-11);}
+ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+// 3 · lit LEDs
+for(let i=0;i<N;i++){const a=A[i];if(a<=0||K[i])continue;const c=i%COLS,r=(i/COLS)|0,x=X(c),y=Y(r);
+  ctx.fillStyle=rgb(C[i],a);ctx.beginPath();ctx.arc(x,y,1.2+.62*a,0,Math.PI*2);ctx.fill();
+  if(a>.94){ctx.fillStyle=C[i]?'rgba(255,200,170,.85)':'rgba(255,253,248,.9)';ctx.beginPath();ctx.arc(x,y,.72,0,Math.PI*2);ctx.fill();}}
+// 4 · knocked-out LEDs (type cut out of lit fields)
+ctx.fillStyle='#0B0A09';
+for(let i=0;i<N;i++){if(!K[i])continue;const c=i%COLS,r=(i/COLS)|0;ctx.beginPath();ctx.arc(X(c),Y(r),2.05,0,Math.PI*2);ctx.fill();}
+</script>
+</body></html>

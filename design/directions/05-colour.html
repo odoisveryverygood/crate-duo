@@ -1,0 +1,252 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>CRATE · 05 COLOUR-CODED</title>
+<!-- Direction 05 · COLOUR-CODED — OP-1 field body, the four knob colours reassigned to the four banks.
+     Rule: a colour is a bank, never a state.  A orange = drums · B blue = chops · C ochre = bass/keys · D grey = free.
+     Colour only ever appears as a small marker: a key dot, a lane tab, that lane's playhead, the pressed pad's edge.
+     State is monochrome: an inverted (black) key is ON. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:JB;font-weight:400;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Regular.ttf')}
+@font-face{font-family:JB;font-weight:700;src:url('file:///Users/shuhanzhang/crate-build/Resources/Fonts/JetBrainsMono-Bold.ttf')}
+:root{
+  --alu:#E0E1DE; --key:#F7F7F5; --keyd:#EAEAE6; --seam:#C3C4C0; --ink:#131313; --ink2:#6A6B67; --ink3:#A2A39E;
+  --A:#FA5B1C; --B:#3A76EE; --C:#D9A12A; --D:#9D9E9A;
+  --oled:#000; --w:#F5F5F3; --g1:#8E8E8E; --g2:#5E5E5E; --g3:#2A2A2A;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{zoom:2}
+body{width:669px;height:920px;overflow:hidden;background:#0A0A0A;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased}
+.half{width:669px;height:455px;position:relative;overflow:hidden}
+.hinge{height:10px;background:#0A0A0A}
+.lbl{font:600 6.5px/1 Inter;letter-spacing:.14em;text-transform:uppercase}
+
+/* ============ LID · black OLED, crisp white type, colour = bank ============ */
+.lid{background:var(--oled);color:var(--w)}
+.title{position:absolute;left:28px;top:27px;font:600 9px/1 Inter;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.title span{color:var(--g1);font-weight:500;margin-left:16px;letter-spacing:.06em;text-transform:none}
+.loop{position:absolute;right:28px;top:26.5px;display:flex;align-items:center;gap:9px}
+.loop .lbl{color:var(--g1)}
+.loop .segs{display:flex;gap:3px}
+.loop .segs b{width:15px;height:3px;background:var(--g3);position:relative}
+.loop .segs b.done{background:#6A6A6A}
+.loop .segs b.cur:after{content:'';position:absolute;left:0;top:0;bottom:0;width:22%;background:var(--w)}
+
+.hero{position:absolute;left:28px;top:58px;display:flex;gap:44px}
+.hero .lbl{color:var(--g1)}
+.hero .v{font:300 58px/1 Inter;letter-spacing:-.04em;font-feature-settings:'tnum' 1;margin-top:9px;color:var(--w)}
+.hero .v i{font-style:normal;color:var(--g1)}
+
+/* bank legend = the screen side of the four knobs */
+.bnk{position:absolute;right:28px;top:58px;width:166px}
+.bnk .hd{display:flex;justify-content:space-between;color:var(--g1)}
+.bnk .row{display:flex;align-items:center;height:16px}
+.bnk .row:first-of-type{margin-top:6px}
+.bnk .t{width:2px;height:8px;flex:none}
+.bnk .l{font:600 7.5px/1 Inter;width:18px;margin-left:8px;color:var(--g1)}
+.bnk .nm{font:500 6.8px/1 Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--g1);width:64px}
+.bnk .row.sel .l,.bnk .row.sel .nm{color:var(--w)}
+.bnk .lv{flex:1;height:1.5px;background:var(--g3);position:relative}
+.bnk .lv i{position:absolute;left:0;top:0;bottom:0}
+.bnk .db{width:22px;text-align:right;font:400 6.5px/1 JB;color:var(--g1)}
+.bnk .row.sel .db{color:var(--w)}
+
+.grid{position:absolute;left:28px;right:28px;top:176px;height:150px}
+.tab{position:absolute;left:0;width:2px;height:9px;margin-top:-4.5px}
+.lane{position:absolute;left:9px;font:500 7.5px/1 Inter;letter-spacing:.1em;color:var(--g1)}
+.lane.hot{color:var(--w)}
+.cell{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%}
+.cell.off{width:2px;height:2px;margin:-1px 0 0 -1px;background:#3A3A3A}
+.cell.on{background:var(--w)}
+.cell.gh{width:6px;height:6px;margin:-3px 0 0 -3px;background:transparent;box-shadow:inset 0 0 0 1px #9A9A9A}
+.cell.now{width:10px;height:10px;margin:-5px 0 0 -5px}
+.seg{position:absolute;width:2px;height:19px;margin:-9.5px 0 0 -1px}
+.ruler{position:absolute;top:-18px;font:500 7px/1 Inter;color:var(--g2);transform:translateX(-50%);font-feature-settings:'tnum' 1}
+.ruler.now{color:var(--w)}
+
+.result{position:absolute;left:28px;top:338px;font:400 13px/1.2 Inter;color:var(--w);letter-spacing:-.005em;white-space:nowrap}
+.tg:before{content:'';display:inline-block;width:2px;height:10px;background:var(--c);margin:0 6px 0 1px;vertical-align:-.5px}
+.timing{position:absolute;left:28px;top:364px;font:400 7.5px/1 JB;color:var(--g1);letter-spacing:.04em;white-space:nowrap}
+.timing b{font-weight:400;color:#C8C8C8}
+.timing em{font-style:normal;color:var(--g2);margin:0 7px}
+.timing .ok{color:var(--w)}
+.prompt{position:absolute;left:28px;right:28px;top:396px;height:32px;display:flex;align-items:center;gap:6px;border-top:.5px solid #262626;padding-top:4px}
+.prompt .caret{font:500 12px/1 Inter;color:var(--w);margin-right:4px}
+.prompt .ph2{font:400 10.5px/1 Inter;color:#5C5C5C}
+.prompt .cur{width:1.5px;height:13px;background:var(--w);margin-left:1px}
+.chips{margin-left:auto;display:flex;gap:5px}
+.chip{height:21px;padding:0 9px;border-radius:4px;box-shadow:inset 0 0 0 .5px #4A4A4A;display:flex;align-items:center;gap:5px;font:600 6.8px/1 Inter;letter-spacing:.1em;color:#D6D6D6;text-transform:uppercase;white-space:nowrap}
+.chip.ai{background:var(--w);color:#000;box-shadow:none}
+.chip svg{width:7px;height:7px}
+
+/* ============ DECK · pale aluminium, monochrome keys, colour dots ============ */
+.deck{background:var(--alu);color:var(--ink)}
+.deck:before{content:'';position:absolute;inset:0;opacity:.06;pointer-events:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.key{background:var(--key);box-shadow:0 0 0 .5px var(--seam);border-radius:4px;position:relative}
+.key.inv{background:var(--ink);box-shadow:0 0 0 .5px var(--ink)}
+.col-l{position:absolute;left:28px;top:31px;width:80px;height:392px}
+.mode{position:absolute;left:0;display:flex;align-items:center;gap:9px}
+.mkey{width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.mkey svg{width:12px;height:12px;overflow:visible}
+.mode .t{font:600 7.2px/1 Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.brand{position:absolute;left:0;bottom:0}
+.brand .w{font:800 11px/1 Inter;letter-spacing:.2em}
+.brand .s{font:500 6px/1 Inter;letter-spacing:.14em;color:var(--ink2);margin-top:5px;text-transform:uppercase}
+.grille{position:absolute;left:1px;bottom:44px;display:grid;grid-template-columns:repeat(9,2.4px);gap:4.2px}
+.grille i{width:2.4px;height:2.4px;border-radius:50%;background:#BCBDB9}
+
+.pads{position:absolute;left:126px;top:31px;display:grid;grid-template-columns:repeat(4,94px);grid-auto-rows:94px;gap:5px}
+.pad{padding:10px 10px 11px;display:flex;flex-direction:column;justify-content:space-between;border-radius:4.5px;overflow:hidden}
+.pad .n{font:500 7px/1 Inter;color:var(--ink3);font-feature-settings:'tnum' 1;letter-spacing:.04em}
+.pad .nm{font:600 8px/1 Inter;letter-spacing:.1em;text-transform:uppercase}
+.pad.hit{background:var(--keyd)}
+.pad.hit .n{color:var(--ink)}
+.pad.hit:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--A)}
+
+.col-r{position:absolute;left:541px;top:31px;width:102px;height:392px}
+.col-r .lbl{color:var(--ink2)}
+.banks{display:grid;grid-template-columns:repeat(4,21px);gap:6px;margin-top:11px}
+.bk{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.bk i{width:6px;height:6px;border-radius:50%}
+.bl{display:grid;grid-template-columns:repeat(4,21px);gap:6px;margin-top:7px}
+.bl span{text-align:center;font:600 7px/1 Inter;color:var(--ink2)}
+.bl span.sel{color:var(--ink)}
+.fader{position:absolute;left:0;top:78px;width:102px;height:190px}
+.fader .slot{position:absolute;left:62px;top:16px;bottom:6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#C6C7C3}
+.fader .cap{position:absolute;left:44px;width:36px;height:16px;top:49.6px;border-radius:3px}
+.fader .cap:after{content:'';position:absolute;left:6px;right:6px;top:7.25px;height:1.5px;background:var(--A)}
+.tick{position:absolute;left:18px;width:30px;display:flex;align-items:center;gap:5px;font:500 6px/1 Inter;color:var(--ink2);font-feature-settings:'tnum' 1}
+.tick i{display:block;width:8px;height:.5px;background:var(--ink2)}
+.tick.maj i{width:12px;background:var(--ink)}
+.tick span{width:12px;text-align:right}
+.trans{position:absolute;left:0;top:290px;width:102px;display:flex;justify-content:space-between}
+.tkey{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+.tkey svg{display:block}
+.tlab{position:absolute;left:0;top:327px;width:102px;display:flex;justify-content:space-between}
+.tlab span{width:30px;text-align:center;font:600 5.8px/1 Inter;letter-spacing:.14em;color:var(--ink2)}
+.tlab span.on{color:var(--ink)}
+.dig{position:absolute;left:0;bottom:0;width:102px;height:44px;border-radius:5px;display:flex;align-items:center;justify-content:center;gap:7px;font:700 8.5px/1 Inter;letter-spacing:.2em;color:var(--key)}
+</style></head><body>
+
+<!-- ====================== LID ====================== -->
+<section class="half lid">
+  <div class="title">J Dilla × Jazz Hop<span>GRA PNO · G# · A#m7 – G#m9 – C# – Fm7</span></div>
+  <div class="loop">
+    <span class="lbl">Loop · 4 bars</span>
+    <div class="segs"><b class="done"></b><b class="done"></b><b class="done"></b><b class="cur"></b></div>
+  </div>
+
+  <div class="hero">
+    <div><div class="lbl">BPM</div><div class="v">100</div></div>
+    <div><div class="lbl">Swing</div><div class="v">57</div></div>
+    <div><div class="lbl">Bar</div><div class="v">4<i>.1</i></div></div>
+  </div>
+
+  <div class="bnk">
+    <div class="hd"><span class="lbl">Banks</span><span class="lbl">Level</span></div>
+    <div class="row sel"><i class="t" style="background:var(--A)"></i><span class="l">A</span><span class="nm">Drums</span><span class="lv"><i style="width:74%;background:var(--A)"></i></span><span class="db">−6</span></div>
+    <div class="row"><i class="t" style="background:var(--B)"></i><span class="l">B</span><span class="nm">Chops</span><span class="lv"><i style="width:62%;background:var(--B)"></i></span><span class="db">−9</span></div>
+    <div class="row"><i class="t" style="background:var(--C)"></i><span class="l">C</span><span class="nm">Bass · Keys</span><span class="lv"><i style="width:68%;background:var(--C)"></i></span><span class="db">−8</span></div>
+    <div class="row"><i class="t" style="background:var(--D)"></i><span class="l">D</span><span class="nm">Free</span><span class="lv"></span><span class="db">−∞</span></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="result"><span class="tg" style="--c:var(--A)">Dusty Dilla kit</span> + <span class="tg" style="--c:var(--B)">Nujabes-style piano</span> in G#, 100 BPM</div>
+  <div class="timing"><b>JEV</b> 95 ms<em>·</em><b>KIT</b> 3 ms<em>·</em><b>SAMPLE</b> 120 ms<em>·</em><b>GPT</b> 4.2 s <span class="ok">✓</span></div>
+
+  <div class="prompt">
+    <span class="caret">›</span><span class="ph2">Describe a beat, a kit or a flip</span><span class="cur"></span>
+    <div class="chips">
+      <div class="chip">Dilla × Nujabes</div><div class="chip">House kit</div><div class="chip">Vintage break</div><div class="chip">Flip it</div>
+      <div class="chip ai"><svg viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#000"/></svg>AI perform</div>
+    </div>
+  </div>
+</section>
+
+<div class="hinge"></div>
+
+<!-- ====================== DECK ====================== -->
+<section class="half deck">
+  <div class="col-l" id="modes">
+    <div class="grille" id="grille"></div>
+    <div class="brand"><div class="w">CRATE</div><div class="s">CR-16 · AI sampler</div></div>
+  </div>
+
+  <div class="pads" id="pads"></div>
+
+  <div class="col-r">
+    <div class="lbl">Bank</div>
+    <div class="banks">
+      <div class="key bk inv"><i style="background:var(--A)"></i></div>
+      <div class="key bk"><i style="background:var(--B)"></i></div>
+      <div class="key bk"><i style="background:var(--C)"></i></div>
+      <div class="key bk"><i style="background:var(--D)"></i></div>
+    </div>
+    <div class="bl"><span class="sel">A</span><span>B</span><span>C</span><span>D</span></div>
+    <div class="fader" id="fader">
+      <div class="lbl" style="position:absolute;left:0;top:0">Level</div>
+      <div class="slot"></div>
+      <div class="key cap"></div>
+    </div>
+    <div class="trans">
+      <div class="key tkey"><svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#131313"/></svg></div>
+      <div class="key tkey inv"><svg width="8" height="9" viewBox="0 0 9 10"><path d="M0 0L9 5L0 10Z" fill="#F7F7F5"/></svg></div>
+      <div class="key tkey"><svg width="8" height="8" viewBox="0 0 8 8"><rect width="8" height="8" fill="#131313"/></svg></div>
+    </div>
+    <div class="tlab"><span>REC</span><span class="on">PLAY</span><span>STOP</span></div>
+    <div class="key inv dig"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L5.99 4.01L10 5L5.99 5.99L5 10L4.01 5.99L0 5L4.01 4.01Z" fill="#F7F7F5"/></svg>DIG</div>
+  </div>
+</section>
+
+<script>
+// ---------- SEQ grid (bar 4 of 4, playhead on step 3). Each lane carries its bank colour. ----------
+const COL={A:'var(--A)',B:'var(--B)',C:'var(--C)',D:'var(--D)'};
+const lanes=[["KICK","X......x..x.....","A"],["SNR","....X.......X..g","A"],["HAT","X.x.X.x.X.x.X.xg","A"],["RIM",".........x....g.","A"],["CHOP","X.....x...x..x..","B"],["BASS","X..x...x..x...x.","C"]];
+const NOW=2, G=document.getElementById('grid');
+const X0=54, W=613-X0, BG=10, P=(W-3*BG)/16;
+const cx=i=>X0+i*P+Math.floor(i/4)*BG+P/2;
+const rowY=r=>r*25+6;
+lanes.forEach(([n,s,b],r)=>{
+  const hot=s[NOW]!=='.', c=COL[b], y=rowY(r);
+  G.insertAdjacentHTML('beforeend',`<i class="tab" style="top:${y}px;background:${c}"></i><div class="lane${hot?' hot':''}" style="top:${y-4}px">${n}</div>`);
+  G.insertAdjacentHTML('beforeend',`<i class="seg" style="left:${cx(NOW)}px;top:${y}px;background:${c}"></i>`);
+  [...s].forEach((ch,i)=>{
+    if(i===NOW&&ch==='.') return;                       // the lane's playhead replaces the empty step
+    const cls=ch==='.'?'off':(ch==='g'?'on gh':'on');
+    const now=i===NOW;
+    G.insertAdjacentHTML('beforeend',`<div class="cell ${cls}${now?' now':''}" style="left:${cx(i)}px;top:${y}px${now?`;background:${c}`:''}"></div>`);
+  });
+});
+[0,4,8,12].forEach(i=>G.insertAdjacentHTML('beforeend',`<div class="ruler" style="left:${cx(i)}px">${i+1}</div>`));
+G.insertAdjacentHTML('beforeend',`<div class="ruler now" style="left:${cx(NOW)}px">${NOW+1}</div>`);
+
+// ---------- modes (state = inverted key) ----------
+const M=document.getElementById('modes');
+const icon=(t,k)=>{const st=`fill="none" stroke="${k}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"`;return {
+ Sample:`<path ${st} d="M0 6C1.5 0.5 3 0.5 4 6S6.5 11.5 8 6S10.5 1.5 12 6"/>`,
+ Chop:`<circle ${st} cx="3" cy="9.3" r="1.9"/><circle ${st} cx="9" cy="9.3" r="1.9"/><path ${st} d="M4.3 7.9L10 0.7 M7.7 7.9L2 0.7"/>`,
+ Keys:`<path ${st} d="M0.5 1.5h11v9h-11z M4 6.5v4 M8 6.5v4"/><path fill="${k}" d="M2.9 1.5h2.2v5h-2.2z M6.9 1.5h2.2v5h-2.2z"/>`,
+ Seq:['X.X.','.X..','X..X'].map((row,r)=>[...row].map((ch,c)=>`<circle cx="${1.5+c*3}" cy="${2+r*4}" r="${ch==='X'?1.35:0.55}" fill="${k}"/>`).join('')).join(''),
+ 'Pad FX':`<path ${st} d="M6 0.5L7.3 4.3L11.2 3.2L8.6 6.1L11.2 9L7.3 7.9L6 11.6L4.7 7.9L0.8 9L3.4 6.1L0.8 3.2L4.7 4.3Z"/>`,
+ '16 LVL':`<path fill="none" stroke="${k}" stroke-width="1.6" d="M1.5 11.5v-2 M4.5 11.5v-4 M7.5 11.5v-6.5 M10.5 11.5v-10"/>`,
+ Shift:`<path ${st} d="M6 0.8L11.2 6.3H8.3V11.2H3.7V6.3H0.8Z"/>`}[t]};
+const modes=[["Sample",0],["Chop",0],["Keys",0],["Seq",1],["Pad FX",0],["16 LVL",0]];
+const mode=(t,on,top)=>`<div class="mode" style="top:${top}px"><div class="key mkey${on?' inv':''}"><svg viewBox="0 0 12 12">${icon(t,on?'#F7F7F5':'#131313')}</svg></div><div class="t">${t}</div></div>`;
+modes.forEach(([t,on],i)=>M.insertAdjacentHTML('beforeend',mode(t,on,i*37)));
+M.insertAdjacentHTML('beforeend',mode('Shift',0,6*37+14));
+const GR=document.getElementById('grille'); for(let i=0;i<36;i++)GR.insertAdjacentHTML('beforeend','<i></i>');
+
+// ---------- pads (MPC order, bank A) ----------
+const names={1:"VNYL KCK",2:"VNYL KCK",3:"WARM SNR",4:"WNKY CLP",5:"BRT HAT",6:"DRY HAT",7:"OHAT 026",8:"SOFT RIM",9:"DRY PERC",10:"DRY PERC",11:"WARM SHK",12:"BOOM CYM",13:"808 E",14:"VNYL FX",15:"PNCH VOX",16:"VNYL TEX"};
+const PD=document.getElementById('pads');
+[13,14,15,16,9,10,11,12,5,6,7,8,1,2,3,4].forEach(n=>PD.insertAdjacentHTML('beforeend',
+  `<div class="key pad${n===5?' hit':''}"><div class="n">${String(n).padStart(2,'0')}</div><div class="nm">${names[n]}</div></div>`));
+
+// ---------- fader ticks ----------
+const F=document.getElementById('fader');
+[["0",1],["",0],["−6",1],["",0],["−12",1],["",0],["−24",1],["",0],["−∞",1]].forEach(([t,maj],i)=>
+  F.insertAdjacentHTML('beforeend',`<div class="tick${maj?' maj':''}" style="top:${16+i*20.8-3}px;left:${maj?14:18}px"><span>${t}</span><i></i></div>`));
+</script>
+</body></html>
