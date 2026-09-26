@@ -115,8 +115,8 @@ struct ActionChips: View {
     }
 
     static let items: [Item] = [
-        Item(id: "chip-undo", label: "UNDO", prompt: nil),
-        Item(id: "chip-redo", label: "REDO", prompt: nil),
+        Item(id: "chip-undo", label: "↶ UNDO", prompt: nil),
+        Item(id: "chip-redo", label: "↷ REDO", prompt: nil),
         Item(id: "chip-dilla-nujabes", label: "DILLA × NUJABES",
              prompt: "4 bar loop, j dilla laid back drums and a killer nujabes piano sample"),
         Item(id: "chip-dilla-drums", label: "DILLA DRUMS", prompt: "fill up the pads with some j dilla type drums"),

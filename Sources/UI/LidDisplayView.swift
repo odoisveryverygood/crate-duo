@@ -875,7 +875,7 @@ struct LidChips: View {
             .frame(height: 21)
             .background(RoundedRectangle(cornerRadius: 4).fill(on ? Theme.lidInk : Color.black))
             .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.chipStroke, lineWidth: 0.5).opacity(on ? 0 : 1))
-            .opacity(dim ? 0.35 : 1)
+            .opacity(dim ? 0.55 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(ChipPressStyle())
