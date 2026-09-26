@@ -30,6 +30,16 @@ enum SeqRows {
                 }
             }
         }
+        // The selected pad always has a lane (empty if it's not in the beat yet) so it can be programmed by tapping steps.
+        let sel = state.selectedPad
+        if state.sound(sel) != nil, !rows.contains(where: { $0.pads.contains(sel) }) {
+            let label = sel.bank == .a ? UIHelpers.bankANames[sel.index]
+                : sel.bank == .b ? "CHOP \(sel.number)" : UIHelpers.laneLabel(state, sel)
+            let row = SeqRow(label: label, color: Theme.bank(sel.bank), pads: [sel])
+            // keep bank order: after the last row of the same or an earlier bank
+            let at = rows.lastIndex(where: { ($0.pads.first?.bank.rawValue ?? 0) <= sel.bank.rawValue }).map { $0 + 1 } ?? 0
+            rows.insert(row, at: at)
+        }
         return rows
     }
 
@@ -151,10 +161,21 @@ struct SeqGridView: View {
             }
             let hot = playing && cells[now] != nil
 
+            // the pad you're playing: a soft band + bold label, flashing brighter on each hit
+            let selected = row.pads.contains(state.selectedPad)
+            let hitAge = row.pads.contains(where: { $0 == state.lastHitPad }) ? Date().timeIntervalSince(state.lastHitTime) : 9
+            let flash = max(0, 1 - hitAge / 0.35)
+            if selected || flash > 0 {
+                let band = CGRect(x: -4, y: cy - min(11, pitch / 2 - 1), width: size.width + 4, height: min(22, pitch - 2))
+                ctx.fill(Path(roundedRect: band, cornerRadius: 3),
+                         with: .color(row.color.opacity(0.10 + 0.22 * flash)))
+            }
+
             // bank tab + lane label
-            ctx.fill(Path(CGRect(x: 0, y: cy - 4.5, width: 2, height: 9)), with: .color(row.color))
-            ctx.draw(Text(row.label).font(Theme.inter(7.5, 500)).tracking(0.75)
-                        .foregroundStyle(hot ? Theme.lidInk : Theme.lidGrey1),
+            let tabW: CGFloat = selected ? 3 : 2
+            ctx.fill(Path(CGRect(x: 0, y: cy - 4.5, width: tabW, height: 9)), with: .color(row.color))
+            ctx.draw(Text(row.label).font(Theme.inter(7.5, selected || flash > 0 ? 700 : 500)).tracking(0.75)
+                        .foregroundStyle(hot || selected || flash > 0 ? Theme.lidInk : Theme.lidGrey1),
                      at: CGPoint(x: 9, y: cy), anchor: .leading)
 
             // held notes: a hairline to the note's end

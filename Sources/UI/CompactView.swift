@@ -90,10 +90,14 @@ struct CompactView: View {
 
     private var compactChips: some View {
         ChipFlow(spacing: 5, lineSpacing: 5) {
-            ForEach(ActionChips.items.filter { ["chip-dilla-nujabes", "chip-house-kit", "chip-flip-it", "chip-ai-perform"].contains($0.id) }) { item in
+            ForEach(ActionChips.items.filter { ["chip-undo", "chip-redo", "chip-flip-it", "chip-ai-perform"].contains($0.id) }) { item in
                 let on = item.id == "chip-ai-perform" && state.performOn
                 Button {
                     switch item.id {
+                    case "chip-undo":
+                        Task { @MainActor in await Orchestrator.current?.undo() }
+                    case "chip-redo":
+                        Task { @MainActor in await Orchestrator.current?.redo() }
                     case "chip-flip-it":
                         state.onFlip?()
                         DebugLog.event("flip")
