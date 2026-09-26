@@ -11,6 +11,8 @@ struct CrateApp: App {
         let s = AppState(engine: MockEngine())
         _state = State(initialValue: s)
         hinge = HingeFX(state: s)
+        let hingeFX = hinge
+        CrateUI.shared.onPunch = { hingeFX.apply($0) }
         let library = LibraryStore()
         orchestrator = Orchestrator(state: s, library: library)
         orchestrator.wire()

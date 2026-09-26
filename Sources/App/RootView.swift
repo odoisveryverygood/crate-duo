@@ -38,13 +38,17 @@ struct RootView: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
+                if AppConfig.debugLog {
                 Text(debugLine(division: division, size: size))
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.gray)
                     .padding(4)
+                }
             }
         }
         .ignoresSafeArea()
+        .statusBarHidden(true)
+        .persistentSystemOverlays(.hidden)
         .sceneAccessory {
             CameraCaptureAccessory(isEnabled: $state.crowdDisplayOn) {
                 OuterCrowdHost(state: state)
@@ -70,15 +74,9 @@ struct RootView: View {
         }
     }
 
-    private var lid: some View {
-        ZStack { Color.black; Text("LID").foregroundStyle(.white) }
-    }
-    private var deck: some View {
-        ZStack { Color(white: 0.79); Text("DECK").foregroundStyle(.black) }
-    }
-    private var compact: some View {
-        ZStack { Color(white: 0.2); Text("COMPACT").foregroundStyle(.white) }
-    }
+    private var lid: some View { LidDisplayView(state: state) }
+    private var deck: some View { DeckView(state: state) }
+    private var compact: some View { CompactView(state: state) }
 
     private func debugLine(division: CGRect?, size: CGSize) -> String {
         let d = division.map { "div \(Int($0.minX)),\(Int($0.minY)) \(Int($0.width))x\(Int($0.height))" } ?? "div none"
@@ -92,14 +90,8 @@ struct RootView: View {
 struct OuterCrowdHost: View {
     let state: AppState
     var body: some View {
-        ZStack {
-            Color.black
-            VStack(spacing: 8) {
-                Text("CRATE").font(.system(size: 64, weight: .black, design: .monospaced)).foregroundStyle(Color(red: 0.98, green: 0.36, blue: 0.11))
-                Text(state.styleLabel).font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundStyle(.white)
-            }
-        }
-        .ignoresSafeArea()
+        CrowdView(state: state)
+            .ignoresSafeArea()
         .onAppear { DebugLog.event("outer_display_content", ["appeared": true]) }
     }
 }

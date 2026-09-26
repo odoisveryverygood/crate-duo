@@ -1,0 +1,249 @@
+import SwiftUI
+import Observation
+
+/// UI-only state shared by the lid and the deck (RootView hosts them as separate views).
+@Observable
+final class CrateUI {
+    static let shared = CrateUI()
+
+    /// The prompt draft (lid and compact prompt fields share it).
+    var draft = ""
+    /// ✦ DIG bumps this; the visible prompt field focuses itself.
+    var focusRequest = 0
+    /// Bumped to dismiss the keyboard (a chip was tapped).
+    var blurRequest = 0
+    /// Mirrors the prompt field's focus (the lid shows the suggestion chips while typing).
+    var promptFocused = false
+    /// SHIFT latch: pad touches select the pad without playing it.
+    var shift = false
+    /// Last KEYS note (for the lid's NOTE / SEMI readout).
+    var lastMidi: Int? = nil
+    var lastSemi: Int? = nil
+    /// LEVEL fader per pad, 0…1 (cosmetic unless `onLevel` is wired).
+    var levels: [PadID: Double] = [:]
+    /// Optional hook for the LEVEL fader (pad, 0…1). The App may wire it to a per-pad gain.
+    @ObservationIgnored var onLevel: ((PadID, Double) -> Void)?
+    /// Optional hook for the PAD FX PUNCH fader (0…1), e.g. `{ hinge.apply($0) }` so the fader shares the
+    /// hinge's smoothing + DROP detection. Unset → the fader drives state.punch + engine.setPunch directly.
+    @ObservationIgnored var onPunch: ((Double) -> Void)?
+
+    func level(_ pad: PadID) -> Double { levels[pad] ?? 0.66 }
+
+    /// ✦ DIG: dig the draft if there is one, otherwise focus the prompt field.
+    func digPressed(_ state: AppState) {
+        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty {
+            state.dig(t)
+            draft = ""
+        } else {
+            focusRequest += 1
+        }
+    }
+
+    /// Mode change with the side effects the deck needs (KEYS picks a pitched pad).
+    func setMode(_ mode: Mode, _ state: AppState) {
+        if mode == .keys { ensurePitchedSelection(state) }
+        state.mode = mode
+        DebugLog.event("mode", ["m": mode.rawValue])
+    }
+
+    /// KEYS plays the selected pad chromatically: if that's a drum, move to the first pitched pad (bank C first).
+    func ensurePitchedSelection(_ state: AppState) {
+        if state.sound(state.selectedPad)?.category.isPitched == true { return }
+        if let p = UIHelpers.firstPitchedPad(state) {
+            state.selectedPad = p
+            state.bank = p.bank
+        }
+    }
+
+    /// PAD BANK press. In KEYS mode it also picks that bank's first pitched pad (so B = play a chop chromatically).
+    func selectBank(_ bank: Bank, _ state: AppState) {
+        state.bank = bank
+        if state.mode == .keys {
+            if let i = (0..<16).first(where: { state.sound(PadID(bank, $0))?.category.isPitched == true }) {
+                state.selectedPad = PadID(bank, i)
+            }
+        }
+        DebugLog.event("bank", ["b": bank.letter])
+    }
+}
+
+/// One frame of live transport info, polled from the engine inside TimelineViews.
+struct LiveFrame {
+    let playing: Bool
+    let pattern: Pattern
+    let bars: Int
+    let total: Int
+    /// Absolute position in steps.
+    let pos: Double
+    /// Position inside the pattern (0 ..< total).
+    let local: Double
+    let stepDur: Double
+    let swing: Double
+
+    init(_ state: AppState) {
+        let e = state.engine
+        playing = e.isPlaying
+        pattern = e.pattern
+        bars = max(1, pattern.bars)
+        total = bars * 16
+        let p = e.position()
+        pos = p.isFinite ? max(0, p) : 0
+        local = pos.truncatingRemainder(dividingBy: Double(total))
+        stepDur = 60 / max(30, e.bpm.isFinite ? e.bpm : 90) / 4
+        swing = e.swing
+    }
+
+    var step: Int { min(total - 1, Int(local)) }
+    var bar: Int { step / 16 }
+    var stepInBar: Int { step % 16 }
+    var beat: Int { stepInBar / 4 }
+    var barBeat: String { "\(bar + 1).\(beat + 1)" }
+
+    func swingDelay(_ s: Int) -> Double { s % 2 == 1 ? max(0, 2 * swing / 100 - 1) : 0 }
+
+    /// Steps elapsed since an event at pattern time `t` (wraps around the loop).
+    func age(_ t: Double) -> Double {
+        let n = Double(total)
+        var d = (local - t).truncatingRemainder(dividingBy: n)
+        if d < 0 { d += n }
+        return d
+    }
+
+    var flashSteps: Double { min(0.9, Theme.flash / stepDur) }
+
+    func hitTime(_ h: Hit, _ pad: PadID) -> Double {
+        Double(h.step) + swingDelay(h.step) + h.offset + (pattern.late[pad] ?? 0)
+    }
+
+    /// True for ~100 ms after the sequencer plays `pad`.
+    func sequencerFlash(_ pad: PadID) -> Bool {
+        guard playing else { return false }
+        let win = flashSteps
+        if let hits = pattern.lanes[pad] {
+            for h in hits where age(hitTime(h, pad)) < win { return true }
+        }
+        if let notes = pattern.notes[pad] {
+            for n in notes where age(Double(n.step) + swingDelay(n.step) + (pattern.late[pad] ?? 0)) < win { return true }
+        }
+        return false
+    }
+
+    /// Notes of `pad` sounding right now (for lighting keys under a bassline).
+    func soundingNotes(_ pad: PadID) -> Set<Int> {
+        guard playing, let notes = pattern.notes[pad] else { return [] }
+        var out = Set<Int>()
+        for n in notes {
+            let a = age(Double(n.step) + swingDelay(n.step))
+            if a < max(0.5, n.length) { out.insert(n.midi) }
+        }
+        return out
+    }
+
+    /// The bank-B chop most recently started by the sequencer (for the CHOP view).
+    func currentChop() -> Int? {
+        guard playing else { return nil }
+        var best: (Int, Double)? = nil
+        for (pad, hits) in pattern.lanes where pad.bank == .b {
+            for h in hits {
+                let a = age(hitTime(h, pad))
+                if best == nil || a < best!.1 { best = (pad.index, a) }
+            }
+        }
+        for (pad, notes) in pattern.notes where pad.bank == .b {
+            for n in notes {
+                let a = age(Double(n.step))
+                if best == nil || a < best!.1 { best = (pad.index, a) }
+            }
+        }
+        return best?.0
+    }
+}
+
+/// Peak envelopes are cached per pad + sound + resolution (the real engine computes them from buffers).
+final class WaveCache {
+    static let shared = WaveCache()
+    private var store: [String: [Float]] = [:]
+
+    func wave(_ state: AppState, _ pad: PadID, points: Int) -> [Float] {
+        let s = state.sound(pad)
+        let sid = s.map { "\($0.id)|\($0.fileURL.lastPathComponent)|\($0.start)|\($0.end ?? -1)" } ?? "none"
+        let key = "\(pad.bank.rawValue).\(pad.index).\(sid).\(points)"
+        if let w = store[key] { return w }
+        let w = state.engine.waveform(pad, points: points)
+        if w.contains(where: { $0 > 0.002 }) {
+            if store.count > 400 { store.removeAll() }
+            store[key] = w
+        }
+        return w
+    }
+}
+
+enum UIHelpers {
+    /// Short MPC-style names for the bank-A slots (BankA.slots order).
+    static let bankANames = ["KICK", "KICK 2", "SNR", "CLAP", "HAT", "HAT 2", "OHAT", "RIM",
+                             "PERC", "PERC 2", "SHKR", "CRSH", "808", "FX", "VOX", "VINYL"]
+
+    static func padName(_ state: AppState, _ pad: PadID) -> String? {
+        guard let s = state.sound(pad) else { return nil }
+        let n = s.name.trimmingCharacters(in: .whitespaces)
+        return n.isEmpty ? (pad.bank == .a ? bankANames[pad.index] : "PAD \(pad.number)") : n.uppercased()
+    }
+
+    static func laneLabel(_ state: AppState, _ pad: PadID) -> String {
+        switch pad.bank {
+        case .a: return bankANames[pad.index]
+        case .b: return "CHOP"
+        case .c, .d:
+            if let c = state.sound(pad)?.category {
+                switch c {
+                case .eight08: return "808"
+                case .bass: return "BASS"
+                case .keys: return "KEYS"
+                case .synth: return "SYNTH"
+                case .chop, .loop: return "CHOP"
+                default: return String(c.rawValue.prefix(5)).uppercased()
+                }
+            }
+            return pad.bank == .c ? "BASS" : "D\(pad.number)"
+        }
+    }
+
+    static func firstPitchedPad(_ state: AppState) -> PadID? {
+        for bank in [Bank.c, .b, .d, .a] {
+            for i in 0..<16 {
+                let p = PadID(bank, i)
+                if state.sound(p)?.category.isPitched == true { return p }
+            }
+        }
+        return nil
+    }
+
+    static func rootNote(_ state: AppState, _ pad: PadID) -> Int {
+        if let r = state.sound(pad)?.rootNote { return r }
+        switch state.sound(pad)?.category {
+        case .eight08?, .bass?: return 36
+        default: return 60
+        }
+    }
+
+    /// Note name with flats; Doto has no ♭ so `flat` defaults to a dot-matrix "b".
+    static func noteName(_ midi: Int, flat: String = "b") -> String {
+        let names = ["C", "D\(flat)", "D", "E\(flat)", "E", "F", "G\(flat)", "G", "A\(flat)", "A", "B\(flat)", "B"]
+        let pc = ((midi % 12) + 12) % 12
+        let oct = Int(floor(Double(midi) / 12)) - 1
+        return names[pc] + String(oct)
+    }
+
+    static func keyDisplay(_ key: String?) -> String? {
+        guard let k = Music.parseKey(key) else { return nil }
+        let names = ["C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"]
+        return names[k.pc] + (k.minor ? " MINOR" : " MAJOR")
+    }
+
+    static func signed(_ v: Int) -> String { v > 0 ? "+\(v)" : v < 0 ? "−\(-v)" : "0" }
+
+    static func msText(_ ms: Int) -> String {
+        ms >= 1000 ? String(format: "%.1fs", Double(ms) / 1000) : "\(ms)ms"
+    }
+}
