@@ -10,16 +10,19 @@ struct CrowdStageView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let landscape = geometry.size.width > geometry.size.height
-            let size = landscape
-                ? CGSize(width: geometry.size.height, height: geometry.size.width)
-                : geometry.size
-
+            // The Duo's outer panel presents wide while the device is open: lay out for the real frame,
+            // no automatic rotation (the host can still pass `rotate` if a panel ever presents sideways).
+            let size = geometry.size
             TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
-                stage(size: size, now: timeline.date)
-                    .frame(width: size.width, height: size.height)
-                    .rotationEffect((landscape ? Angle.degrees(90) : .zero) + rotate)
-                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                Group {
+                    if size.width > size.height * 1.15 {
+                        wideStage(size: size, now: timeline.date)
+                    } else {
+                        stage(size: size, now: timeline.date)
+                    }
+                }
+                .frame(width: size.width, height: size.height)
+                .rotationEffect(rotate)
             }
         }
         .background(Color.black)
@@ -29,6 +32,56 @@ struct CrowdStageView: View {
             if new < 0.1, Date().timeIntervalSince(lastHighPunch) < 0.3 {
                 dropFlashUntil = Date().addingTimeInterval(0.28)
                 lastHighPunch = .distantPast
+            }
+        }
+    }
+
+    /// Wide panel: cover art left, a quiet title block right. Minimal text so it reads from across a room.
+    private func wideStage(size: CGSize, now: Date) -> some View {
+        let inset = max(24, size.height * 0.08)
+        let cover = size.height - inset * 2
+        let level = min(1, max(0, Double(state.engine.level())))
+        return ZStack {
+            Color.black
+            HStack(alignment: .center, spacing: inset) {
+                NowPlayingCard(state: state)
+                    .frame(width: cover, height: cover)
+                VStack(alignment: .leading, spacing: max(10, size.height * 0.035)) {
+                    Text("CRATE")
+                        .font(Theme.doto(min(44, size.height * 0.09)))
+                        .foregroundStyle(Theme.orange)
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                    Text(state.styleLabel.uppercased())
+                        .font(Theme.doto(min(64, size.height * 0.13)))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Text(state.sampleLabel.uppercased())
+                        .font(Theme.label(max(12, size.height * 0.035)))
+                        .foregroundStyle(Theme.mid)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    GeometryReader { bar in
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Theme.dim)
+                            Rectangle().fill(Theme.orange).frame(width: bar.size.width * level)
+                        }
+                    }
+                    .frame(height: 3)
+                }
+                .frame(maxHeight: cover, alignment: .topLeading)
+            }
+            .padding(inset)
+            .frame(width: size.width, height: size.height, alignment: .leading)
+
+            if now < dropFlashUntil {
+                Theme.orange.opacity(0.93)
+                Text("DROP")
+                    .font(Theme.doto(min(size.height * 0.4, 200)))
+                    .foregroundStyle(Color.black)
+                    .minimumScaleFactor(0.5)
+                    .accessibilityIdentifier("crowd-drop")
             }
         }
     }
