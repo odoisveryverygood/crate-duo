@@ -143,3 +143,19 @@ Build settings: iOS deployment target 27.1, Swift language mode 5, `SWIFT_STRICT
 - hinge CLI breaks → Option-slider in Device Hub; PAD FX slider fallback.
 - Simulator audio crackle → keep voices ≤ 32, IO buffer 5–10 ms, avoid main-thread work in callbacks.
 - Demo wifi → run the whole demo once offline to prove the fallback path sounds good.
+
+## 11. Self-test of the demo flow (objective, repeatable; run after every integration)
+Sim facts (verified 10:46): iPhone Duo on iOS 27.1, UDID `0F3EDA96-26C2-468E-AAC2-2B28AE79F3B4`. The inner display is 2853×2007 px landscape when open (book pose: the fold runs vertically); laptop pose = rotate 90° (Simulator ⌘← / ⌘→, or cmux-cua hotkey). `hinge 0` = closed (inner display black, outer display active), `hinge 110`, `hinge open`, `hinge sweep 110 20 3`. There's no simctl rotate. AXe 1.8 (`axe tap/type/describe-ui/screenshot`) is on PATH; `xcrun simctl io <udid> screenshot`.
+**Debug hooks the app must have (DEBUG builds; launch args):**
+- `-crateDebugRecord 1`: master-output tap writes `Documents/crate-debug.wav` (44.1 k, ≤ 120 s).
+- `-crateDebugLog 1`: one JSON line per event to stdout + os_log subsystem `com.shuhan.crate`: `dig_start`, `jev_plan{ms,answers}`, `kit{style,ids}`, `loop{id,bpm,key}`, `pattern{bars,lanes,hits}`, `gpt{model,ms,ok}`, `perform{bar,fill}`, `punch{p}`, `drop`, `keys{note,semi}`.
+- `-crateOffline 1`: skip network (proves the fallback path).
+- URL scheme `crate://dig?q=<prompt>`, `crate://mode?m=keys`, `crate://pad?i=3` so the harness drives flows with `xcrun simctl openurl`.
+**Script `tools/selftest.sh`** (write at hacking time): launch with debug flags → `openurl crate://dig?q=4 bar loop j dilla laid back drums killer nujabes piano` → wait 8 s → screenshots (inner + outer) + `axe describe-ui` (expect JEV/KIT/SAMPLE/GPT labels) → `openurl crate://dig?q=fill up the pads with some house drums` → wait 4 s → `hinge sweep 110 20 3; hinge 110` → wait 3 s → KEYS taps → pull `crate-debug.wav` (`xcrun simctl get_app_container <udid> com.shuhan.crate data`) and analyze with librosa (`~/forkdaw/.venv/bin/python`):
+- tempo ≈ the chosen loop BPM ±2; not silent (RMS > −40 dBFS); peak < −0.3 dBFS (limiter works)
+- swing: offbeat hat onsets late by the expected fraction for the Dilla section
+- the house section: kick onsets at 4-on-the-floor spacing after the swap
+- the hinge sweep: spectral centroid falls by > 60 % during the fold and recovers within 300 ms of the snap (DROP)
+- the log: jev_plan < 600 ms; gpt ok < 6 s (luna); the kit ids come from dusty/jazz packs for dilla and House Starter for house; the loop is piano with jazzhop ≥ 0.8
+- the offline run (`-crateOffline 1`) produces the same structure with no network
+Pass = all checks green + screenshots match `design/mockup-laptop.png`. Record the final demo video only after two consecutive green runs.
