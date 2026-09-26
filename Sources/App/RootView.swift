@@ -135,7 +135,7 @@ struct RootView: View {
 struct OuterCrowdHost: View {
     let state: AppState
     var body: some View {
-        CrowdView(state: state)
+        CrowdStageView(state: state)
             .ignoresSafeArea()
             .onAppear { DebugLog.event("outer_display_content", ["appeared": true]) }
     }

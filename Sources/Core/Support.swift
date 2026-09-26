@@ -18,6 +18,8 @@ enum AppConfig {
     static var offline: Bool { UserDefaults.standard.bool(forKey: "crateOffline") }
     static var debugRecord: Bool { UserDefaults.standard.bool(forKey: "crateDebugRecord") }
     static var debugLog: Bool { UserDefaults.standard.bool(forKey: "crateDebugLog") }
+    /// `-crateNoPaywall 1` for live demos and recordings (the RevenueCat gate otherwise opens after the 3rd DIG).
+    static var noPaywall: Bool { UserDefaults.standard.bool(forKey: "crateNoPaywall") }
 }
 
 /// One JSON line per event (stdout + os_log) for the self-test harness. Enabled with `-crateDebugLog 1`.

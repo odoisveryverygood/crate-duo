@@ -14,15 +14,28 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: YES
     DEBUG_INFORMATION_FORMAT: dwarf
+packages:
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios.git
+    exactVersion: 5.39.0
 targets:
   Crate:
     type: application
     platform: iOS
+    dependencies:
+      - package: RevenueCat
+        product: RevenueCat
+      - package: RevenueCat
+        product: RevenueCatUI
     configFiles:
       Debug: Config/Base.xcconfig
       Release: Config/Base.xcconfig
     sources:
       - path: Sources
+        excludes:
+          - Paywall/Verification
+          - Crowd/README.md
+          - Paywall/README.md
       - path: Resources/Fonts
       - path: Resources/AI
       - path: Resources/DefaultKit

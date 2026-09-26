@@ -26,8 +26,16 @@ struct CrateApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(state: state, hinge: hinge)
+                .crateIf(!AppConfig.noPaywall) { $0.paywallGate(state: state) }
                 .onOpenURL { Router.handle($0, state: state, hinge: hinge) }
                 .onAppear { commands.start(state: state, hinge: hinge) }
         }
+    }
+}
+
+extension View {
+    /// Apply a modifier only when `condition` holds (used to switch the paywall off for demos).
+    @ViewBuilder func crateIf<V: View>(_ condition: Bool, _ transform: (Self) -> V) -> some View {
+        if condition { transform(self) } else { self }
     }
 }
