@@ -416,7 +416,7 @@ extension AudioEngine {
         if let e = endAt, e - start < dur - 0.003 {
             let d = max(0.006, e - start)
             let frames = min(pa.frames, Int(d * sr * Double(rate)))
-            let fade = Int(0.003 * sr * Double(rate))
+            let fade = Int(0.012 * sr * Double(rate))
             if let cut = Loader.truncated(pa.buffer, frames: frames, fadeFrames: fade) {
                 buffer = cut
                 dur = d
@@ -535,7 +535,7 @@ extension AudioEngine {
         let pool = pools[pad.bank.rawValue]
         if Self.cutsSomething(pad) {
             for v in pool where !v.fading && v.busyUntil > now && v.startAt <= now + 0.002 {
-                if let vp = v.pad, Self.cuts(pad, vp) { fade(v, over: 0.006) }
+                if let vp = v.pad, Self.cuts(pad, vp) { fade(v, over: vp.bank == .b || vp.bank == .d ? 0.03 : 0.006) }
             }
         }
         var end: Double? = nil
