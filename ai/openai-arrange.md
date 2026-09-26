@@ -4,7 +4,7 @@ Called in the background right after the instant Jev plan has already filled the
 Result is swapped in on the next bar boundary. Also used for "change_groove" / "bass_only" requests and the FLIP button.
 
 - API: Responses API `POST https://api.openai.com/v1/responses`, `Authorization: Bearer $OPENAI_API_KEY`
-- Model: a small/fast tier with `reasoning: {effort: "none"}` (or "minimal" if "none" is rejected). Anchor: `gpt-5.6-luna` (known working in the flatfinder project); verify with `GET /v1/models` before hacking starts.
+- Models (verified 2026-09-26 on the user's key): **`gpt-6-luna` + `reasoning:{effort:"none"}` = 3.8 s** for this exact prompt (default for arrange). **`gpt-6-sol` + effort none = 7.2 s** (FLIP / deeper rewrites). `gpt-6-astra` + low = 22 s (too slow for live). All returned valid strict-schema JSON with 16-char bar strings.
 - `text.format = {type: "json_schema", name: "arrangement", strict: true, schema: <below>}`
 - Compact output on purpose (step strings, not per-hit objects): about 300-600 output tokens, which keeps it at roughly 2-4 s.
 
