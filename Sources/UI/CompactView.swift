@@ -9,12 +9,29 @@ struct CompactView: View {
         GeometryReader { geo in
             let inset: CGFloat = 12
             let topInset = max(inset, geo.safeAreaInsets.top)
-            VStack(spacing: 10) {
-                miniLid
-                PadGridView(state: state, gap: 8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                bottomRow
-                    .frame(height: 40)
+            Group {
+                if geo.size.width > geo.size.height {
+                    // Closed, held sideways: readouts + transport left, square pad grid right.
+                    HStack(spacing: 12) {
+                        VStack(spacing: 10) {
+                            miniLid
+                            Spacer(minLength: 0)
+                            bottomRow.frame(height: 40)
+                        }
+                        .frame(width: geo.size.width * 0.44)
+                        PadGridView(state: state, gap: 8)
+                            .aspectRatio(1, contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                } else {
+                    VStack(spacing: 10) {
+                        miniLid
+                        PadGridView(state: state, gap: 8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        bottomRow
+                            .frame(height: 40)
+                    }
+                }
             }
             .padding(.horizontal, inset)
             .padding(.top, topInset)
