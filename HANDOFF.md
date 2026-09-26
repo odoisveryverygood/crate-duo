@@ -64,3 +64,18 @@ The Duo is the first iPhone with side-by-side multitasking; make CRATE a good ne
 - Drag OUT: a BOUNCE button (lid header or deck) captures the next 4 bars of the master output to `Documents/bounces/<title>.wav` (add `func bounce(bars:completion:)` to AudioEngine by reusing its master tap, or tap `mainMixerNode` from your own file), then shows a draggable chip `↗ <title>.wav` (`.draggable` with a `Transferable` FileRepresentation, plus a ShareLink fallback).
 - Files: NEW `Sources/Transfer/*.swift` (+ the tiny AudioEngine hook if needed; tell the lead).
 - Verify: typecheck; in the Simulator drag a WAV from the Files app in Split View onto a pad.
+
+## FIELD REDESIGN (the user picked direction 01 FIELD): split into 4 non-overlapping packages
+Reference = `design/directions/01-field.html` (exact CSS values: colours, sizes, spacing; copy them) + `01-field.png` (the look). Keep ALL behaviour, accessibility IDs and state bindings; this is a restyle. Pull `main` first; one branch per package; typecheck; push by **14:10**; the lead merges. Fonts: Inter 300/400/500/600 (download TTFs from Google Fonts into `Resources/Fonts/`, add the filenames to `UIAppFonts` in `Resources/Info.plist`; R1 owns this).
+
+### R1: Theme + LID display (`Sources/UI/Theme.swift`, `LidDisplayView.swift`, `LidPanels.swift`, fonts), branch `wp/field-lid`
+Lid per the mock: no header row; the top-left title line "J DILLA × JAZZ HOP  GRA PNO · G# · chords"; top-right "LOOP · 4 BARS" segment bar; hero numerals BPM / SWING / BAR in thin Inter (300) with small caps labels; the dot sequencer (white hits, tiny dots for rests, hollow for ghosts) with ONE orange vertical playhead line; ONE plain-language result line (Inter 400) + ONE small timing strip "JEV 95 ms · KIT 3 ms · SAMPLE 120 ms · GPT 4.2 s ✓"; the prompt + outlined chips. New Theme tokens for the Field palette (warm aluminium deck, white pads, black ink, orange #FA5B1C only for live). Other packages use these tokens, so push Theme early.
+
+### R2: DECK chrome (`Sources/UI/DeckView.swift`, `DeckControls.swift`), branch `wp/field-deck`
+Mode keys as white pictogram keys + labels (SAMPLE CHOP KEYS SEQ PAD FX 16 LVL SHIFT; the active one gets the orange dot), square BANK A–D keys (the selected one inverted black), a LEVEL fader with a printed dB scale, round REC / PLAY / STOP keys with captions, the orange DIG key, and the "CRATE / CR-16 · AI SAMPLER" wordmark bottom-left, on a warm-aluminium background. Note: another agent is adding a PAD FX view switch inside DeckView; keep your edit to DeckView layout-only and tell the lead.
+
+### R3: PADS + KEYS (`Sources/UI/PadGridView.swift`, `KeysView.swift`), Teammate 1, after WP8 on the same branch or `wp/field-pads`
+Pads = white keys in one seamed keypad (number top-left, name bottom-left, Inter/JetBrains caps), pressed/playing = solid orange #FA5B1C with white text (as pad 05 in the mock); piano keys in the same white/black ink style.
+
+### R4: COMPACT + BACK SCREEN (`Sources/UI/CompactView.swift`, `Sources/Crowd/*`), Teammate 2, after WP13, branch `wp/field-outer`
+The closed-phone compact view and the back-screen crowd/Now-Playing card in the Field language (black lid-style top, white pads, thin Inter numerals, orange only for live).
