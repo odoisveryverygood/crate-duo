@@ -1,0 +1,468 @@
+{
+ "w": 1920,
+ "h": 1080,
+ "fps": 30,
+ "shots": [
+  {
+   "type": "image",
+   "id": "title",
+   "path": "cards/title.png",
+   "dur": 4.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 4.0,
+     "zoom": 1.05,
+     "cx": 0.5,
+     "cy": 0.46
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "type_prompt",
+   "clip": "clips/take1_intro_lid.mov",
+   "ss": 0.0,
+   "dur": 4.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.12,
+     "cx": 0.45,
+     "cy": 0.72
+    },
+    {
+     "t": 4.4,
+     "zoom": 1.45,
+     "cx": 0.377,
+     "cy": 0.92
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "pads_fill",
+   "clip": "clips/take1_intro_full.mov",
+   "ss": 3.95,
+   "dur": 3.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 3.0,
+     "zoom": 1.07,
+     "cx": 0.5,
+     "cy": 0.45
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "jev_readout",
+   "clip": "clips/take1_intro_lid.mov",
+   "ss": 5.3,
+   "dur": 2.6,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 2.2,
+     "cx": 0.83,
+     "cy": 0.05
+    },
+    {
+     "t": 2.6,
+     "zoom": 2.7,
+     "cx": 0.84,
+     "cy": 0.04
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "gpt_line",
+   "clip": "clips/take1_intro_lid.mov",
+   "ss": 7.9,
+   "dur": 3.6,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 2.3,
+     "cx": 0.78,
+     "cy": 0.95
+    },
+    {
+     "t": 3.6,
+     "zoom": 1.9,
+     "cx": 0.7,
+     "cy": 0.92
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "image",
+   "id": "chapter_two_screens",
+   "path": "cards/chapter_03.png",
+   "dur": 2.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 2.4,
+     "zoom": 1.03,
+     "cx": 0.45,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "finger_drum",
+   "clip": "clips/take1_deck.mov",
+   "ss": 22.0,
+   "dur": 8.6,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 8.6,
+     "zoom": 1.22,
+     "cx": 0.47,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "keys_mode",
+   "clip": "clips/take1_inner_up.mov",
+   "ss": 30.6,
+   "dur": 6.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 6.0,
+     "zoom": 1.12,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "three_screens",
+   "clip": "clips/take1_inner_up.mov",
+   "ss": 41.817,
+   "dur": 7.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "second": "clips/take3_outer_up.mov",
+   "second_ss": 0.4,
+   "second_keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "frame_keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 7.0,
+     "zoom": 1.07,
+     "cx": 0.5,
+     "cy": 0.47
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "image",
+   "id": "chapter_hinge",
+   "path": "cards/chapter_04.png",
+   "dur": 2.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 2.4,
+     "zoom": 1.03,
+     "cx": 0.45,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "hinge_fold",
+   "clip": "clips/take4_lid.mov",
+   "ss": 3.048,
+   "dur": 16.6,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 16.6,
+     "zoom": 1.6,
+     "cx": 0.31,
+     "cy": 0.25
+    }
+   ],
+   "overlay": {
+    "path": "cards/hinge_fold.mov",
+    "x": 4,
+    "y": 380
+   },
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "snap_drop",
+   "clip": "clips/take4_inner_up.mov",
+   "ss": 19.668,
+   "dur": 3.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.3,
+     "cx": 0.5,
+     "cy": 0.32
+    },
+    {
+     "t": 3.0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "overlay": {
+    "path": "cards/hinge_snap.mov",
+    "x": 4,
+    "y": 380
+   },
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "house_type",
+   "clip": "clips/take4_house_lid.mov",
+   "ss": 0.0,
+   "dur": 4.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.45,
+     "cx": 0.34,
+     "cy": 0.9
+    },
+    {
+     "t": 4.4,
+     "zoom": 1.55,
+     "cx": 0.32,
+     "cy": 0.93
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "house_pads",
+   "clip": "clips/take4_deck.mov",
+   "ss": 25.833,
+   "dur": 3.2,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 3.2,
+     "zoom": 1.1,
+     "cx": 0.47,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "video",
+   "id": "end_typed",
+   "path": "cards/end_typed.mov",
+   "audio": "silent"
+  },
+  {
+   "type": "image",
+   "id": "end_card",
+   "path": "cards/end_card.png",
+   "dur": 6.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 6.0,
+     "zoom": 1.04,
+     "cx": 0.5,
+     "cy": 0.48
+    }
+   ],
+   "audio": "silent"
+  }
+ ],
+ "music": [
+  {
+   "file": "music/horn.wav",
+   "at": 0.0,
+   "track_in": 0.0,
+   "dur": 18.0,
+   "gain_db": 8.0,
+   "fade_in": 0.3,
+   "fade_out": 2.5,
+   "note": "L1 song intro under title/prompt/pads"
+  },
+  {
+   "file": "clips/take1_app_aligned.wav",
+   "at": 15.5,
+   "track_in": 17.5,
+   "dur": 19.12,
+   "gain_db": -3.0,
+   "fade_in": 1.5,
+   "fade_out": 0.03,
+   "note": "APP1a CRATE's own beat, take1 continuous: gpt line -> card -> finger drum -> keys"
+  },
+  {
+   "file": "clips/take1_app_aligned.wav",
+   "at": 34.6,
+   "track_in": 41.817,
+   "dur": 9.4,
+   "gain_db": -3.0,
+   "fade_in": 0.03,
+   "fade_out": 2.2,
+   "note": "APP1b take1 two bars later (AI PERFORM), under three screens + the hinge card"
+  },
+  {
+   "file": "music/horn.wav",
+   "at": 41.6,
+   "track_in": 124.22,
+   "dur": 19.0,
+   "gain_db": 7.0,
+   "fade_in": 2.0,
+   "fade_out": 0.02,
+   "note": "L2 SYNC: breakdown under the fold (song 126.62 on its first frame, so 143.22 lands on the snap)"
+  },
+  {
+   "file": "clips/take4_app_aligned.wav",
+   "at": 44.0,
+   "track_in": 3.048,
+   "dur": 16.6,
+   "gain_db": -1.0,
+   "fade_in": 0.4,
+   "fade_out": 2.5,
+   "note": "APP2 the fold: filter closing, reverb swelling (fades as the breakdown takes over)"
+  },
+  {
+   "file": "music/horn.wav",
+   "at": 60.6,
+   "track_in": 143.22,
+   "dur": 4.6,
+   "gain_db": 10.0,
+   "fade_in": 0.005,
+   "fade_out": 1.8,
+   "note": "L3 SYNC: the band re-enters (143.0 s section, first hit 143.22) on the snap-open frame = DROP"
+  },
+  {
+   "file": "clips/take4_app_aligned.wav",
+   "at": 63.9,
+   "track_in": 21.733,
+   "dur": 8.9,
+   "gain_db": -3.0,
+   "fade_in": 1.2,
+   "fade_out": 1.6,
+   "note": "APP3 loop keeps going, house drums swap in at the DIG"
+  },
+  {
+   "file": "music/horn.wav",
+   "at": 70.9,
+   "track_in": 8.0,
+   "dur": 8.8,
+   "gain_db": 4.0,
+   "fade_in": 1.5,
+   "fade_out": 3.0,
+   "note": "L4 quiet reprise under the end cards"
+  }
+ ],
+ "_timeline_estimate": {
+  "title": 0.0,
+  "type_prompt": 4.0,
+  "pads_fill": 8.4,
+  "jev_readout": 11.4,
+  "gpt_line": 14.0,
+  "chapter_two_screens": 17.6,
+  "finger_drum": 20.0,
+  "keys_mode": 28.6,
+  "three_screens": 34.6,
+  "chapter_hinge": 41.6,
+  "hinge_fold": 44.0,
+  "snap_drop": 60.6,
+  "house_type": 63.6,
+  "house_pads": 68.0,
+  "end_typed": 71.2,
+  "end_card": 73.7
+ },
+ "_total_estimate": 79.7
+}

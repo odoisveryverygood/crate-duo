@@ -1,0 +1,17 @@
+i,id,type,start,dur
+0,title,image,0.0,4.0
+1,type_prompt,clip,4.0,4.4
+2,pads_fill,clip,8.4,3.0
+3,jev_readout,clip,11.4,2.6
+4,gpt_line,clip,14.0,3.6
+5,chapter_two_screens,image,17.6,2.4
+6,finger_drum,clip,20.0,8.6
+7,keys_mode,clip,28.6,6.0
+8,three_screens,clip,34.6,7.0
+9,chapter_hinge,image,41.6,2.4
+10,hinge_fold,clip,44.0,16.6
+11,snap_drop,clip,60.6,3.0
+12,house_type,clip,63.6,4.4
+13,house_pads,clip,68.0,3.2
+14,end_typed,video,71.2,2.5
+15,end_card,image,73.7,6.0
