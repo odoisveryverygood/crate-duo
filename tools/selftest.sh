@@ -24,7 +24,7 @@ url() { echo "crate://$1" >> "$CMD"; sleep 0.15; }
 enc() { python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$1"; }
 
 xcrun simctl install "$U" "$APP"
-hinge 150 >/dev/null 2>&1
+hinge -d "$U" 150 >/dev/null 2>&1
 xcrun simctl launch --console-pty --terminate-running-process "$U" com.shuhan.crate \
   -crateDebugLog 1 -crateDebugRecord 1 -crateOffline $OFF -crateNoPaywall 1 -crateCmdFile "$CMD" > "$OUT/console.log" 2>&1 &
 sleep 3
@@ -36,8 +36,8 @@ url "mode?m=chop"; sleep 1.2; shot 02-chop
 url "mode?m=seq"
 mark dig2; url "dig?q=$(enc 'fill up the pads with some house drums')"
 sleep 7; shot 03-house
-mark fold; hinge sweep 150 30 3 >/dev/null 2>&1; shot 04-folded; sleep 0.8
-hinge 150 >/dev/null 2>&1; mark snap; sleep 3; shot 05-drop
+mark fold; hinge -d "$U" sweep 150 30 3 >/dev/null 2>&1; shot 04-folded; sleep 0.8
+hinge -d "$U" 150 >/dev/null 2>&1; mark snap; sleep 3; shot 05-drop
 url "mode?m=keys"; url "bank?b=C"; sleep 0.5
 mark keys; for s in 0 3 5 7 10 12; do url "pad?b=C&i=1&semi=$s"; sleep 0.3; done; shot 06-keys
 url "mode?m=seq"; mark perform; url "perform?on=1"; sleep 12; shot 07-perform

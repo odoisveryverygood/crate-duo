@@ -37,6 +37,8 @@ protocol SamplerEngine: AnyObject {
     func setPunch(_ amount: Double)
     /// Snap-open: FX off instantly + crash + kick.
     func drop()
+    /// PAD FX: which effect `setPunch` drives (nil = the default PUNCH chain). Default impl is a no-op.
+    func setFX(_ type: FXType?)
 
     /// Master RMS 0...1 for meters.
     func level() -> Float

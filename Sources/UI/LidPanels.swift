@@ -291,6 +291,8 @@ struct AILogView: View {
 
 struct PunchStrip: View {
     let punch: Double
+    /// Selected PAD FX (nil = the default PUNCH chain, which shows its LPF / VERB readout).
+    var fx: FXType? = nil
 
     var body: some View {
         let p = min(1, max(0, punch))
@@ -298,7 +300,7 @@ struct PunchStrip: View {
         let cells = 24
         let lit = Int((p * Double(cells)).rounded())
         HStack(spacing: 10) {
-            Text(p > 0.92 ? "BREAKDOWN" : "PUNCH")
+            Text(fx?.label ?? (p > 0.92 ? "BREAKDOWN" : "PUNCH"))
                 .crateLabel(9, tracking: 0.16)
                 .foregroundStyle(Theme.orange)
             HStack(spacing: 2) {
@@ -311,7 +313,7 @@ struct PunchStrip: View {
             Text("\(Int(p * 100))%")
                 .font(Theme.mono(10, bold: true))
                 .foregroundStyle(Theme.text)
-            Text("LPF \(cutoff >= 1000 ? String(format: "%.1fk", cutoff / 1000) : "\(Int(cutoff))") · VERB \(Int(38 * p))")
+            Text(fx.map { $0.hint } ?? "LPF \(cutoff >= 1000 ? String(format: "%.1fk", cutoff / 1000) : "\(Int(cutoff))") · VERB \(Int(38 * p))")
                 .font(Theme.mono(10))
                 .foregroundStyle(Theme.mid)
                 .lineLimit(1)

@@ -30,6 +30,9 @@ final class AppState {
     var lastNoteName = ""
 
     var punch: Double = 0
+    /// PAD FX selection (FXType raw value; nil = PUNCH default chain) and LATCH (true = tap selects and stays).
+    var fxType: String? = nil
+    var fxLatched = true
     var hingeAngle: Double? = nil
     var performOn = false
     var lastPerform = ""

@@ -3,6 +3,7 @@ import Foundation
 /// URL commands for the self-test harness: `xcrun simctl openurl <udid> "crate://dig?q=..."`.
 /// crate://dig?q=  crate://mode?m=keys  crate://bank?b=B  crate://pad?i=3[&b=A][&semi=5]
 /// crate://play  crate://stop  crate://perform?on=1  crate://flip  crate://punch?p=0.7
+/// crate://fx?t=lpf  crate://fxamt?v=0.7  crate://latch?on=0
 enum Router {
     static func handle(_ url: URL, state: AppState, hinge: HingeFX) {
         guard url.scheme == "crate" else { return }
@@ -37,6 +38,14 @@ enum Router {
             state.onFlip?()
         case "punch":
             if let p = q("p").flatMap(Double.init) { hinge.apply(p) }
+        case "fx":
+            // crate://fx?t=lpf | repeat | half | punch … (FXType raw value or label; punch/none = default chain)
+            if let t = q("t"), let parsed = FXType.parse(t) { state.selectFX(parsed) }
+        case "fxamt":
+            // crate://fxamt?v=0.7 — same path as the hinge / knob (DROP detection included)
+            if let v = q("v").flatMap(Double.init) { hinge.apply(min(1, max(0, v))) }
+        case "latch":
+            state.fxLatched = q("on") != "0"
         case "cam":
             CrowdCam.shared.start()
         case "rot":

@@ -44,12 +44,15 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     let bankMixers: [AVAudioMixerNode] // indexed by Bank.rawValue
     var roundRobin = [0, 0, 0, 0]      // q only
     let sumMixer = AVAudioMixerNode()
-    let eq = AVAudioUnitEQ(numberOfBands: 2)
+    /// Bands: 0 low-pass (PUNCH / LP / LOFI / BP), 1 high-pass (HP / BP), 2 low shelf + 3 high shelf (COLOR).
+    let eq = AVAudioUnitEQ(numberOfBands: 4)
     let lowPass: AVAudioUnitEQFilterParameters
     let distortion = AVAudioUnitDistortion()
     let delayFX = AVAudioUnitDelay()
     let reverb = AVAudioUnitReverb()
     let limiter: AVAudioUnitEffect
+    /// PAD FX character unit (LOFI / CRUSH / RING MOD / RADIO / GRANULAR), first in the chain; bypassed otherwise.
+    let fxDist = AVAudioUnitDistortion()
 
     // MARK: Queues
 
@@ -98,6 +101,22 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     var breakdown = false
     var muteGen = 0
     var lastPunchLog: Double = 0
+    /// PAD FX selection as seen by setPunch (breakdown only applies to the default chain).
+    var fxSelected: FXType?
+
+    // MARK: PAD FX engine state (fxQ only, except the q-owned sequencer bits)
+
+    let fxQ = DispatchQueue(label: "com.shuhan.crate.audio.fx", qos: .userInteractive)
+    var fxTypeQ: FXType?
+    var fxApplied: Double = 0
+    var fxRampGen = 0
+    /// BEAT REPEAT (q): slice length in steps (0 = off), first remapped step, captured hit step, ratchet.
+    var repeatLen = 0
+    var repeatFrom = 0
+    var repeatHit = 0
+    var repeatRatchet = 1
+    /// HALF SPEED (q): varispeed multiplier for newly started voices.
+    var rateMulQ: Float = 1
 
     // MARK: Metering (levelLock)
 
@@ -205,15 +224,16 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             mixer.outputVolume = Self.bankGain
             try engine.connectNode(mixer, to: sumMixer, fromBus: 0, toBus: AVAudioNodeBus(bank.rawValue), format: fmt)
         }
-        for node in [eq, distortion, delayFX, reverb, limiter] as [AVAudioNode] { engine.attach(node) }
+        for node in [fxDist, eq, distortion, delayFX, reverb, limiter] as [AVAudioNode] { engine.attach(node) }
+        try engine.connectNode(sumMixer, to: fxDist, format: fmt)
         // Crush before the low-pass: the decimator's aliasing re-adds highs, so after the filter it
         // cancelled the "filter closing" (measured: centroid stayed ~1.3 kHz at a 400 Hz cutoff).
         if Self.crushBeforeFilter {
-            try engine.connectNode(sumMixer, to: distortion, format: fmt)
+            try engine.connectNode(fxDist, to: distortion, format: fmt)
             try engine.connectNode(distortion, to: eq, format: fmt)
             try engine.connectNode(eq, to: delayFX, format: fmt)
         } else {
-            try engine.connectNode(sumMixer, to: eq, format: fmt)
+            try engine.connectNode(fxDist, to: eq, format: fmt)
             try engine.connectNode(eq, to: distortion, format: fmt)
             try engine.connectNode(distortion, to: delayFX, format: fmt)
         }
@@ -231,10 +251,24 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         lp.bandwidth = 0.5
         lp.gain = 0
         lp.bypass = false
+        // HP stays engaged at 10 Hz (inaudible) so HP / BP FILTER can sweep it without bypass clicks.
         let hp = eq.bands[1]
         hp.filterType = .highPass
-        hp.frequency = 30
-        hp.bypass = true
+        hp.frequency = 10
+        hp.bypass = false
+        let ls = eq.bands[2]
+        ls.filterType = .lowShelf
+        ls.frequency = 250
+        ls.gain = 0
+        ls.bypass = false
+        let hs = eq.bands[3]
+        hs.filterType = .highShelf
+        hs.frequency = 3500
+        hs.gain = 0
+        hs.bypass = false
+        fxDist.loadFactoryPreset(.multiDecimated4)
+        fxDist.wetDryMix = 0
+        fxDist.bypass = true
         eq.globalGain = 0
         distortion.loadFactoryPreset(.multiDecimated2)
         distortion.wetDryMix = 0
@@ -422,13 +456,14 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         var log = false
         fxLock.lock()
         punchValue = p
-        if !breakdown && p > 0.92 { breakdown = true; muteChange = true; muteGen += 1 }
-        else if breakdown && p < 0.88 { breakdown = false; muteChange = false; muteGen += 1 }
+        let typed = fxSelected != nil
+        if !typed && !breakdown && p > 0.92 { breakdown = true; muteChange = true; muteGen += 1 }
+        else if breakdown && (p < 0.88 || typed) { breakdown = false; muteChange = false; muteGen += 1 }
         let gen = muteGen
         if now - lastPunchLog >= 0.1 || muteChange != nil { lastPunchLog = now; log = true }
         fxLock.unlock()
 
-        applyFX(p)
+        fxQ.async { self.rampFX(to: p) }
         if let m = muteChange { rampBreakdown(muted: m, gen: gen) }
         if log {
             var f: [String: Any] = ["p": (p * 1000).rounded() / 1000]
@@ -443,7 +478,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             breakdown = false
             muteGen += 1
         }
-        applyFX(0)
+        fxQ.async { self.rampFX(to: 0, over: 0.01) }
         eq.globalGain = 0
         bankMixers[Bank.a.rawValue].outputVolume = Self.bankGain
         bankMixers[Bank.c.rawValue].outputVolume = Self.bankGain
@@ -466,7 +501,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
 
     /// Breakdown: banks A + C fade out over ~20 ms (bank B chops ring through the FX) with a little makeup
     /// gain so the filtered chops stay audible; reverse on exit.
-    private func rampBreakdown(muted: Bool, gen: Int) {
+    func rampBreakdown(muted: Bool, gen: Int) {
         let targets = [bankMixers[Bank.a.rawValue], bankMixers[Bank.c.rawValue]]
         let from = targets[0].outputVolume
         let to: Float = muted ? 0 : Self.bankGain

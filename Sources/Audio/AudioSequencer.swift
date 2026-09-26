@@ -174,6 +174,7 @@ extension AudioEngine {
         skipOnce.removeAll()
         nextStep = 0
         schedBar = 0
+        if repeatLen > 0 { captureRepeat(from: 0) }
         anchorStep = 0
         anchorTime = Clock.now() + Self.startDelay
         timelineQ = Timeline(playing: true, anchorStep: 0, anchorTime: anchorTime, sps: sps)
@@ -231,7 +232,7 @@ extension AudioEngine {
             timelineQ.sps = newSps
             publishTimeline()
         }
-        delayFX.delayTime = min(2.0, 3 * newSps)
+        fxQ.async { if self.fxTypeQ != .comb { self.delayFX.delayTime = self.fxDelayTime(for: self.fxTypeQ, sps: newSps) } }
     }
 
     // MARK: - Clock tick (q, every 5 ms)
@@ -293,8 +294,23 @@ extension AudioEngine {
         return active
     }
 
-    /// All events at absolute step `s`: the pattern (looped over totalSteps) with bar fills applied to bank-A lanes.
+    /// All events at absolute step `s`; BEAT REPEAT (PAD FX) remaps steps ≥ repeatFrom onto the captured slice.
     func events(at s: Int) -> [SeqEvent] {
+        guard repeatLen > 0, s >= repeatFrom else { return naturalEvents(at: s) }
+        let src: Int
+        if repeatLen == 1 {
+            src = repeatHit
+        } else {
+            let b = Self.floorDiv(repeatHit, repeatLen) * repeatLen
+            src = b + ((s - b) % repeatLen + repeatLen) % repeatLen
+        }
+        var evs = naturalEvents(at: src)
+        if repeatRatchet > 1 { for i in evs.indices { evs[i].ratchet = min(8, evs[i].ratchet * repeatRatchet) } }
+        return evs
+    }
+
+    /// The pattern (looped over totalSteps) with bar fills applied to bank-A lanes.
+    func naturalEvents(at s: Int) -> [SeqEvent] {
         let bar = Self.floorDiv(s, 16)
         let inBar = s - bar * 16
         let comp = compiled(forBar: bar)
@@ -387,7 +403,7 @@ extension AudioEngine {
                     endAt: Double?, live: Bool, now: Double) {
         guard let fmt = engineFormat, isRunning,
               pa.buffer.format.sampleRate == fmt.sampleRate, pa.buffer.format.channelCount == fmt.channelCount else { return }
-        let rate = Float(min(4, max(0.25, pow(2.0, semitones / 12))))
+        let rate = Float(min(4, max(0.25, pow(2.0, semitones / 12) * Double(rateMulQ))))
         let sr = fmt.sampleRate
         let start = t ?? now
         var buffer = pa.buffer

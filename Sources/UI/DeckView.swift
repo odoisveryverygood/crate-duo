@@ -108,6 +108,8 @@ struct DeckView: View {
     private var center: some View {
         if state.mode == .keys {
             KeysView(state: state)
+        } else if state.mode == .padFX {
+            PadFXView(state: state)
         } else {
             PadGridView(state: state)
         }

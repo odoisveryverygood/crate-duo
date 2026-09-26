@@ -16,7 +16,7 @@ struct LidDisplayView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 12)
                 if state.punch > 0.01 {
-                    PunchStrip(punch: state.punch).padding(.bottom, 10)
+                    PunchStrip(punch: state.punch, fx: state.fx).padding(.bottom, 10)
                 }
                 Group {
                     if CrateUI.shared.promptFocused {
@@ -192,7 +192,7 @@ struct LidReadouts: View {
                 readout(midi.map { UIHelpers.noteName($0) } ?? "--", "NOTE", color: Theme.orange, id: "note")
                 readout(CrateUI.shared.lastSemi.map { UIHelpers.signed($0) } ?? "0", "SEMI", id: "semi")
             case .padFX:
-                readout(String(format: "%03d", Int((state.punch * 100).rounded())), "PUNCH %", color: Theme.orange, id: "punch")
+                readout(String(format: "%03d", Int((state.punch * 100).rounded())), (state.fx?.label ?? "PUNCH") + " %", color: Theme.orange, id: "punch")
                 live
             case .chop:
                 TimelineView(.animation(minimumInterval: 1.0 / 30)) { _ in
@@ -319,6 +319,14 @@ struct LidPromptArea: View {
                         .lineLimit(1)
                         .fixedSize()
                         .accessibilityIdentifier("perform-status")
+                }
+                if let fx = state.fx {
+                    Text("FX ▸ \(fx.label) \(Int((state.punch * 100).rounded()))%")
+                        .font(Theme.mono(10, bold: true))
+                        .foregroundStyle(state.punch > 0.01 ? Theme.orange : Theme.mid)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .accessibilityIdentifier("fx-status")
                 }
             }
             if suggest {
