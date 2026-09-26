@@ -65,6 +65,18 @@ enum Music {
         return steps.map { (pc + $0) % 12 }
     }
 
+    /// Nearest pitch inside the key's scale (ties resolve downward).
+    static func snap(_ midi: Int, keyPC: Int, minor: Bool) -> Int {
+        let pcs = Set(scale(pc: keyPC, minor: minor))
+        func pc(_ m: Int) -> Int { ((m % 12) + 12) % 12 }
+        if pcs.contains(pc(midi)) { return midi }
+        for d in 1...6 {
+            if pcs.contains(pc(midi - d)) { return midi - d }
+            if pcs.contains(pc(midi + d)) { return midi + d }
+        }
+        return midi
+    }
+
     /// Move `midi` by whole octaves to within ±6 semitones of `root` (keeps pitch class).
     static func fold(_ midi: Int, near root: Int) -> Int {
         var m = midi
