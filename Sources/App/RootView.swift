@@ -16,6 +16,8 @@ struct RootView: View {
     @State private var deviceOrientation = UIDevice.current.orientation
     /// Debug override: -crateTurn 90 / -90 / 0 (also `crate://rot?deg=`), 999 = automatic.
     @AppStorage("crateTurn") private var turnOverride: Double = 999
+    /// Rotation in use when the hinge FX started: folding the hinge for FX must never spin the layout.
+    @State private var lockedTurn: Double?
 
     var body: some View {
         GeometryReader { proxy in
@@ -25,7 +27,8 @@ struct RootView: View {
             // Apple: branch on size classes, not orientation. Outer display = compact in either orientation;
             // the inner display is regular/regular in every pose.
             let outer = hSize == .compact || vSize == .compact
-            let turn = outer ? 0 : counterRotation(size: size)
+            let liveTurn = outer ? 0 : counterRotation(size: size)
+            let turn = (state.punch > 0.04 ? lockedTurn : nil) ?? liveTurn
             ZStack {
                 Color.black
                 if outer {
@@ -61,6 +64,9 @@ struct RootView: View {
                 }
             }
             .onChange(of: turn) { _, t in DebugLog.event("layout_turn", ["turn": t, "w": size.width, "h": size.height]) }
+            .onAppear { lockedTurn = liveTurn }
+            .onChange(of: liveTurn) { _, t in if state.punch <= 0.04 { lockedTurn = t } }
+            .onChange(of: state.punch) { _, p in if p <= 0.04 { lockedTurn = liveTurn } }
         }
         .background(KeyboardControl(state: state).frame(width: 0, height: 0))
         .background {
@@ -78,7 +84,10 @@ struct RootView: View {
         .persistentSystemOverlays(.hidden)
         .onAppear { UIDevice.current.beginGeneratingDeviceOrientationNotifications() }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-            deviceOrientation = UIDevice.current.orientation
+            // Moving the hinge makes iOS report faceUp / unknown for a moment; keep the last real orientation.
+            let o = UIDevice.current.orientation
+            guard o.isPortrait || o.isLandscape else { return }
+            deviceOrientation = o
             DebugLog.event("device_orientation", ["raw": deviceOrientation.rawValue])
         }
         .sceneAccessory {

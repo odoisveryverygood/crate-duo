@@ -1,11 +1,12 @@
 import Foundation
 
 /// Maps the hinge angle to the punch-in FX amount; snapping the hinge open fires the DROP.
-/// Laptop/book rest angle ≈ 110°+ → no FX. Folding toward 25° ramps filter/crush/reverb up to a breakdown.
+/// Laptop/book rest angle ≈ 110°+ → no FX. Folding toward 65° ramps filter/crush/reverb up to a breakdown.
 final class HingeFX {
     private let state: AppState
     var restAngle: Double = 110
-    var closedAngle: Double = 25
+    /// Full FX at 65°: below ~55° the Duo turns the inner screen off and moves the app to the outer display.
+    var closedAngle: Double = 65
     private var lastDrop = Date.distantPast
     /// Hinge events right after launch (the simulator can start folded) must not fire a DROP.
     private let born = Date()
