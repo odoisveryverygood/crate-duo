@@ -58,7 +58,29 @@ import AVFoundation
         }
         let fileRegions = try SampleChopper.analyze(url: url, chop: .regions16)
         precondition(fileRegions.slices.count == 16)
+        precondition(abs(fileRegions.duration - 44_223.0 / 44_100.0) < 0.000001,
+                     "The partial final RMS window must retain the entire WAV duration")
         checkCoverage(fileRegions.slices, duration: fileRegions.duration)
+        // Also cover the smallest accepted take with a partial window and a short take.
+        let shortURL = url.deletingLastPathComponent().appendingPathComponent("short.wav")
+        do {
+            let file = try AVAudioFile(forWriting: shortURL, settings: format.settings)
+            buffer.frameLength = 3529 // 80ms + one frame: final read is one frame.
+            try file.write(from: buffer)
+        }
+        let shortAnalysis = try SampleChopper.analyze(url: shortURL, chop: .regions16)
+        precondition(shortAnalysis.slices.count == 16)
+        precondition(abs(shortAnalysis.duration - 3529.0 / 44_100.0) < 0.000001)
+        let tinyURL = url.deletingLastPathComponent().appendingPathComponent("tiny.wav")
+        do {
+            let file = try AVAudioFile(forWriting: tinyURL, settings: format.settings)
+            buffer.frameLength = 100
+            try file.write(from: buffer)
+        }
+        do {
+            _ = try SampleChopper.analyze(url: tinyURL, chop: .regions16)
+            preconditionFailure("A too-short take must fail before replacing any bank")
+        } catch SampleChopError.emptyRecording { }
         let fileTransients = try SampleChopper.analyze(url: url, chop: .threshold)
         precondition(fileTransients.slices.count == 3)
         precondition(abs(fileTransients.slices[1].start - 0.2) < 0.011)
