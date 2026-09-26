@@ -38,3 +38,11 @@ In the Simulator: ⌘→ to rotate into laptop pose; hold ⌥ and drag for the h
 
 ### WP6 (human, main Mac): ears on the library
 `afplay ~/duo-hack/library/loops/piano/L002.wav` (the headline Nujabes piano), plus L001/L003/L004/L018 and the breaks L061–L063. Note any bad sample IDs in `LIBRARY-NOTES.md` so they can be excluded.
+
+### WP7: SAMPLE mode, mic → pad → auto-chop (MPC Sample workflow), `Sources/Sampler/` only, ~60 min
+The MPC Sample's core loop: press SAMPLE RECORD, record from the mic, and the take is auto-chopped onto pads ("Threshold" chop by transients, or "Regions 16" equal slices). Build it without touching `Sources/Audio`:
+- `final class MicSampler` (init(state: AppState)): `startRecording()` / `stopRecording(chop: .threshold | .regions16) async`. Record with AVAudioRecorder (44.1 kHz mono 16-bit WAV) to `Documents/samples/rec-<timestamp>.wav`. While recording, switch the AVAudioSession to `.playAndRecord` with options `[.defaultToSpeaker, .mixWithOthers]`, then restore `.playback` afterwards (the audio engine keeps running; it handles config changes). Expose a live input `level` (0…1) for a meter. Optional: threshold arm (start the take when the level crosses −30 dBFS, like MPC Sample's Threshold).
+- Auto-chop: load the WAV, find transients (RMS in 10 ms windows, rising edges above an adaptive threshold, ≥ 80 ms apart), and make up to 16 slices (or 16 equal regions) → `PadSound(id:, name: "REC 01"…, category: .chop, fileURL:, start:, end:, rootNote: 60)` → `await state.engine.loadBank(.d, sounds: [0: …, 1: …])`, set `state.bank = .d` and `state.sounds` for those pads, and `state.addLog("SAMPLE", "16 chops · 4.2 s", tint: .grey)`.
+- `SampleRecordButton(state:sampler:)` SwiftUI view: hold to record (orange dot + live level bar + seconds), release to stop and chop; a small CHOP TYPE toggle (THRESH / REGIONS 16). TE style: see `Sources/UI/Theme.swift` (read-only) or HANDOFF WP2 colours.
+- Add `DebugLog.event("sample_rec", ["sec": …])` and `("sample_chop", ["slices": …])`.
+- Verify with the typecheck command above (Core + your files). If you have Xcode 27.1 + the iOS 27.1 simulator, you can also run it on a fresh clone (no keys needed; the app falls back to its built-in kit). The lead wires the button into the deck's SAMPLE mode.
