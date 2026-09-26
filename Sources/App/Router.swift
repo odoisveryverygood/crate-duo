@@ -63,6 +63,14 @@ enum Router {
             // crate://project?cmd=new|save|saveas|open&name=…
             let cmd = q("cmd") ?? "save", name = q("name")
             Task { @MainActor in await ProjectStore.shared.handle(cmd: cmd, name: name, state: state) }
+        case "undo":
+            Task { @MainActor in await Orchestrator.current?.undo() }
+        case "redo":
+            Task { @MainActor in await Orchestrator.current?.redo() }
+        case "bpm":
+            if let v = q("v").flatMap(Double.init) { Task { @MainActor in Orchestrator.current?.setTempo(v) } }
+        case "bars":
+            if let n = q("n").flatMap(Int.init) { Task { @MainActor in Orchestrator.current?.setBars(n) } }
         case "rec":
             state.setRecording(q("on") != "0")
         default:

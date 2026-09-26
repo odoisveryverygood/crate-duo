@@ -86,11 +86,11 @@ final class Orchestrator {
         let variant = repeatCount
         let seed = Self.fnv(key) &+ UInt64(variant) &* 0x9E37_79B9
 
-        if let order = Self.reorderRequest(prompt) {
-            await applyPadOrder(order)
+        if await handleCommand(prompt) {
             state.isDigging = false
             return DigReport(prompt: prompt, plan: KeywordParser.parse(prompt, grooves: library.grooves))
         }
+        checkpoint(prompt.count > 28 ? String(prompt.prefix(26)) + "…" : prompt)
         var plan = KeywordParser.parse(prompt, grooves: library.grooves)
         let kwScope = plan.scope
         let kwMs = Self.ms(t0)
@@ -107,6 +107,8 @@ final class Orchestrator {
         guard serial == digSerial else { report.superseded = true; return report }
         // An imported song flip keeps its chops: "dilla drums for this" stays drums-only whatever Jev guesses.
         if importedFlip, kwScope == .drumsOnly, [.fullBeat, .sampleOnly].contains(plan.scope) { plan.scope = .drumsOnly }
+        // "a slow sax" / "french jazz piano sample": an instrument and no drums is a sample request, whatever Jev guesses.
+        if kwScope == .sampleOnly, [.drumsOnly, .singleSound, .changeGroove, .bassOnly].contains(plan.scope) { plan.scope = .sampleOnly }
         if session == nil, [.sampleOnly, .bassOnly, .changeGroove, .flip].contains(plan.scope) { plan.scope = .fullBeat }
         report.plan = plan
         logPlan(plan, kwMs: kwMs)

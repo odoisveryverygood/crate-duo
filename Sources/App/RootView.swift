@@ -63,6 +63,16 @@ struct RootView: View {
             .onChange(of: turn) { _, t in DebugLog.event("layout_turn", ["turn": t, "w": size.width, "h": size.height]) }
         }
         .background(KeyboardControl(state: state).frame(width: 0, height: 0))
+        .background {
+            // ⌘Z = UNDO (same as the chip)
+            Button { Task { @MainActor in await Orchestrator.current?.undo() } } label: { EmptyView() }
+                .keyboardShortcut("z", modifiers: .command)
+                .accessibilityHidden(true)
+            // ⇧⌘Z = REDO
+            Button { Task { @MainActor in await Orchestrator.current?.redo() } } label: { EmptyView() }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .accessibilityHidden(true)
+        }
         .ignoresSafeArea()
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)

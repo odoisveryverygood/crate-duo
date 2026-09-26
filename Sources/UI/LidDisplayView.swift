@@ -256,7 +256,17 @@ struct LoopBar: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            let f = LiveFrame(state)
+            let empty = f.pattern.lanes.isEmpty && f.pattern.notes.isEmpty
+            let cur = max(1, empty ? state.bars : f.bars)
+            let next = [1, 2, 4, 8].first { $0 > cur } ?? 1
+            Orchestrator.current?.setBars(next)
+        }
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Tap to change the loop length")
         .accessibilityIdentifier("loop-bar")
         .accessibilityLabel("Loop")
     }
@@ -314,6 +324,8 @@ struct LidHero: View {
             HStack(alignment: .top, spacing: gap) {
                 let b = "\(Int(bpm.rounded()))"
                 readout(Text(b), plain: b, label: "BPM", id: "bpm")
+                    .contentShape(Rectangle())
+                    .gesture(tempoDrag)
                 if swing {
                     let s = "\(Int(state.engine.swing.rounded()))"
                     readout(Text(s), plain: s, label: "SWING", id: "swing")
@@ -323,6 +335,25 @@ struct LidHero: View {
                 readout(Text("\(bar)\(beat)"), plain: f.barBeat, label: "BAR", id: "bar-beat")
             }
         }
+    }
+
+    @State private var dragStartBPM: Double?
+
+    /// Drag the BPM number: up = faster, 1 BPM per 4 pt; one undo step per drag.
+    private var tempoDrag: some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { g in
+                guard let orch = Orchestrator.current else { return }
+                if dragStartBPM == nil {
+                    dragStartBPM = state.bpm
+                    orch.checkpoint("tempo \(Int(state.bpm)) BPM")
+                }
+                orch.setTempo((dragStartBPM ?? state.bpm) - Double(g.translation.height) / 4, checkpoint: false)
+            }
+            .onEnded { _ in
+                dragStartBPM = nil
+                state.addLog("TEMPO", "\(Int(state.bpm)) BPM", tint: .orange)
+            }
     }
 
     private func currentSlice(_ f: LiveFrame, now: Date) -> Int? {
@@ -805,7 +836,7 @@ struct LidChips: View {
     var wrap = true
 
     /// The chips the mock prints on the prompt row.
-    static let lidSet = ["chip-dilla-nujabes", "chip-house-kit", "chip-vintage-break", "chip-flip-it", "chip-ai-perform"]
+    static let lidSet = ["chip-undo", "chip-redo", "chip-dilla-nujabes", "chip-house-kit", "chip-vintage-break", "chip-flip-it", "chip-ai-perform"]
 
     var body: some View {
         let items = ActionChips.items.filter { ids?.contains($0.id) ?? true }
@@ -824,6 +855,7 @@ struct LidChips: View {
     private func chip(_ item: ActionChips.Item) -> some View {
         let isPerform = item.id == "chip-ai-perform"
         let on = isPerform && state.performOn
+        let dim = (item.id == "chip-undo" && !CrateUndoSignal.shared.canUndo) || (item.id == "chip-redo" && !CrateUndoSignal.shared.canRedo)
         let ink = on ? Color.black : Theme.chipText
         return Button {
             tap(item)
@@ -843,6 +875,7 @@ struct LidChips: View {
             .frame(height: 21)
             .background(RoundedRectangle(cornerRadius: 4).fill(on ? Theme.lidInk : Color.black))
             .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.chipStroke, lineWidth: 0.5).opacity(on ? 0 : 1))
+            .opacity(dim ? 0.35 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(ChipPressStyle())
@@ -855,6 +888,10 @@ struct LidChips: View {
     private func tap(_ item: ActionChips.Item) {
         let ui = CrateUI.shared
         switch item.id {
+        case "chip-undo":
+            Task { @MainActor in await Orchestrator.current?.undo() }
+        case "chip-redo":
+            Task { @MainActor in await Orchestrator.current?.redo() }
         case "chip-flip-it":
             state.onFlip?()
             DebugLog.event("flip")

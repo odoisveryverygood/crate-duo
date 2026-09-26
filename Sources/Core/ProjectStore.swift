@@ -152,19 +152,19 @@ final class ProjectStore {
         }
     }
 
-    /// First launch: the bundled HIP HOP and HOUSE demo projects go into Projects, and HIP HOP opens.
+    /// First launch: the bundled FRENCH JAZZ, HIP HOP and HOUSE demo projects go into Projects, and FRENCH JAZZ opens.
     private static func seedDefaults() {
-        let flag = "crateSeededDefaultsV1"
+        let flag = "crateSeededDefaultsV2"
         guard !UserDefaults.standard.bool(forKey: flag),
               let dir = Bundle.main.url(forResource: "DefaultProjects", withExtension: nil) else { return }
         let fm = FileManager.default
-        for id in ["default-hiphop", "default-house"] {
+        for id in ["default-frenchjazz", "default-hiphop", "default-house"] {
             let src = dir.appendingPathComponent(id + ".json"), dst = url(id)
             if fm.fileExists(atPath: src.path), !fm.fileExists(atPath: dst.path) { try? fm.copyItem(at: src, to: dst) }
         }
         UserDefaults.standard.set(true, forKey: flag)
         if UserDefaults.standard.string(forKey: lastKey) == nil {
-            UserDefaults.standard.set("default-hiphop", forKey: lastKey)
+            UserDefaults.standard.set("default-frenchjazz", forKey: lastKey)
         }
     }
 
