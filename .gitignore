@@ -16,3 +16,12 @@ build/
 *.xcodeproj/
 xcuserdata/
 .DS_Store
+
+# demo video media
+demo/clips/
+demo/music/
+demo/ref/
+demo/cache/
+demo/*.mp4
+demo/*.mov
+demo/*.m4a
