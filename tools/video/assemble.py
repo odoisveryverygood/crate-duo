@@ -118,6 +118,26 @@ def render_shot(shot, here):
         render_clip(shot, here, tmp)
     else:
         render_image_or_video(shot, here, tmp)
+    ov = shot.get("overlay")
+    if ov:
+        # optional transparent overlay (e.g. the hinge-angle diagram), composited
+        # onto the finished 1920x1080 segment; the segment keeps its exact length.
+        tmp2 = out_path + ".tmp2.mov"
+        vc.sh(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-i", resolve(here, ov["path"]),
+               "-filter_complex", f"[1:v]format=rgba,setpts=PTS-STARTPTS[o];[0:v][o]overlay={ov.get('x', 0)}:{ov.get('y', 0)}:eof_action=pass,format=yuv420p[v]",
+               "-map", "[v]", "-map", "0:a", "-r", str(vc.FPS)] + vc.VCODEC_MOV + ["-c:a", "copy", tmp2])
+        os.replace(tmp2, tmp)
+    fk = shot.get("frame_keys")
+    if fk:
+        # optional camera over the WHOLE composited frame (cream included), e.g. a
+        # slow push on the two-screen layout; compose's own keys zoom inside the box.
+        tmp3 = out_path + ".tmp3.mov"
+        n = round(vc.probe_duration(tmp) * vc.FPS)
+        kb = vc.kenburns_filter(fk, vc.CANVAS_W, vc.CANVAS_H)
+        vc.sh(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-filter_complex",
+               f"[0:v]{kb},fps={vc.FPS},format=yuv420p,trim=end_frame={n},setpts=PTS-STARTPTS[v]",
+               "-map", "[v]", "-map", "0:a", "-r", str(vc.FPS)] + vc.VCODEC_MOV + ["-c:a", "copy", tmp3])
+        os.replace(tmp3, tmp)
     os.replace(tmp, out_path)
     return out_path
 
