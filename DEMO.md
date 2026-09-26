@@ -19,7 +19,7 @@
 9. **(1:25) Close:** "CRATE: your crates, instantly, on the first phone with a hinge."
 
 ## Judge Q&A crib
-- **Why Duo?** Two screens = a lid display + a deck, like real hardware. The hinge angle is a continuous controller (Apple's own Duo tech talk uses hinge → pitch bend). The outer screen = a pocket sketchpad.
+- **Why Duo?** THREE screens at once in laptop pose: lid display (top half), deck (bottom half), and the back screen facing the room as a Now-Playing/crowd card (via `CameraCaptureAccessory`). The hinge angle is a continuous controller (Apple's own Duo tech talk uses hinge → pitch bend). The outer screen = a pocket sketchpad.
 - **Why these models?** Jev returns typed decisions, not text, so it's fast enough for real-time musical decisions and can't hallucinate a format. GPT-6-luna (3.8 s measured) does real composition in the background. Sounds come from local retrieval over a pre-analyzed library (555 one-shots + 77 loops with BPM/key/chords), so it's instant and offline-capable.
 - **Is the music generated?** The sounds are the user's own samples (no uncanny AI audio); the *arrangement* (patterns, bass, flips, fills) is AI.
 - **Offline?** Yes: keyword parser + groove templates + rule-based bass. Network AI only upgrades it.
