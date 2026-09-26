@@ -43,8 +43,12 @@ enum SampleChopper {
         var rms: [Double] = []
         while file.framePosition < file.length {
             try Task.checkCancellation()
-            try file.read(into: buffer, frameCount: frames)
-            guard buffer.frameLength > 0, let channels = buffer.floatChannelData else {
+            // iOS 27 can throw when the requested read extends past EOF. Most takes
+            // do not end on an exact 10 ms boundary; request only their remaining frames.
+            let remaining = file.length - file.framePosition
+            let requested = AVAudioFrameCount(min(AVAudioFramePosition(frames), remaining))
+            try file.read(into: buffer, frameCount: requested)
+            guard buffer.frameLength == requested, let channels = buffer.floatChannelData else {
                 throw SampleChopError.unreadableAudio
             }
             var sum = 0.0
