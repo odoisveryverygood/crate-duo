@@ -418,7 +418,7 @@ struct DigComposer: View {
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            LidChips(state: state)
+            LidChips(state: state, ids: LidChips.lidSet)
             Spacer(minLength: 0)
         }
         .padding(.top, 2)

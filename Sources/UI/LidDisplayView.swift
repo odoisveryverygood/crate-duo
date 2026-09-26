@@ -836,7 +836,7 @@ struct LidChips: View {
     var wrap = true
 
     /// The chips the mock prints on the prompt row.
-    static let lidSet = ["chip-undo", "chip-redo", "chip-dilla-nujabes", "chip-house-kit", "chip-vintage-break", "chip-flip-it", "chip-ai-perform"]
+    static let lidSet = ["chip-undo", "chip-redo", "chip-flip-it", "chip-ai-perform"]
 
     var body: some View {
         let items = ActionChips.items.filter { ids?.contains($0.id) ?? true }
@@ -854,8 +854,11 @@ struct LidChips: View {
 
     private func chip(_ item: ActionChips.Item) -> some View {
         let isPerform = item.id == "chip-ai-perform"
-        let on = isPerform && state.performOn
-        let dim = (item.id == "chip-undo" && !CrateUndoSignal.shared.canUndo) || (item.id == "chip-redo" && !CrateUndoSignal.shared.canRedo)
+        let isHistory = item.id == "chip-undo" || item.id == "chip-redo"
+        let available = item.id == "chip-undo" ? CrateUndoSignal.shared.canUndo : CrateUndoSignal.shared.canRedo
+        // UNDO / REDO: solid white while there's something to undo/redo, outlined when not.
+        let on = (isPerform && state.performOn) || (isHistory && available)
+        let dim = isHistory && !available
         let ink = on ? Color.black : Theme.chipText
         return Button {
             tap(item)
