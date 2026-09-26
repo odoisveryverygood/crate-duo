@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UniformTypeIdentifiers
 
 final class KeyboardSpy: SamplerEngine {
     var pattern = Pattern.empty
@@ -119,6 +120,14 @@ enum TeamateChecks {
             do { _ = try AudioImport.copy(invalid, directory: root.appendingPathComponent("invalid")) } catch { rejected = true }
             try check(rejected, "reject invalid audio")
             try check((try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("invalid").path)).isEmpty, "clean invalid copy")
+            let provider = NSItemProvider(contentsOf: fixture)!
+            let providerResult: Result<ImportedAudio, Error> = await withCheckedContinuation { continuation in
+                AudioDropProvider.load(provider) { continuation.resume(returning: $0) }
+            }
+            let providerAudio = try providerResult.get()
+            try check(FileManager.default.fileExists(atPath: providerAudio.url.path), "provider temp file copied before callback returns")
+            try check(abs(providerAudio.duration - 1) < 0.001, "provider audio decoded")
+            try? FileManager.default.removeItem(at: providerAudio.url)
             results.append("PASS import: audio validation, owned copies, unique paths, preserved bank, 16 contiguous chops and invalid-file cleanup")
 
             let engine = AudioEngine()

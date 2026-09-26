@@ -19,7 +19,7 @@ private struct AudioPadDrop: ViewModifier {
                 let row = min(3, max(0, Int(point.y / (ch + gap))))
                 let pad = PadID(state.bank, (3 - row) * 4 + column)
                 importer.isBusy = true
-                load(provider) { result in
+                AudioDropProvider.load(provider) { result in
                     Task { @MainActor in
                         switch result {
                         case .success(let audio): await importer.receive(audio, on: pad, state: state)
@@ -54,7 +54,10 @@ private struct AudioPadDrop: ViewModifier {
             } message: { Text(importer.error ?? "") }
     }
 
-    private func load(_ provider: NSItemProvider, completion: @escaping (Result<ImportedAudio, Error>) -> Void) {
+}
+
+enum AudioDropProvider {
+    static func load(_ provider: NSItemProvider, completion: @escaping (Result<ImportedAudio, Error>) -> Void) {
         if let type = provider.registeredTypeIdentifiers.first(where: { UTType($0)?.conforms(to: .audio) == true }) {
             provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
                 guard let url else { completion(.failure(error ?? AudioTransferError.invalidAudio)); return }

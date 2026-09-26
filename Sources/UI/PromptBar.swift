@@ -38,6 +38,13 @@ struct PromptLine: View {
                 DotSpinner(color: Theme.orange, dot: 2)
             }
         }
+        .background {
+            // TextField consumes raw presses; register Escape with the hosting controller
+            // so it also works while UIKit's text editor is first responder.
+            Button { focused = false; state.promptFocused = false } label: { EmptyView() }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityHidden(true)
+        }
         .frame(minHeight: fontSize + 8)
         .onChange(of: ui.focusRequest) { _, _ in focused = true }
         .onChange(of: ui.blurRequest) { _, _ in focused = false }

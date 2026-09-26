@@ -10,7 +10,9 @@ struct DeckView: View {
             let size = geo.size
             ZStack {
                 Theme.chassis
-                if size.height > size.width * 1.05 {
+                if state.mode == .keys {
+                    wideKeys
+                } else if size.height > size.width * 1.05 {
                     portrait(size)
                 } else {
                     landscape(size)
@@ -27,6 +29,27 @@ struct DeckView: View {
     }
 
     // MARK: layouts
+
+    /// One slim control row leaves the entire deck width for the one-octave keyboard.
+    private var wideKeys: some View {
+        VStack(spacing: 9) {
+            HStack(spacing: 6) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(modeItems, id: \.self) { item in
+                            modeButton(item).frame(width: 46, height: 32)
+                        }
+                    }
+                }
+                TransportRow(state: state, height: 32).frame(width: 106)
+                DigButton(state: state, height: 32).frame(width: 62)
+            }
+            .frame(height: 32)
+            KeysView(state: state).frame(maxWidth: .infinity, maxHeight: .infinity)
+            BrandLine()
+        }
+        .padding(12)
+    }
 
     private func landscape(_ size: CGSize) -> some View {
         let inset: CGFloat = size.width < 560 ? 12 : 16
