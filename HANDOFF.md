@@ -1,3 +1,14 @@
+# ASSIGNMENTS & TIMELINE (read this first)
+| Who | 1st | 2nd | 3rd |
+|---|---|---|---|
+| **Teammate 1** | WP8 keyboard play (push 13:45) | R3 pads + keys incl. RECORDS pad style (push 14:10) | 14:20 QA run of the demo flow on merged `main`, report bugs to the lead |
+| **Teammate 2** | WP13 drag audio in/out (push 13:45) | R4 compact + back screen (push 14:10) | 14:20 QA run focused on drag-in → chop → flip |
+| **Astra** | R1 theme + lid (push Theme tokens by 13:35, lid by 14:10) | WP4 app icon + wordmark in `Resources/Brand/` (push 14:25) | — |
+| **Local Codex** | R2 deck chrome + show Astra's `SampleRecordButton` in the deck when mode == SAMPLE (push 14:10) | WP3 README + SUBMISSION.md (push 14:30) | — |
+| **Lead (Claude)** | Song import → auto-chop → instant AI flip + DIG locked to the chop's tempo/key | PAD FX grid + hinge knob (agent), all merges + self-test after each | Final video (realistic Duo) after the freeze |
+| **Shuhan** | The demo song file (now) + pick the demo sounds | Rehearse the flow twice (14:45–15:10), the sung melody | Submit (15:15–15:30) + the 20 s RevenueCat pitch |
+**Freeze 14:45** (only bug fixes after). **Submit 15:30.**
+
 # HANDOFF: parallel work on CRATE (Bitrig Hacks: iPhone Duo Edition)
 
 **Deadline:** submit by 15:30; demos 15:30–17:00. **Repo:** github.com/Shuhan-Zhang/crate-duo (private), branch `main`.
