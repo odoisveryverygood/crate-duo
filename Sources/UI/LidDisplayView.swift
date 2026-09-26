@@ -12,6 +12,7 @@ struct LidDisplayView: View {
             let narrow = geo.size.width < 520
             VStack(alignment: .leading, spacing: 0) {
                 LidHeader(state: state, narrow: narrow)
+                BounceControl(state: state).padding(.top, 6)
                 LidReadouts(state: state, stacked: narrow, hero: narrow ? 40 : 44)
                     .padding(.top, 12)
                     .padding(.bottom, 12)
