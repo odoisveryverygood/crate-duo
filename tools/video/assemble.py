@@ -50,6 +50,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vidcommon as vc
 import compose
+import duo_compose
+import duo_model
 
 SEG_CACHE = os.path.join(vc.CACHE, "shots")
 os.makedirs(SEG_CACHE, exist_ok=True)
@@ -74,14 +76,15 @@ def render_image_or_video(shot, here, out_path):
     if dur is None:
         dur = vc.probe_duration(path)
     nframes = round(dur * vc.FPS)
-    kb = vc.kenburns_filter(keys or [{"t": 0, "zoom": 1.0, "cx": 0.5, "cy": 0.5}], vc.CANVAS_W, vc.CANVAS_H)
+    cam = vc.camera_filter(keys or [{"t": 0, "zoom": 1.0, "cx": 0.5, "cy": 0.5}], vc.CANVAS_W, vc.CANVAS_H, work=2.0)
 
     if shot["type"] == "image":
-        in_args = ["-loop", "1", "-t", f"{dur + 0.5}", "-i", path]
+        in_args = ["-loop", "1", "-framerate", str(vc.FPS), "-t", f"{dur + 0.5}", "-i", path]
     else:
         in_args = ["-t", f"{dur + 0.5}", "-i", path]
 
-    vf = f"{kb},fps={vc.FPS},format=yuv420p,tpad=stop_mode=clone:stop_duration=2,trim=end_frame={nframes},setpts=PTS-STARTPTS"
+    vf = (f"fps={vc.FPS},scale={2 * vc.CANVAS_W}:{2 * vc.CANVAS_H}:flags=lanczos,{cam},format=yuv420p,"
+          f"tpad=stop_mode=clone:stop_duration=2,trim=end_frame={nframes},setpts=PTS-STARTPTS")
     cmd = (["ffmpeg", "-v", "error", "-y"] + in_args + vc.silent_audio_args(dur) +
            ["-filter_complex", f"[0:v]{vf}[v]", "-map", "[v]", "-map", "1:a", "-r", str(vc.FPS)] +
            vc.VCODEC_MOV + vc.ACODEC_PCM + ["-shortest", out_path])
@@ -104,18 +107,30 @@ def render_clip(shot, here, out_path):
         second_dur=shot.get("second_dur"),
         second_speed=shot.get("second_speed"),
         second_keys=shot.get("second_keys"),
+        crop=shot.get("crop"),
+        second_crop=shot.get("second_crop"),
+        box=shot.get("box"),
+        radius=shot.get("radius"),
     )
     return out_path
 
 
 def render_shot(shot, here):
     key = {k: v for k, v in shot.items() if k not in ("id", "audio", "gain_db", "fade_in", "fade_out")}
+    key["_cam"] = 2                       # sub-pixel camera (v3); invalidates pre-fix cached segments
+    if shot["type"] == "device":
+        key["_duo_v"] = duo_model.VERSION
     out_path = vc.cache_path("shot", key, ".mov")
     if os.path.exists(out_path):
         return out_path
     tmp = out_path + ".tmp.mov"
     if shot["type"] == "clip":
         render_clip(shot, here, tmp)
+    elif shot["type"] == "device":
+        duo_compose.render(tmp, shot, lambda p: resolve(here, p))
+    elif shot["type"] == "device_anim":
+        import duo_anim
+        duo_anim.render(tmp, shot, lambda p: resolve(here, p))
     else:
         render_image_or_video(shot, here, tmp)
     ov = shot.get("overlay")
@@ -123,8 +138,14 @@ def render_shot(shot, here):
         # optional transparent overlay (e.g. the hinge-angle diagram), composited
         # onto the finished 1920x1080 segment; the segment keeps its exact length.
         tmp2 = out_path + ".tmp2.mov"
-        vc.sh(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-i", resolve(here, ov["path"]),
-               "-filter_complex", f"[1:v]format=rgba,setpts=PTS-STARTPTS[o];[0:v][o]overlay={ov.get('x', 0)}:{ov.get('y', 0)}:eof_action=pass,format=yuv420p[v]",
+        opath = resolve(here, ov["path"])
+        sdur = vc.probe_duration(tmp)
+        oin = (["-loop", "1", "-framerate", str(vc.FPS), "-t", f"{sdur:.4f}", "-i", opath]
+               if opath.lower().endswith(".png") else ["-i", opath])
+        fd = ov.get("fade", 0)
+        ofade = (f",fade=t=in:st=0:d={fd}:alpha=1,fade=t=out:st={max(0, sdur - fd):.3f}:d={fd}:alpha=1" if fd else "")
+        vc.sh(["ffmpeg", "-v", "error", "-y", "-i", tmp] + oin + [
+               "-filter_complex", f"[1:v]format=rgba,setpts=PTS-STARTPTS{ofade}[o];[0:v][o]overlay={ov.get('x', 0)}:{ov.get('y', 0)}:eof_action=pass,format=yuv420p[v]",
                "-map", "[v]", "-map", "0:a", "-r", str(vc.FPS)] + vc.VCODEC_MOV + ["-c:a", "copy", tmp2])
         os.replace(tmp2, tmp)
     fk = shot.get("frame_keys")
@@ -133,9 +154,9 @@ def render_shot(shot, here):
         # slow push on the two-screen layout; compose's own keys zoom inside the box.
         tmp3 = out_path + ".tmp3.mov"
         n = round(vc.probe_duration(tmp) * vc.FPS)
-        kb = vc.kenburns_filter(fk, vc.CANVAS_W, vc.CANVAS_H)
+        cam = vc.camera_filter(fk, vc.CANVAS_W, vc.CANVAS_H, work=2.0)
         vc.sh(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-filter_complex",
-               f"[0:v]{kb},fps={vc.FPS},format=yuv420p,trim=end_frame={n},setpts=PTS-STARTPTS[v]",
+               f"[0:v]fps={vc.FPS},scale={2 * vc.CANVAS_W}:{2 * vc.CANVAS_H}:flags=lanczos,{cam},format=yuv420p,trim=end_frame={n},setpts=PTS-STARTPTS[v]",
                "-map", "[v]", "-map", "0:a", "-r", str(vc.FPS)] + vc.VCODEC_MOV + ["-c:a", "copy", tmp3])
         os.replace(tmp3, tmp)
     os.replace(tmp, out_path)

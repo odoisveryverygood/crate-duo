@@ -1,0 +1,17 @@
+i,id,type,start,dur
+0,title,image,0.0,3.5
+1,s1_dig,clip,3.5,4.2
+2,s1_gpt,clip,7.7,4.5
+3,s1_drums_dev,device,12.2,3.0
+4,s1_drums_flat,clip,15.2,2.3
+5,s1_keys,clip,17.5,5.3
+6,s1_perform_dev,device,22.8,5.0
+7,s1_perform_lid,clip,27.8,5.4
+8,chapter_hinge,image,33.2,2.4
+9,s2_dig,clip,35.6,6.0
+10,s2_fx_build,device_anim,41.6,10.224
+11,s2_snap,device_anim,51.824,3.0
+12,s2_drop,clip,54.824,6.0
+13,s2_dropback,clip,60.824,5.5
+14,end_typed,video,66.324,2.5
+15,end_card,image,68.824,6.5

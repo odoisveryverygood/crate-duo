@@ -1,0 +1,536 @@
+{
+ "w": 1920,
+ "h": 1080,
+ "fps": 30,
+ "shots": [
+  {
+   "type": "image",
+   "id": "title",
+   "path": "cards/title_tag.png",
+   "dur": 3.5,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 3.5,
+     "zoom": 1.04,
+     "cx": 0.5,
+     "cy": 0.47
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s1_dig",
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 0.8,
+   "dur": 4.2,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 4.2,
+     "zoom": 1.12,
+     "cx": 0.5,
+     "cy": 0.42
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s1_gpt",
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 5.0,
+   "dur": 4.5,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.3,
+     "cx": 0.45,
+     "cy": 0.33
+    },
+    {
+     "t": 4.5,
+     "zoom": 1.7,
+     "cx": 0.35,
+     "cy": 0.36
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "device",
+   "id": "s1_drums_dev",
+   "device": {
+    "pose": "laptop",
+    "view": "front",
+    "el": 38
+   },
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 9.5,
+   "dur": 3.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 2.05,
+     "screen": "deck",
+     "u": 0.43,
+     "v": 0.55
+    },
+    {
+     "t": 3.0,
+     "zoom": 2.25,
+     "screen": "deck",
+     "u": 0.45,
+     "v": 0.58
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s1_drums_flat",
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 12.5,
+   "dur": 2.3,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.35,
+     "cx": 0.5,
+     "cy": 0.72
+    },
+    {
+     "t": 2.3,
+     "zoom": 1.42,
+     "cx": 0.5,
+     "cy": 0.73
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s1_keys",
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 14.8,
+   "dur": 5.3,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 5.3,
+     "zoom": 1.3,
+     "cx": 0.5,
+     "cy": 0.64
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "device",
+   "id": "s1_perform_dev",
+   "device": {
+    "pose": "laptop",
+    "view": "front",
+    "az": 9
+   },
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 20.1,
+   "dur": 5.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 5.0,
+     "zoom": 1.06,
+     "cx": 0.5,
+     "cy": 0.48
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s1_perform_lid",
+   "clip": "clips/jazz_inner_up.mov",
+   "ss": 25.1,
+   "dur": 5.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.4,
+     "cx": 0.5,
+     "cy": 0.27
+    },
+    {
+     "t": 5.4,
+     "zoom": 1.55,
+     "cx": 0.5,
+     "cy": 0.27
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "image",
+   "id": "chapter_hinge",
+   "path": "cards/chapter_04.png",
+   "dur": 2.4,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 2.4,
+     "zoom": 1.03,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s2_dig",
+   "clip": "clips/song2_inner_up.mov",
+   "ss": 1.6,
+   "dur": 6.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 6.0,
+     "zoom": 1.08,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "device_anim",
+   "id": "s2_fx_build",
+   "device": {
+    "pose": "laptop",
+    "view": "front",
+    "az": 9
+   },
+   "clip": "clips/song2_inner_up.mov",
+   "ss": 13.406,
+   "dur": 10.224,
+   "open_keys": [
+    {
+     "t": 0.0,
+     "deg": 110.0
+    },
+    {
+     "t": 2.54,
+     "deg": 110.0
+    },
+    {
+     "t": 2.94,
+     "deg": 107.3
+    },
+    {
+     "t": 3.34,
+     "deg": 104.0
+    },
+    {
+     "t": 3.74,
+     "deg": 100.5
+    },
+    {
+     "t": 4.24,
+     "deg": 95.8
+    },
+    {
+     "t": 4.64,
+     "deg": 91.9
+    },
+    {
+     "t": 5.14,
+     "deg": 86.8
+    },
+    {
+     "t": 5.64,
+     "deg": 81.6
+    },
+    {
+     "t": 6.14,
+     "deg": 76.3
+    },
+    {
+     "t": 6.64,
+     "deg": 70.9
+    },
+    {
+     "t": 7.14,
+     "deg": 65.4
+    },
+    {
+     "t": 7.54,
+     "deg": 60.9
+    },
+    {
+     "t": 8.04,
+     "deg": 55.2
+    },
+    {
+     "t": 8.54,
+     "deg": 50.6
+    },
+    {
+     "t": 8.94,
+     "deg": 44.7
+    },
+    {
+     "t": 9.44,
+     "deg": 38.9
+    },
+    {
+     "t": 9.94,
+     "deg": 32.8
+    },
+    {
+     "t": 10.224,
+     "deg": 30.4
+    }
+   ],
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 10.224,
+     "zoom": 1.12,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "screens": {
+    "lid": {
+     "crop": "lid"
+    },
+    "deck": {
+     "crop": "deck"
+    }
+   },
+   "audio": "silent"
+  },
+  {
+   "type": "device_anim",
+   "id": "s2_snap",
+   "device": {
+    "pose": "laptop",
+    "view": "front",
+    "az": 9
+   },
+   "clip": "clips/song2_inner_up.mov",
+   "ss": 23.63,
+   "dur": 3.0,
+   "open_keys": [
+    {
+     "t": 0,
+     "deg": 30.4
+    },
+    {
+     "t": 0.15,
+     "deg": 110
+    },
+    {
+     "t": 3.0,
+     "deg": 110
+    }
+   ],
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.12,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 3.0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "screens": {
+    "lid": {
+     "crop": "lid"
+    },
+    "deck": {
+     "crop": "deck"
+    }
+   },
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s2_drop",
+   "clip": "clips/song2_inner_up.mov",
+   "ss": 26.63,
+   "dur": 6.0,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.35,
+     "cx": 0.5,
+     "cy": 0.3
+    },
+    {
+     "t": 6.0,
+     "zoom": 1.2,
+     "cx": 0.5,
+     "cy": 0.35
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "clip",
+   "id": "s2_dropback",
+   "clip": "clips/dropback_outer_up.mov",
+   "ss": 5.6,
+   "dur": 5.5,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 5.5,
+     "zoom": 1.04,
+     "cx": 0.5,
+     "cy": 0.5
+    }
+   ],
+   "audio": "silent"
+  },
+  {
+   "type": "video",
+   "id": "end_typed",
+   "path": "cards/end_typed.mov",
+   "audio": "silent"
+  },
+  {
+   "type": "image",
+   "id": "end_card",
+   "path": "cards/end_card.png",
+   "dur": 6.5,
+   "keys": [
+    {
+     "t": 0,
+     "zoom": 1.0,
+     "cx": 0.5,
+     "cy": 0.5
+    },
+    {
+     "t": 6.5,
+     "zoom": 1.04,
+     "cx": 0.5,
+     "cy": 0.48
+    }
+   ],
+   "audio": "silent"
+  }
+ ],
+ "music": [
+  {
+   "file": "music/horn.wav",
+   "at": 0.0,
+   "track_in": 0.0,
+   "dur": 3.5,
+   "gain_db": 8.0,
+   "fade_in": 0.3,
+   "fade_out": 0.7
+  },
+  {
+   "file": "clips/jazz_app_aligned.wav",
+   "at": 3.5,
+   "track_in": 0.8,
+   "dur": 30.9,
+   "gain_db": -3.0,
+   "fade_in": 0.05,
+   "fade_out": 1.6
+  },
+  {
+   "file": "music/horn.wav",
+   "at": 32.8,
+   "track_in": 60.0,
+   "dur": 4.6,
+   "gain_db": 8.0,
+   "fade_in": 0.6,
+   "fade_out": 1.4
+  },
+  {
+   "file": "clips/song2_app_aligned.wav",
+   "at": 35.6,
+   "track_in": 1.6,
+   "dur": 6.0,
+   "gain_db": -3.0,
+   "fade_in": 0.8,
+   "fade_out": 0.03
+  },
+  {
+   "file": "clips/song2_app_aligned.wav",
+   "at": 41.6,
+   "track_in": 13.406,
+   "dur": 19.244,
+   "gain_db": -3.0,
+   "fade_in": 0.03,
+   "fade_out": 0.02
+  },
+  {
+   "file": "clips/dropback_outer_up.mov",
+   "at": 60.824,
+   "track_in": 5.6,
+   "dur": 7.0,
+   "gain_db": -3.0,
+   "fade_in": 0.02,
+   "fade_out": 1.8
+  },
+  {
+   "file": "music/horn.wav",
+   "at": 65.524,
+   "track_in": 8.0,
+   "dur": 9.8,
+   "gain_db": 6.0,
+   "fade_in": 1.2,
+   "fade_out": 2.5
+  }
+ ],
+ "_total_estimate": 75.324
+}

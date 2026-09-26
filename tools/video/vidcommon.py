@@ -290,3 +290,40 @@ def fit_box(iw, ih, box_w, box_h):
 def cache_path(kind, params, ext):
     key = hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()[:16]
     return os.path.join(CACHE, f"{kind}_{key}{ext}")
+
+
+# ------------------------------------------ sub-pixel camera (no jitter) ---
+def camera_filter(keys, out_w, out_h, work=2.0):
+    """Keyframed virtual camera WITHOUT integer rounding: the input must already
+    be at (work*out_w) x (work*out_h). Each frame, the crop window
+    (size W/zoom x H/zoom, centred on cx,cy, clamped inside the frame) is
+    resampled with the `perspective` filter (sense=source, eval=frame,
+    bicubic) -- a continuous, sub-pixel crop+scale -- then one static
+    lanczos downscale to out_w x out_h. Replaces kenburns_filter, whose
+    per-frame even-rounded scale sizes and integer crop offsets made slow
+    push-ins shake."""
+    W, H = int(round(out_w * work)), int(round(out_h * work))
+    ks = keys or [{"t": 0, "zoom": 1.0, "cx": 0.5, "cy": 0.5}]
+    down = f"scale={out_w}:{out_h}:flags=lanczos"
+    if keys_are_static(ks):
+        z, cx, cy = ks[0]["zoom"], ks[0]["cx"], ks[0]["cy"]
+        if abs(z - 1.0) < 1e-9:
+            return down
+        ww, wh = W / z, H / z
+        x0 = min(max(cx * W - ww / 2, 0), W - ww)
+        y0 = min(max(cy * H - wh / 2, 0), H - wh)
+        pts = [x0, y0, x0 + ww, y0, x0, y0 + wh, x0 + ww, y0 + wh]
+        names = ["x0", "y0", "x1", "y1", "x2", "y2", "x3", "y3"]
+        opts = ":".join(f"{n}={v:.4f}" for n, v in zip(names, pts))
+        return f"format=yuv420p,perspective={opts}:sense=source:eval=init:interpolation=cubic,{down}"
+    tv = f"((in-1)/{FPS})"          # perspective's `in` counts from 1
+    Z = piecewise_expr(ks, "zoom", tv)
+    CX = piecewise_expr(ks, "cx", tv)
+    CY = piecewise_expr(ks, "cy", tv)
+    X0 = f"clip(({CX})*{W}-{W}/(2*({Z})),0,{W}-{W}/({Z}))"
+    Y0 = f"clip(({CY})*{H}-{H}/(2*({Z})),0,{H}-{H}/({Z}))"
+    X1 = f"({X0})+{W}/({Z})"
+    Y1 = f"({Y0})+{H}/({Z})"
+    opts = (f"x0='{X0}':y0='{Y0}':x1='{X1}':y1='{Y0}':"
+            f"x2='{X0}':y2='{Y1}':x3='{X1}':y3='{Y1}'")
+    return f"format=yuv420p,perspective={opts}:sense=source:eval=frame:interpolation=cubic,{down}"

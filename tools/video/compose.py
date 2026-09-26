@@ -37,7 +37,7 @@ def default_keys():
     return [{"t": 0.0, "zoom": 1.0, "cx": 0.5, "cy": 0.5}]
 
 
-def _device_layer(idx, src, ss, dur, speed, keys, target_w, target_h):
+def _device_layer(idx, src, ss, dur, speed, keys, target_w, target_h, crop=None):
     """Return (input_args, filter_lines, out_label) for one recording: trim,
     retime for speed, apply the Ken Burns camera, land on target_w x
     target_h with sharp corners (rounding happens later via the corner
@@ -47,13 +47,16 @@ def _device_layer(idx, src, ss, dur, speed, keys, target_w, target_h):
     step for where the source aspect ratio is actually read."""
     src_dur = dur * speed + 0.5   # small safety pad, trimmed off precisely below
     nframes = round(dur * vc.FPS)
-    kb = vc.kenburns_filter(keys, target_w, target_h)
+    cam = vc.camera_filter(keys, target_w, target_h, work=2.0)
 
     chain = ["setpts=PTS-STARTPTS"]
+    if crop:
+        chain.append(f"crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]}")
     if speed != 1.0:
         chain.append(f"setpts=PTS/{speed}")
-    chain.append(kb)
-    chain.append(f"fps={vc.FPS}")
+    chain.append(f"fps={vc.FPS}")            # CFR before the camera: its clock is the frame index
+    chain.append(f"scale={2 * target_w}:{2 * target_h}:flags=lanczos")
+    chain.append(cam)
     chain.append("format=yuv420p")
     chain.append(f"tpad=stop_mode=clone:stop_duration=2")
     chain.append(f"trim=end_frame={nframes}")
@@ -65,10 +68,25 @@ def _device_layer(idx, src, ss, dur, speed, keys, target_w, target_h):
     return in_args, filt, label
 
 
+def resolve_crop(clip, crop, t):
+    """crop: None | [x,y,w,h] | "lid" | "deck" (inner laptop recording split at the fold)"""
+    if crop in ("lid", "deck"):
+        import duo_compose
+        w, h = vc.probe_size(clip)
+        lb, dt = duo_compose.split_rows(clip, t)
+        return [0, 0, w, lb] if crop == "lid" else [0, dt, w, h - dt]
+    return crop
+
+
 def render(out, clip, ss, dur, keys=None, speed=1.0, second=None,
-           second_ss=None, second_dur=None, second_speed=None, second_keys=None):
-    """Render one styled segment to `out` (.mov, PCM audio, silent)."""
+           second_ss=None, second_dur=None, second_speed=None, second_keys=None,
+           crop=None, second_crop=None, box=None, radius=None):
+    """Render one styled segment to `out` (.mov, PCM audio, silent).
+    crop: source region ([x,y,w,h] or "lid"/"deck"); box: solo box fraction
+    of the canvas (default 0.78; 0.9 = the big legible v3 treatment)."""
     keys = keys or default_keys()
+    crop = resolve_crop(clip, crop, ss + dur / 2)
+    second_crop = resolve_crop(second, second_crop, ss + dur / 2) if second else None
     os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
 
     devices = []  # (input_args, filter_line, label, (iw, ih))
@@ -79,9 +97,9 @@ def render(out, clip, ss, dur, keys=None, speed=1.0, second=None,
         second_keys = second_keys or default_keys()
 
     # --- layout: compute each device's on-canvas box size -------------------
-    iw0, ih0 = vc.probe_size(clip)
+    iw0, ih0 = (crop[2], crop[3]) if crop else vc.probe_size(clip)
     if second:
-        iw1, ih1 = vc.probe_size(second)
+        iw1, ih1 = (second_crop[2], second_crop[3]) if second_crop else vc.probe_size(second)
         pair_w = vc.CANVAS_W * PAIR_BOX_W_FRAC
         pair_h = vc.CANVAS_H * PAIR_BOX_H_FRAC
         gap = vc.CANVAS_W * PAIR_GAP_FRAC
@@ -99,30 +117,30 @@ def render(out, clip, ss, dur, keys=None, speed=1.0, second=None,
         x1 = x0 + w0 + gap
         y0 = (vc.CANVAS_H - h0) / 2
         y1 = (vc.CANVAS_H - h1) / 2
-        boxes = [(clip, ss, dur, speed, keys, w0, h0, x0, y0),
-                 (second, second_ss, second_dur, second_speed, second_keys, w1, h1, x1, y1)]
+        boxes = [(clip, ss, dur, speed, keys, w0, h0, x0, y0, crop),
+                 (second, second_ss, second_dur, second_speed, second_keys, w1, h1, x1, y1, second_crop)]
     else:
-        box_w = vc.CANVAS_W * SOLO_BOX_FRAC
-        box_h = vc.CANVAS_H * SOLO_BOX_FRAC
+        box_w = vc.CANVAS_W * (box or SOLO_BOX_FRAC)
+        box_h = vc.CANVAS_H * (box or SOLO_BOX_FRAC)
         w0, h0 = vc.fit_box(iw0, ih0, box_w, box_h)
         x0 = (vc.CANVAS_W - w0) / 2
         y0 = (vc.CANVAS_H - h0) / 2
-        boxes = [(clip, ss, dur, speed, keys, w0, h0, x0, y0)]
+        boxes = [(clip, ss, dur, speed, keys, w0, h0, x0, y0, crop)]
 
     # --- ffmpeg graph --------------------------------------------------------
     inputs = ["-f", "lavfi", "-i", f"color=c={vc.CREAM_HEX}:s={vc.CANVAS_W}x{vc.CANVAS_H}:r={vc.FPS}:d={dur}"]
     filt = []
     overlay_chain = "[0:v]"
     next_idx = 1
-    for src, s_ss, s_dur, s_speed, s_keys, w, h, x, y in boxes:
-        in_args, dfilt, label = _device_layer(next_idx, src, s_ss, s_dur, s_speed, s_keys, int(w), int(h))
+    for src, s_ss, s_dur, s_speed, s_keys, w, h, x, y, s_crop in boxes:
+        in_args, dfilt, label = _device_layer(next_idx, src, s_ss, s_dur, s_speed, s_keys, int(w), int(h), crop=s_crop)
         inputs += in_args
         filt.append(dfilt)
         next_idx += 1
 
-        radius = max(2, round(w * CORNER_FRAC))
-        shadow_path, pad = vc.drop_shadow_png(int(w), int(h), radius, cache_key=f"shadow_{int(w)}x{int(h)}_{radius}")
-        mask_path = vc.corner_mask_png(int(w), int(h), radius, cache_key=f"corner_{int(w)}x{int(h)}_{radius}")
+        rad = max(2, round((radius or CORNER_FRAC) * w))
+        shadow_path, pad = vc.drop_shadow_png(int(w), int(h), rad, cache_key=f"shadow_{int(w)}x{int(h)}_{rad}")
+        mask_path = vc.corner_mask_png(int(w), int(h), rad, cache_key=f"corner_{int(w)}x{int(h)}_{rad}")
 
         inputs += ["-loop", "1", "-t", f"{dur}", "-i", shadow_path]
         shadow_idx = next_idx; next_idx += 1

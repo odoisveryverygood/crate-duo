@@ -74,52 +74,61 @@ def onset_near(x, t_guess, win=1.2):
     return (a + idx * blk) / SR
 
 
+ENGINE_TO_WAV0 = -0.036   # measured twice on v1 takes: WAV sample 0 = engine_start - 36 ms
+
+
 def main():
     take = sys.argv[1]
     ev = events(take)
-    rec = json.load(open(os.path.join(CLIPS, f"{take}_inner.rec.json")))
-    t_v0 = rec["t_started"]
+    inner_rec = os.path.join(CLIPS, f"{take}_inner.rec.json")
+    outer_rec = os.path.join(CLIPS, f"{take}_outer.rec.json")
     eng = [e for e in ev if e.get("event") == "engine_start"][0]["t"]
+    t_wav0 = eng + ENGINE_TO_WAV0
     wav = os.path.join(CLIPS, f"{take}_app.wav")
-    x = wav_array(wav)
-    # sync: WAV is silent until the first DIG starts the loop; the loop's first
-    # hit lands on the "play" event, so t_wav0 = t(play) - first onset.
-    t_play = [e for e in ev if e.get("event") == "play"][0]["t"]
-    on = float(np.argmax(np.abs(x) > 0.01)) / SR
-    t_wav0 = t_play - on
-    print(f"engine_start {eng:.3f}  play {t_play:.3f}  first onset {on:.3f}s -> t_wav0 {t_wav0:.3f} (engine{t_wav0 - eng:+.3f})")
-    off = t_v0 - t_wav0          # wav position at video t=0
-    print(f"video t0 {t_v0:.3f}  -> wav offset {off:.3f}s")
-    aligned = os.path.join(CLIPS, f"{take}_app_aligned.wav")
-    if off >= 0:
-        af = f"atrim=start={off:.6f},asetpts=PTS-STARTPTS"
-    else:
-        af = f"adelay={int(-off * 1000)}|{int(-off * 1000)}"
-    sh(["ffmpeg", "-v", "error", "-y", "-i", wav, "-af", af, "-ar", str(SR), "-ac", "2", "-c:a", "pcm_s16le", aligned])
-
-    up = os.path.join(CLIPS, f"{take}_inner_up.mov")
-    sh(["ffmpeg", "-v", "error", "-y", "-noautorotate", "-i", os.path.join(CLIPS, f"{take}_inner.mp4"), "-i", aligned,
-        "-map", "0:v", "-map", "1:a", "-vf", f"fps=30,{DEBUG_STRIP},format=yuv420p",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-c:a", "pcm_s16le",
-        "-metadata:s:v:0", "rotate=0", "-shortest", up])
-    print("wrote", up)
-    outer = os.path.join(CLIPS, f"{take}_outer.mp4")
-    if os.path.exists(outer):
-        oup = os.path.join(CLIPS, f"{take}_outer_up.mov")
-        sh(["ffmpeg", "-v", "error", "-y", "-noautorotate", "-i", outer, "-vf", "fps=30,format=yuv420p",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-an", "-metadata:s:v:0", "rotate=0", oup])
-        print("wrote", oup)
-    # timeline helpers: key events in VIDEO time
-    keyev = {}
+    have_wav = os.path.exists(wav)
+    if have_wav:
+        x = wav_array(wav)
+        plays = [e for e in ev if e.get("event") in ("play", "pattern")]
+        if plays and np.any(np.abs(x) > 0.01):
+            on = float(np.argmax(np.abs(x) > 0.01)) / SR
+            cross = plays[0]["t"] - on
+            print(f"sync check: engine-based t_wav0 {t_wav0:.3f}, onset-based {cross:.3f} (diff {cross - t_wav0:+.3f}s)")
+    out = {"t_wav0": t_wav0, "events": ev}
+    for kind, recp in (("inner", inner_rec), ("outer", outer_rec)):
+        if not os.path.exists(recp):
+            continue
+        rec = json.load(open(recp))
+        if "t_started" not in rec:
+            continue
+        t_v0 = rec["t_started"]
+        src = os.path.join(CLIPS, f"{take}_{kind}.mp4")
+        up = os.path.join(CLIPS, f"{take}_{kind}_up.mov")
+        off = t_v0 - t_wav0
+        cmd = ["ffmpeg", "-v", "error", "-y", "-noautorotate", "-i", src]
+        if have_wav:
+            af = f"atrim=start={off:.6f},asetpts=PTS-STARTPTS" if off >= 0 else f"adelay={int(-off * 1000)}|{int(-off * 1000)}"
+            cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-af", af + ",aresample=48000", "-ac", "2", "-c:a", "pcm_s16le"]
+        else:
+            cmd += ["-an"]
+        vf = f"fps=30,{DEBUG_STRIP},format=yuv420p" if kind == "inner" else "fps=30,format=yuv420p"
+        cmd += ["-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-metadata:s:v:0", "rotate=0"]
+        if have_wav:
+            cmd += ["-shortest"]
+        cmd += [up]
+        sh(cmd)
+        print("wrote", up, f"(video t0 {t_v0:.3f}, wav offset {off:+.3f}s)")
+        out[f"t_v0_{kind}"] = t_v0
+        if have_wav and kind == "inner":
+            aligned = os.path.join(CLIPS, f"{take}_app_aligned.wav")
+            af = f"atrim=start={off:.6f},asetpts=PTS-STARTPTS" if off >= 0 else f"adelay={int(-off * 1000)}|{int(-off * 1000)}"
+            sh(["ffmpeg", "-v", "error", "-y", "-i", wav, "-af", af, "-ar", str(SR), "-ac", "2", "-c:a", "pcm_s16le", aligned])
+    json.dump(out, open(os.path.join(CLIPS, f"{take}_timing.json"), "w"), indent=1)
+    t0 = out.get("t_v0_inner", out.get("t_v0_outer"))
     for e in ev:
         n = e.get("event")
-        if n in ("dig_start", "play", "gpt", "drop", "perform", "load_bank", "jev_plan") or (n == "url" and e.get("cmd") in ("mode", "perform", "dig", "stop")):
-            keyev.setdefault(n if n != "url" else "url_" + e.get("cmd"), []).append(round(e["t"] - t_v0, 3))
-    hinge = [(round(e["t"] - t_v0, 3), e["deg"]) for e in ev if e.get("event") == "hinge"]
-    json.dump({"t_v0": t_v0, "t_wav0": t_wav0, "events_video_t": keyev, "hinge": hinge},
-              open(os.path.join(CLIPS, f"{take}_timing.json"), "w"), indent=1)
-    for k, v in keyev.items():
-        print(k, v[:12])
+        if n in ("url", "play", "pattern", "gpt", "drop", "dig_start", "jev_plan", "load_bank", "import", "flip") :
+            q = e.get("q", "")
+            print(f"  {e['t'] - t0:8.3f}  {n:10s} {e.get('cmd', '')} {q[:60] if isinstance(q, str) else ''}")
 
 
 if __name__ == "__main__":

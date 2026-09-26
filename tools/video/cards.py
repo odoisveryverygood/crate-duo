@@ -29,16 +29,17 @@ import vidcommon as vc
 
 W, H = vc.CANVAS_W, vc.CANVAS_H
 MARGIN_X = 400          # left margin for title/chapter cards, ~= ref's 21% of width
-KICKER = "CRATE — an AI sampler for iPhone Duo"
-TITLE = "Your crates, instantly."
+KICKER = "AI sampler for iPhone Duo"
+TITLE = "CRATE"
+TAGLINE = "Type a vibe. Get a beat. Fold the phone to drop it."
 CHAPTERS = [
     "Say the vibe.",
     "It digs your own sample packs.",
     "Two screens. One instrument.",
     "The hinge is the punch-in FX.",
 ]
-CLOSING_LINE = "AI digs it. You flip it."
-END_LINE_1 = "Jev reacts · GPT composes · your crates supply the sound"
+CLOSING_LINE = "Type a sound, get a pad."
+END_LINE_1 = "Type a sound, get a pad."
 END_LINE_2 = "Built at Bitrig Hacks · iPhone Duo Edition"
 
 
@@ -78,6 +79,8 @@ def render_title(out_path):
     headline_font = vc.serif_font(132, "Regular")
     y = pill_box[3] + 56
     d.text((MARGIN_X, y), TITLE, font=headline_font, fill=vc.INK)
+    asc, desc = headline_font.getmetrics()
+    d.text((MARGIN_X, y + asc + desc + 28), TAGLINE, font=vc.serif_font(54, "Regular"), fill=vc.GREY)
     img.save(out_path)
     return out_path
 
@@ -168,6 +171,25 @@ def render_end_card(out_path):
     y += l1_font.getmetrics()[0] + l1_font.getmetrics()[1] + gap2
     d.text(((W - l2_w) / 2, y), END_LINE_2, font=l2_font, fill=vc.GREY)
 
+    img.save(out_path)
+    return out_path
+
+
+def render_caption(text, out_path, y=None, size=38, sub=None):
+    """transparent 1920x1080 PNG: one serif line (ink) centred in the bottom
+    cream margin of a big flat shot (box 0.84 leaves ~86 px); optional grey
+    second line."""
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    f = vc.serif_font(size, "Regular")
+    tw = d.textlength(text, font=f)
+    asc, desc = f.getmetrics()
+    yy = y if y is not None else H - 22 - (asc + desc)
+    d.text(((W - tw) / 2, yy), text, font=f, fill=vc.INK + (255,))
+    if sub:
+        fs = vc.sans_font(24)
+        sw = d.textlength(sub, font=fs)
+        d.text(((W - sw) / 2, yy - 34), sub, font=fs, fill=vc.GREY + (255,))
     img.save(out_path)
     return out_path
 
