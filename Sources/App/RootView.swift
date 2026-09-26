@@ -5,6 +5,7 @@ import SwiftUI
 /// Flat → split along the longer axis. Compact width (outer display) → compact view.
 struct RootView: View {
     @Bindable var state: AppState
+    let hinge: HingeFX
     @Environment(\.horizontalSizeClass) private var hSize
 
     var body: some View {
@@ -45,8 +46,9 @@ struct RootView: View {
         }
         .ignoresSafeArea()
         .onHingeChange { _, context in
-            if let hinge = context.hinge {
-                state.hingeAngle = hinge.angle.degrees
+            if let h = context.hinge {
+                DebugLog.event("hinge", ["deg": (h.angle.degrees * 10).rounded() / 10, "status": "\(h.status)"])
+                hinge.update(angle: h.angle.degrees)
             } else {
                 state.hingeAngle = nil
             }
