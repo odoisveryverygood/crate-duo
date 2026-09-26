@@ -46,3 +46,20 @@ The MPC Sample's core loop: press SAMPLE RECORD, record from the mic, and the ta
 - `SampleRecordButton(state:sampler:)` SwiftUI view: hold to record (orange dot + live level bar + seconds), release to stop and chop; a small CHOP TYPE toggle (THRESH / REGIONS 16). TE style: see `Sources/UI/Theme.swift` (read-only) or HANDOFF WP2 colours.
 - Add `DebugLog.event("sample_rec", ["sec": …])` and `("sample_chop", ["slices": …])`.
 - Verify with the typecheck command above (Core + your files). If you have Xcode 27.1 + the iOS 27.1 simulator, you can also run it on a fresh clone (no keys needed; the app falls back to its built-in kit). The lead wires the button into the deck's SAMPLE mode.
+
+### WP8: Keyboard play (Logic Musical Typing) + pressed visuals, ~45 min
+The demo runs in the Simulator, so the performer plays with the Mac keyboard, and every press must VISIBLY press the pad/key in the app.
+- Files: NEW `Sources/App/KeyboardControl.swift`; additive fields in `Sources/Core/AppState.swift` (`heldPads: Set<PadID>`, `heldNotes: Set<Int>`, `keyVelocity = 110`, `promptFocused`); small visual edits in `Sources/UI/PadGridView.swift`, `KeysView.swift`, `PromptBar.swift`; attach the key catcher once in `Sources/App/RootView.swift` (one line; rebase on main first).
+- Key catcher: a UIViewRepresentable UIView that `canBecomeFirstResponder`, overrides `pressesBegan/pressesEnded/pressesCancelled` (ignore repeats), placed once at the root; it re-takes first responder when the DIG prompt resigns (Esc/submit). (SwiftUI `.onKeyPress(phases: [.down,.up])` is fine too if it works reliably with the Simulator's hardware keyboard, toggled with ⇧⌘K.)
+- Pads (all modes except KEYS), MPC-software layout: pads 13–16 = `1 2 3 4`, 9–12 = `Q W E R`, 5–8 = `A S D F`, 1–4 = `Z X C V` → `state.hit(pad, velocity: state.keyVelocity)` on down, insert into/remove from `heldPads`; in 16 LVL the same keys play the selected pad at −7…+8 semitones.
+- KEYS mode (Logic Musical Typing): `A W S E D F T G Y H U J K O L P ; '` = C … F, one octave-and-a-half from C3 (48 + 12·keysOctave), honouring scale lock like KeysView; `Z`/`X` = octave −/+, `C`/`V` = velocity −/+ 10; key up → remove from `heldNotes`, release the pad when none are held.
+- Global: Space = play/stop, Return = REC, Tab = next bank, Shift+Tab = next mode, `/` = focus the DIG prompt, Esc = leave it.
+- Visuals: held pads look pressed (like a finger press); held piano keys look pressed; each pad/key shows its letter small in the corner (Logic style).
+- Verify: typecheck + run in the Duo Simulator; send keys with `axe key <HIDcode>` (a=4, z=29, space=44) and screenshot.
+
+### WP13: Drag audio in/out (Duo Split View), ~45 min
+The Duo is the first iPhone with side-by-side multitasking; make CRATE a good neighbour.
+- Drag IN: every pad accepts dropped audio (`.dropDestination(for: URL.self)` / UTType.audio): copy into `Documents/imported/`, build a `PadSound` (short files → one-shot on that pad; files > 2 s → offer "CHOP 16" = 16 equal slices onto bank D), then `await state.engine.loadBank(...)` for that bank with the pad replaced, and log `SAMPLE ▸ dropped <name>`.
+- Drag OUT: a BOUNCE button (lid header or deck) captures the next 4 bars of the master output to `Documents/bounces/<title>.wav` (add `func bounce(bars:completion:)` to AudioEngine by reusing its master tap, or tap `mainMixerNode` from your own file), then shows a draggable chip `↗ <title>.wav` (`.draggable` with a `Transferable` FileRepresentation, plus a ShareLink fallback).
+- Files: NEW `Sources/Transfer/*.swift` (+ the tiny AudioEngine hook if needed; tell the lead).
+- Verify: typecheck; in the Simulator drag a WAV from the Files app in Split View onto a pad.
