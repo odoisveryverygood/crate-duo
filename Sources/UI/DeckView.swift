@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// The chassis half: MODE buttons, 4×4 pads (or the KEYS keyboard), PAD BANK, LEVEL/PUNCH fader, transport, ✦ DIG.
-/// Landscape (~669×455) = the mockup's three columns; portrait (~455×669) = modes on top, pads, controls below.
+/// The chassis half, direction 05 (COLOUR-CODED): pictogram MODE keys, 4×4 pads (or the KEYS keyboard),
+/// round BANK A–D keys, LEVEL/PUNCH fader with a printed scale, REC / PLAY / STOP, the black ✦ DIG key.
+/// Landscape (~669×455) = the mock's three columns; portrait (~455×669) = modes on top, pads, controls below.
+/// KEYS mode hides the right column so the one-octave keyboard gets the full deck width.
 struct DeckView: View {
     let state: AppState
 
@@ -9,9 +11,9 @@ struct DeckView: View {
         GeometryReader { geo in
             let size = geo.size
             ZStack {
-                Theme.chassis
+                DeckSurface()
                 if state.mode == .keys {
-                    wideKeys
+                    wideKeys(size)
                 } else if size.height > size.width * 1.05 {
                     portrait(size)
                 } else {
@@ -20,7 +22,7 @@ struct DeckView: View {
             }
             .frame(width: size.width, height: size.height)
         }
-        .background(Theme.chassis)
+        .background(Deck05.alu)
         .ignoresSafeArea(.keyboard)
         .crateDeferEdgeGestures()
         .onChange(of: state.mode) { _, m in
@@ -30,135 +32,193 @@ struct DeckView: View {
 
     // MARK: layouts
 
-    /// One slim control row leaves the entire deck width for the one-octave keyboard.
-    private var wideKeys: some View {
-        VStack(spacing: 9) {
-            HStack(spacing: 6) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(modeItems, id: \.self) { item in
-                            modeButton(item).frame(width: 46, height: 32)
+    /// One slim control row (two in portrait) leaves the entire deck width for the one-octave keyboard.
+    private func wideKeys(_ size: CGSize) -> some View {
+        let tall = size.height > size.width * 1.05
+        let key: CGFloat = 28
+        let inset: CGFloat = tall ? 16 : 22
+        return VStack(spacing: 10) {
+            if tall {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(modeItems.filter(\.isMode), id: \.self) { item in
+                        modeButton(item, key: 30, labelBelow: true)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(modeItems.filter { !$0.isMode }, id: \.self) { item in
+                        modeButton(item, key: key, labelBelow: true)
+                    }
+                    Spacer(minLength: 6)
+                    TransportRow(state: state, height: key)
+                        .frame(width: key * 3 + 12)
+                    DigButton(state: state, height: key)
+                        .frame(width: 64)
+                }
+            } else {
+                HStack(alignment: .top, spacing: 10) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(modeItems, id: \.self) { item in
+                                modeButton(item, key: key, labelBelow: true)
+                            }
                         }
+                        .padding(.horizontal, 1)
                     }
+                    TransportRow(state: state, height: key)
+                        .frame(width: key * 3 + 12)
+                    DigButton(state: state, height: key)
+                        .frame(width: 76)
                 }
-                TransportRow(state: state, height: 32).frame(width: 106)
-                DigButton(state: state, height: 32).frame(width: 62)
+                .frame(height: key + 14)
             }
-            .frame(height: 32)
-            KeysView(state: state).frame(maxWidth: .infinity, maxHeight: .infinity)
-            BrandLine()
-        }
-        .padding(12)
-    }
-
-    private func landscape(_ size: CGSize) -> some View {
-        let inset: CGFloat = size.width < 560 ? 12 : 16
-        let brandH: CGFloat = 26
-        let contentH = max(100, size.height - inset * 2 - brandH)
-        let items = modeItems
-        let btnH = min(50, max(28, (contentH - 16 - 8 * CGFloat(items.count - 1)) / CGFloat(items.count)))
-        let leftW: CGFloat = size.width < 560 ? 74 : 86
-        let rightW: CGFloat = size.width < 560 ? 92 : 104
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    SilkLabel("MODE").frame(height: 8)
-                    ForEach(items, id: \.self) { item in
-                        modeButton(item).frame(height: btnH)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .frame(width: leftW, height: contentH)
-
-                center
-                    .frame(maxWidth: .infinity)
-                    .frame(height: contentH)
-
-                rightColumn
-                    .frame(width: rightW, height: contentH)
-            }
-            Spacer(minLength: 0)
+            KeysView(state: state)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 8) {
-                BrandLine().frame(maxWidth: .infinity, alignment: .leading)
+                BrandMark(inline: true)
+                Spacer(minLength: 8)
                 BounceControl(state: state)
             }
+            .frame(height: 24)
         }
         .padding(.horizontal, inset)
         .padding(.top, inset)
-        .padding(.bottom, 9)
+        .padding(.bottom, 8)
     }
 
-    private func portrait(_ size: CGSize) -> some View {
-        let inset: CGFloat = 16
-        let items = modeItems
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                SilkLabel("MODE")
-                Spacer(minLength: 8)
-                SilkLabel(selectedInfo, color: Theme.mid)
+    /// The mock at 669×455: 28 | modes 80 | 18 | pads | 24 | right 102 | 26.
+    private func landscape(_ size: CGSize) -> some View {
+        let narrow = size.width < 600
+        let left: CGFloat = narrow ? 16 : 28
+        let right: CGFloat = narrow ? 14 : 26
+        let top: CGFloat = min(31, max(14, size.height * 0.052))
+        let bottom: CGFloat = min(31, max(12, size.height * 0.048))
+        let contentH = max(200, size.height - top - bottom)
+        return HStack(alignment: .top, spacing: 0) {
+            leftColumn
+                .frame(width: narrow ? 74 : 80, height: contentH, alignment: .topLeading)
+            VStack(alignment: .leading, spacing: 8) {
+                center
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                BounceControl(state: state)
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24, alignment: .leading)
             }
-            HStack(spacing: 5) {
-                ForEach(items, id: \.self) { item in
-                    modeButton(item).frame(maxWidth: .infinity).frame(height: 40)
+            .frame(height: contentH)
+            .padding(.leading, narrow ? 12 : 18)
+            .padding(.trailing, narrow ? 16 : 24)
+            rightColumn
+                .frame(width: 102, height: contentH)
+        }
+        .padding(.leading, left)
+        .padding(.trailing, right)
+        .padding(.top, top)
+        .padding(.bottom, bottom)
+    }
+
+    /// Portrait: one row of mode keys, the pads, then BANK | LEVEL | transport + DIG, wordmark + BOUNCE.
+    private func portrait(_ size: CGSize) -> some View {
+        let inset: CGFloat = size.width < 420 ? 14 : 20
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(modeItems, id: \.self) { item in
+                    modeButton(item, key: 30, labelBelow: true)
+                        .frame(maxWidth: .infinity)
                 }
             }
             center
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    SilkLabel("PAD BANK").frame(height: 8)
-                    BankGrid(state: state)
+                .padding(.top, 14)
+            HStack(alignment: .top, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    DeckLabel("Bank")
+                    BankGrid(state: state, key: 24, spacing: 10)
+                        .padding(.top, 11)
+                    Spacer(minLength: 6)
+                    GrilleDots()
+                        .padding(.leading, 1)
                 }
-                .frame(width: min(124, size.width * 0.28))
-                VStack(alignment: .leading, spacing: 8) {
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 0) {
                     faderLabel
                     fader
+                        .padding(.top, 1.5)
                 }
-                .frame(width: state.mode == .padFX ? 84 : 62)
-                VStack(spacing: 8) {
-                    Spacer(minLength: 0)
-                    TransportRow(state: state)
-                    DigButton(state: state)
+                .frame(width: 102)
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 0) {
+                    TransportRow(state: state, height: 32)
+                    Spacer(minLength: 8)
+                    DigButton(state: state, height: 44)
                 }
                 .frame(maxWidth: .infinity)
             }
-            .frame(height: 104)
-            HStack(spacing: 8) {
-                BrandLine().frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 142)
+            .padding(.top, 16)
+            HStack(alignment: .bottom, spacing: 8) {
+                BrandMark()
+                Spacer(minLength: 8)
                 BounceControl(state: state)
             }
+            .padding(.top, 14)
         }
         .padding(.horizontal, inset)
-        .padding(.top, inset)
-        .padding(.bottom, 10)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
+    }
+
+    /// Landscape left column: mode keys stacked (37 pt pitch, SHIFT set apart), grille + wordmark at the foot.
+    private var leftColumn: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            ForEach(modeItems.filter { $0 != .shift }, id: \.self) { item in
+                modeButton(item, key: 26, labelBelow: false)
+            }
+            modeButton(.shift, key: 26, labelBelow: false)
+                .padding(.top, 14)
+            Spacer(minLength: 0)
+            GrilleDots()
+                .padding(.leading, 1)
+                .padding(.bottom, 11)
+            BrandMark()
+        }
+    }
+
+    /// Landscape right column, spaced as the mock (BANK 0, keys 17, LEVEL 78, transport 290, DIG 348 of 392).
+    private var rightColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DeckLabel("Bank")
+            BankGrid(state: state)
+                .padding(.top, 11)
+            faderLabel
+                .padding(.top, 25)
+            fader
+                .padding(.top, 1.5)
+                .frame(maxHeight: .infinity)
+            TransportRow(state: state, height: 30)
+                .padding(.top, 20)
+            DigButton(state: state, height: 44)
+                .padding(.top, 14)
+        }
     }
 
     @ViewBuilder
     private var center: some View {
-        if state.mode == .keys {
+        switch state.mode {
+        case .keys:
             KeysView(state: state)
-        } else if state.mode == .padFX {
+        case .padFX:
             PadFXView(state: state)
-        } else {
+        case .sample:
+            VStack(spacing: 6) {
+                SampleModePanel(state: state)
+                PadGridView(state: state)
+            }
+        default:
             PadGridView(state: state)
         }
     }
 
-    private var rightColumn: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SilkLabel("PAD BANK").frame(height: 8)
-            BankGrid(state: state)
-            faderLabel.padding(.top, 4)
-            fader.frame(maxHeight: .infinity)
-            TransportRow(state: state)
-            DigButton(state: state)
-        }
-    }
-
     private var faderLabel: some View {
-        SilkLabel(state.mode == .padFX ? "PUNCH" : "LEVEL",
-                  color: state.mode == .padFX ? Theme.orange : Theme.silk)
-            .frame(height: 8)
+        DeckLabel(state.mode == .padFX ? "Punch" : "Level")
     }
 
     @ViewBuilder
@@ -175,16 +235,15 @@ struct DeckView: View {
         }
     }
 
-    private var selectedInfo: String {
-        let p = state.selectedPad
-        let name = UIHelpers.padName(state, p) ?? "EMPTY"
-        return "PAD \(p.bank.letter)\(String(format: "%02d", p.number)) · \(name)"
-    }
-
-    // MARK: mode buttons
+    // MARK: mode keys
 
     enum ModeItem: Hashable {
         case mode(Mode), shift, octDown, octUp, scale
+
+        var isMode: Bool {
+            if case .mode = self { return true }
+            return false
+        }
     }
 
     private var modeItems: [ModeItem] {
@@ -195,23 +254,49 @@ struct DeckView: View {
     }
 
     @ViewBuilder
-    private func modeButton(_ item: ModeItem) -> some View {
+    private func modeButton(_ item: ModeItem, key: CGFloat, labelBelow: Bool) -> some View {
         let ui = CrateUI.shared
         switch item {
         case .mode(let m):
-            DeckButton(label: m.label, on: state.mode == m,
-                       id: "mode-" + m.label.lowercased().replacingOccurrences(of: " ", with: "")) {
+            ModeKey(glyph: ModeGlyph(m), label: m.label, on: state.mode == m, key: key, labelBelow: labelBelow,
+                    id: "mode-" + m.label.lowercased().replacingOccurrences(of: " ", with: "")) {
                 ui.setMode(m, state)
             }
         case .shift:
-            DeckButton(label: "SHIFT", on: ui.shift, toggle: true, id: "mode-shift") { ui.shift.toggle() }
+            ModeKey(glyph: .shift, label: "SHIFT", on: ui.shift, key: key, labelBelow: labelBelow,
+                    id: "mode-shift") { ui.shift.toggle() }
                 .modifier(PadStyleSwitch())
         case .octDown:
             DeckButton(label: "OCT −", id: "oct-down") { state.keysOctave = max(-3, state.keysOctave - 1) }
+                .frame(width: key + 12, height: key)
         case .octUp:
             DeckButton(label: "OCT +", id: "oct-up") { state.keysOctave = min(3, state.keysOctave + 1) }
+                .frame(width: key + 12, height: key)
         case .scale:
             DeckButton(label: "SCALE", on: state.scaleLock, toggle: true, id: "scale-lock") { state.scaleLock.toggle() }
+                .frame(width: key + 18, height: key)
+        }
+    }
+}
+
+/// SAMPLE mode: the mic sampler (hold to record, release to chop into bank D) above the pads.
+/// Owns one MicSampler for as long as SAMPLE mode is on screen.
+@MainActor
+private struct SampleModePanel: View {
+    let state: AppState
+    @State private var sampler: MicSampler?
+
+    var body: some View {
+        Group {
+            if let sampler {
+                SampleRecordButton(state: state, sampler: sampler)
+                    .clipShape(RoundedRectangle(cornerRadius: 4.5, style: .continuous))
+            } else {
+                Color.clear.frame(height: 1)
+            }
+        }
+        .onAppear {
+            if sampler == nil { sampler = MicSampler(state: state) }
         }
     }
 }
@@ -222,7 +307,7 @@ struct PunchFader: View {
     @State private var peak: Double = 0
 
     var body: some View {
-        FaderView(value: state.punch, fill: true, id: "punch-fader", onChange: { v in
+        FaderView(value: state.punch, fill: true, id: "punch-fader", marks: FaderView.percentMarks, onChange: { v in
             if let hook = CrateUI.shared.onPunch { hook(v); return }
             peak = max(peak, v)
             state.punch = v
