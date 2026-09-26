@@ -1,0 +1,162 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=JetBrains+Mono:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chassis:#C9C9CB; --chassis2:#BDBDC0; --silk:#16161D; --pad:#2F2F36; --pad2:#3A3A42; --padEdge:#484850;
+  --padLabel:#AFAFB3; --disp:#000; --txt:#F6F4F4; --dim:#484850; --mid:#797982;
+  --orange:#FA5B1C; --blue:#5B8DEF; --ochre:#E0A92E; --grey:#AFAFB3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0c0c10;font-family:'JetBrains Mono',monospace;padding:40px;display:flex;gap:60px;align-items:flex-start}
+.device{width:626px;border-radius:28px;background:#1b1b20;padding:10px;box-shadow:0 0 0 2px #2a2a31}
+.cap{color:#797982;font:700 11px 'Space Mono';letter-spacing:.14em;margin:0 0 12px 6px}
+.half{width:606px;height:435px;border-radius:18px;overflow:hidden;position:relative}
+.fold{height:14px;margin:0 20px;border-radius:7px;background:linear-gradient(#26262c,#101014,#26262c)}
+/* ---------- TOP: lid display ---------- */
+.lid{background:var(--disp);color:var(--txt);padding:16px 18px}
+.hdr{display:flex;justify-content:space-between;align-items:center;font:700 10px 'Space Mono';letter-spacing:.16em;color:var(--mid)}
+.hdr .logo{color:var(--txt)}
+.hdr b{color:var(--orange)}
+.readout{display:flex;gap:26px;margin:10px 0 12px;align-items:flex-end}
+.big{font:900 44px 'Doto';line-height:.9;color:var(--txt)}
+.big.o{color:var(--orange)}
+.lbl{font:700 9px 'Space Mono';letter-spacing:.18em;color:var(--mid);margin-top:4px}
+.grid{display:grid;grid-template-columns:52px repeat(16,1fr);gap:5px 4px;align-items:center}
+.lane{font:700 9px 'Space Mono';letter-spacing:.12em;color:var(--mid)}
+.dot{width:14px;height:14px;border-radius:50%;background:#16161D;justify-self:center}
+.dot.a{background:var(--orange)} .dot.a2{background:#a8431b}
+.dot.b{background:var(--blue)} .dot.c{background:var(--ochre)} .dot.g{background:#5a5a64}
+.col{outline:1px solid #F6F4F455;border-radius:3px}
+.ph{position:absolute;top:108px;bottom:74px;width:22px;left:calc(18px + 52px + 4px + 5*29.6px);background:#F6F4F412;border-left:1px solid #F6F4F4aa}
+.ai{position:absolute;left:18px;right:18px;bottom:14px;border-top:1px solid #2F2F36;padding-top:10px;font:400 11px 'JetBrains Mono';color:var(--txt)}
+.ai .p{color:var(--txt)} .ai .p i{color:var(--orange);font-style:normal}
+.ai .r{margin-top:6px;color:var(--mid);font-size:10px;letter-spacing:.04em;display:flex;gap:14px}
+.ai .r b{color:var(--orange);font-weight:700} .ai .r s{color:var(--blue);text-decoration:none} .ai .r u{color:var(--ochre);text-decoration:none}
+/* ---------- BOTTOM: deck ---------- */
+.deck{background:var(--chassis);padding:16px;display:grid;grid-template-columns:86px 1fr 104px;gap:14px}
+.silk{font:700 8.5px 'Space Mono';letter-spacing:.16em;color:var(--silk)}
+.col1,.col3{display:flex;flex-direction:column;gap:8px}
+.btn{height:38px;border-radius:4px;background:#E4E4E6;border:1px solid #9d9da2;display:flex;align-items:flex-end;padding:5px 6px;font:700 8.5px 'Space Mono';letter-spacing:.14em;color:var(--silk);position:relative}
+.btn.on{background:var(--silk);color:#F6F4F4;border-color:var(--silk)}
+.btn.on:after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--orange)}
+.pads{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;align-content:start}
+.pad{height:88px;border-radius:6px;background:var(--pad);border:1px solid var(--padEdge);position:relative;padding:7px}
+.pad .n{font:700 8px 'Space Mono';color:#797982;letter-spacing:.1em}
+.pad .t{position:absolute;left:7px;bottom:7px;font:700 10px 'JetBrains Mono';color:var(--padLabel);letter-spacing:.06em}
+.pad .bar{position:absolute;left:0;right:0;top:0;height:3px;border-radius:6px 6px 0 0}
+.pad.hit{background:var(--pad2);box-shadow:inset 0 0 0 2px var(--orange)}
+.pad.hit .t{color:#fff}
+.banks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bank{height:30px;border-radius:4px;border:1px solid #9d9da2;background:#E4E4E6;font:700 12px 'Space Mono';display:flex;align-items:center;justify-content:center;color:var(--silk);position:relative}
+.bank.sel{background:var(--silk);color:#fff}
+.bank i{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:14px;height:2px}
+.fader{flex:1;border-radius:4px;border:1px solid #9d9da2;background:#E4E4E6;position:relative;min-height:96px}
+.fader:before{content:'';position:absolute;left:50%;top:10px;bottom:10px;width:2px;background:#9d9da2;transform:translateX(-50%)}
+.fader b{position:absolute;left:18%;right:18%;height:16px;top:38%;background:var(--silk);border-radius:2px}
+.fader b:after{content:'';position:absolute;left:4px;right:4px;top:7px;height:2px;background:var(--orange)}
+.tr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.tr div{height:34px;border-radius:4px;border:1px solid #9d9da2;background:#E4E4E6;display:flex;align-items:center;justify-content:center;font:700 12px 'Space Mono';color:var(--silk)}
+.tr .rec{color:var(--orange)}
+.tr .play{background:var(--silk);color:var(--orange)}
+.brand{position:absolute;left:16px;bottom:10px;font:700 8px 'Space Mono';letter-spacing:.24em;color:#797982}
+.ask{height:40px;border-radius:4px;background:var(--orange);color:#fff;font:700 10px 'Space Mono';letter-spacing:.16em;display:flex;align-items:center;justify-content:center}
+/* keys */
+.keys{position:relative;height:376px;margin-top:0}
+.wk{position:absolute;bottom:0;width:calc((100% - 9*4px)/10);height:100%;background:#EDEDEF;border:1px solid #9d9da2;border-radius:0 0 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font:700 8px 'Space Mono';color:#797982}
+.bk{position:absolute;top:0;width:calc((100% - 9*4px)/10*0.62);height:58%;background:var(--pad);border-radius:0 0 4px 4px;z-index:2}
+.wk.hit{background:#fff;box-shadow:inset 0 -4px 0 var(--orange)}
+</style></head><body>
+
+<div>
+<div class="cap">LAPTOP POSE · SEQ + AI (626×445 pt per half)</div>
+<div class="device">
+  <div class="half lid">
+    <div class="hdr"><span class="logo">CRATE · CR-16</span><span>BANK <b>A</b> · SEQ · 4 BARS</span><span>JEV <b>●</b> 118MS &nbsp; GPT <b>●</b> 2.4S</span></div>
+    <div class="readout">
+      <div><div class="big">089</div><div class="lbl">BPM</div></div>
+      <div><div class="big">56</div><div class="lbl">SWING %</div></div>
+      <div><div class="big o">3.2</div><div class="lbl">BAR.BEAT</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font:700 13px 'Space Mono';letter-spacing:.14em">J DILLA × JAZZ HOP</div><div class="lbl">NUJ KEYS · Am9 → Dm9 → G13 → Cmaj9</div></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="ph"></div>
+    <div class="ai">
+      <div class="p"><i>›</i> 4 bar loop, j dilla laid back drums + a killer nujabes piano sample<i>▌</i></div>
+      <div class="r"><span><b>JEV 118ms</b> DILLA · JAZZHOP · 4 BARS</span><span><b>KIT</b> 16 VINTAGE HIP HOP KITS</span><s>SAMPLE NUJ KEYS Am</s><u>BASS ✓ GPT 2.4s</u></div>
+    </div>
+  </div>
+  <div class="fold"></div>
+  <div class="half deck">
+    <div class="col1">
+      <div class="silk" style="margin-bottom:2px">MODE</div>
+      <div class="btn">SAMPLE</div><div class="btn">CHOP</div><div class="btn">KEYS</div><div class="btn on">SEQ</div><div class="btn">PAD FX</div><div class="btn">16 LVL</div><div class="btn">SHIFT</div>
+    </div>
+    <div class="pads" id="pads"></div>
+    <div class="col3">
+      <div class="silk">PAD BANK</div>
+      <div class="banks"><div class="bank sel">A<i style="background:var(--orange)"></i></div><div class="bank">B<i style="background:var(--blue)"></i></div><div class="bank">C<i style="background:var(--ochre)"></i></div><div class="bank">D<i style="background:var(--grey)"></i></div></div>
+      <div class="silk" style="margin-top:4px">LEVEL</div>
+      <div class="fader"><b></b></div>
+      <div class="tr"><div class="rec">●</div><div class="play">▶</div><div>■</div></div>
+      <div class="ask">✦ DIG</div>
+    </div>
+    <div class="brand">CRATE CR-16 · AI SAMPLER FOR IPHONE DUO</div>
+  </div>
+</div>
+</div>
+
+<div>
+<div class="cap">LAPTOP POSE · KEYS MODE (pad 13 “808 F” across keys)</div>
+<div class="device">
+  <div class="half lid">
+    <div class="hdr"><span class="logo">CRATE · CR-16</span><span>BANK <b>C</b> · KEYS · OCT 2</span><span>ROOT <b>F1</b></span></div>
+    <div class="readout">
+      <div><div class="big o">A♭1</div><div class="lbl">NOTE</div></div>
+      <div><div class="big">+3</div><div class="lbl">SEMI</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font:700 13px 'Space Mono';letter-spacing:.14em">808 F · KRYPTIC LOFI 808</div><div class="lbl">SCALE LOCK: A MINOR</div></div>
+    </div>
+    <svg width="570" height="210" viewBox="0 0 570 210">
+      <g stroke="#F6F4F4" stroke-width="1.4" fill="none" id="wave"></g>
+      <line x1="0" y1="105" x2="570" y2="105" stroke="#2F2F36"/>
+    </svg>
+    <div class="ai"><div class="r"><u>BASS SUGGESTION</u><span>A1 · A1 · E2 · G1 → D2</span><span>TAP ✓ TO COMMIT</span></div></div>
+  </div>
+  <div class="fold"></div>
+  <div class="half deck" style="grid-template-columns:86px 1fr 104px">
+    <div class="col1">
+      <div class="silk" style="margin-bottom:2px">MODE</div>
+      <div class="btn">SAMPLE</div><div class="btn">CHOP</div><div class="btn on">KEYS</div><div class="btn">SEQ</div><div class="btn">PAD FX</div><div class="btn">OCT −</div><div class="btn">OCT +</div>
+    </div>
+    <div class="keys" id="keys"></div>
+    <div class="col3">
+      <div class="silk">PAD BANK</div>
+      <div class="banks"><div class="bank">A<i style="background:var(--orange)"></i></div><div class="bank">B<i style="background:var(--blue)"></i></div><div class="bank sel">C<i style="background:var(--ochre)"></i></div><div class="bank">D<i style="background:var(--grey)"></i></div></div>
+      <div class="silk" style="margin-top:4px">LEVEL</div>
+      <div class="fader"><b></b></div>
+      <div class="tr"><div class="rec">●</div><div class="play">▶</div><div>■</div></div>
+      <div class="ask">✦ DIG</div>
+    </div>
+    <div class="brand">CRATE CR-16 · AI SAMPLER FOR IPHONE DUO</div>
+  </div>
+</div>
+</div>
+
+<script>
+// seq grid (current bar): lanes x 16
+const lanes=[["KICK","a","X......x..X....."],["SNR","a","....X.......X..g"],["HAT","a","x.x.x.x.x.x.x.xg"],["RIM","a",".........x......"],["CHOP","b","X...x...X...x..."],["BASS","c","X.....x...X...x."]];
+const g=document.getElementById('grid');
+lanes.forEach(([n,c,s])=>{const l=document.createElement('div');l.className='lane';l.textContent=n;g.appendChild(l);
+ [...s].forEach((ch,i)=>{const d=document.createElement('div');d.className='dot'+(ch==='.'?'':(' '+(ch==='g'?'g':c)))+(i===5?' col':'');g.appendChild(d)})});
+// pads MPC order: row top = 13-16
+const names={1:"KICK",2:"KICK 2",3:"SNR",4:"CLAP",5:"HAT",6:"HAT 2",7:"OHAT",8:"RIM",9:"PERC",10:"PERC 2",11:"SHKR",12:"CRSH",13:"808",14:"FX",15:"VOX",16:"VINYL"};
+const p=document.getElementById('pads');
+[13,14,15,16,9,10,11,12,5,6,7,8,1,2,3,4].forEach(n=>{const d=document.createElement('div');d.className='pad'+(n===3?' hit':'');d.innerHTML=`<div class="bar" style="background:${n===3?'var(--orange)':'transparent'}"></div><div class="n">${String(n).padStart(2,'0')}</div><div class="t">${names[n]}</div>`;p.appendChild(d)});
+// keys: 10 white keys
+const k=document.getElementById('keys');const wn=["F","G","A","B","C","D","E","F","G","A"];
+wn.forEach((n,i)=>{const w=document.createElement('div');w.className='wk'+(i===2?' hit':'');w.style.left=`calc(${i}*((100% - 36px)/10 + 4px))`;w.textContent=n+(i<4?'1':'2');k.appendChild(w)});
+[0,1,2,4,5,7,8].forEach(i=>{const b=document.createElement('div');b.className='bk';b.style.left=`calc(${i+1}*((100% - 36px)/10 + 4px) - (100% - 36px)/10*0.31 - 2px)`;k.appendChild(b)});
+// waveform
+const wv=document.getElementById('wave');let d="M0 105";for(let x=0;x<570;x+=2){const env=Math.exp(-x/190)*90+4;d+=` L${x} ${105-Math.sin(x*0.19)*env*Math.abs(Math.sin(x*0.013+0.4))}`}wv.innerHTML=`<path d="${d}"/>`;
+</script>
+</body></html>
