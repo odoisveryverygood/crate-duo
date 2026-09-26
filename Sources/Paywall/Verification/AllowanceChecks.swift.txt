@@ -1,0 +1,33 @@
+import Foundation
+
+let suite = "crate.paywall.tests.\(UUID().uuidString)"
+let defaults = UserDefaults(suiteName: suite)!
+defer { defaults.removePersistentDomain(forName: suite) }
+let allowance = DigAllowance(defaults: defaults)
+var log: [LogLine] = []
+func append(_ tag: String, ms: Int? = nil) -> Bool {
+    log.append(LogLine(tag: tag, text: "fixture", ms: ms, tint: .grey))
+    return allowance.consume(log)
+}
+assert(!append("JEV")) // Network timeout diagnostic is not a plan.
+assert(!append("KW", ms: 0))
+assert(allowance.count == 1)
+assert(!allowance.consume(log)) // Repeated view observations do not count twice.
+assert(!append("KIT", ms: 8))
+assert(!append("GPT", ms: 1200))
+assert(!append("JEV", ms: 123))
+assert(allowance.count == 2)
+assert(append("KW", ms: 0)) // Third DIG presents even with a zero-ms offline parse.
+assert(!allowance.consume(log))
+let remounted = DigAllowance(defaults: defaults)
+assert(remounted.count == 3)
+assert(!remounted.consume(log)) // Pose/view recreation does not replay the paywall.
+log = Array(log.suffix(2))
+assert(!remounted.consume(log)) // Rolling log truncation is harmless.
+log.append(LogLine(tag: "JEV", text: "full beat", ms: 100, tint: .orange))
+assert(remounted.consume(log)) // Subsequent DIG retries after dismissing.
+assert(remounted.count == 3)
+let restarted = DigAllowance(defaults: defaults)
+assert(!restarted.consume([]))
+assert(restarted.consume([LogLine(tag: "KW", text: "drums only", ms: 1, tint: .grey)]))
+print("PASS: allowance threshold, timeout filtering, deduplication, rolling logs, remount and restart")
