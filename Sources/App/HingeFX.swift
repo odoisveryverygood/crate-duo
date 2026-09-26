@@ -12,6 +12,13 @@ final class HingeFX {
 
     init(state: AppState) { self.state = state }
 
+    /// Closed (outer screen) → no FX, no DROP: closing the phone must never mute the beat.
+    func released() {
+        wasHigh = false
+        leftHighAt = nil
+        if state.punch != 0 { state.punch = 0; state.engine.setPunch(0) }
+    }
+
     func update(angle: Double) {
         state.hingeAngle = angle
         let p = min(1, max(0, (restAngle - angle) / (restAngle - closedAngle)))

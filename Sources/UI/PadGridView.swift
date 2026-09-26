@@ -58,7 +58,8 @@ struct PadGridView: View {
                 let accepted = AudioImport.receive(providers, at: pad) { result in
                     switch result {
                     case .success(let audio):
-                        if audio.duration > 2 { pendingChop = audio; importing = false }
+                        if AudioImport.autoChops(audio) { Task { await AudioImport.chop16(audio, state: state); importing = false } }
+                        else if audio.duration > 2 { pendingChop = audio; importing = false }
                         else { Task { await AudioImport.loadOnPad(audio, state: state); importing = false } }
                     case .failure(let error):
                         importing = false

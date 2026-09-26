@@ -5,6 +5,8 @@ struct Arrangement: Codable {
     struct Drum: Codable { var lane: String; var bars: [String]; var late: Double }
     struct Bass: Codable { var bar: Int; var step: Int; var len: Double; var midi: Int; var vel: Int }
     struct Chop: Codable { var bar: Int; var step: Int; var slice: Int; var len: Double }
+    /// MIDI chord stab on the keys pad (C2); only for MIDI-only beats (house), else null.
+    struct ChordHit: Codable { var bar: Int; var step: Int; var len: Double; var notes: [Int]; var vel: Int }
     var title: String
     var comment: String
     var bpm: Int
@@ -12,9 +14,10 @@ struct Arrangement: Codable {
     var drums: [Drum]
     var bass: [Bass]
     var chops: [Chop]?
+    var chords: [ChordHit]?
 }
 
-enum ArrangePart: Hashable { case drums, bass, chops }
+enum ArrangePart: Hashable { case drums, bass, chops, chords }
 
 struct OpenAIError: Error, CustomStringConvertible {
     var description: String
@@ -156,6 +159,11 @@ final class OpenAIClient: @unchecked Sendable {
                 }
             }
             if !notes.isEmpty { p.notes[bassPad] = notes }
+        }
+        if take.contains(.chords), let chords = a.chords {
+            // Key guard (Orchestrator.apply) snaps every bank-C note, chords included, into state.scaleKey.
+            let notes = ChordWriter.events(from: chords, bars: bars)
+            if Set(notes.map(\.step)).count >= 4 { p.notes[ChordWriter.pad] = notes }
         }
         if take.contains(.chops), let chops = a.chops {
             let valid = chops.filter { $0.bar >= 0 && $0.bar < bars && (0..<16).contains($0.step) && (0..<16).contains($0.slice) }

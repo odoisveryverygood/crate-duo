@@ -97,23 +97,27 @@ extension AudioEngine {
 
     /// Does an event on `cutter` cut the sound of `victim`?
     /// Bank B is mono across the bank (every chop cuts the previous chop: they're slices of one loop).
-    /// Bank C is mono/legato per pad (the 808 line never overlaps itself, but it doesn't cut the keys pad).
+    /// Bank C is mono/legato per pad (the 808 line never overlaps itself, but it doesn't cut the keys pad),
+    /// except the chord pads (C2 keys, C3 synth), which are polyphonic so chord tones ring together.
     /// Bank A: hats (4, 5) and the open hat itself cut the open hat (6). Bank D is polyphonic.
     static func cuts(_ cutter: PadID, _ victim: PadID) -> Bool {
         switch victim.bank {
         case .b: return cutter.bank == .b
-        case .c: return cutter == victim
+        case .c: return cutter == victim && !isPoly(victim)
         case .a: return victim.index == 6 && cutter.bank == .a && (4...6).contains(cutter.index)
         case .d: return false
         }
     }
 
+    /// Polyphonic pads inside the otherwise mono bank C (chords; notes still end at their NoteEvent length).
+    static func isPoly(_ pad: PadID) -> Bool { pad.bank == .c && (1...2).contains(pad.index) }
+
     static func canBeCut(_ pad: PadID) -> Bool {
-        pad.bank == .b || pad.bank == .c || (pad.bank == .a && pad.index == 6)
+        pad.bank == .b || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && pad.index == 6)
     }
 
     static func cutsSomething(_ pad: PadID) -> Bool {
-        pad.bank == .b || pad.bank == .c || (pad.bank == .a && (4...6).contains(pad.index))
+        pad.bank == .b || (pad.bank == .c && !isPoly(pad)) || (pad.bank == .a && (4...6).contains(pad.index))
     }
 
     /// Root used for NoteEvents: the pad's rootNote, else 36 for 808/bass and 60 otherwise (BUILD.md §6 convention).

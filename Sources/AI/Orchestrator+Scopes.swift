@@ -14,7 +14,10 @@ extension Orchestrator {
         report.retrievalMs = Self.ms(tR)
         report.kitIDs = (0..<16).compactMap { kit[$0]?.id }
         logKit(ds, kit, ms: report.retrievalMs)
-        report.loadMs = await loadBanks([(.a, kit)])
+        // Imported-song flip: drums join at the flip tempo and a bass enters in the song's key (bank C loads if it's new).
+        let flipBass = importedFlip && lastPattern.notes[PadID(.c, 0)] == nil
+        let bankC = flipBass ? Retrieval.bankC(library, style: ds, target: target, seed: seed) : [:]
+        report.loadMs = await loadBanks([(.a, kit), (.c, bankC)])
         guard serial == digSerial else { return }
         let groove = PatternBuilder.groove(library, style: ds, variant: variant)
         let swing = PatternBuilder.swing(style: ds, groove: groove, laidback: laid, lib: library)
@@ -32,8 +35,17 @@ extension Orchestrator {
                               energy: plan.energy ?? 0.55, chops: nil, harmony: BassWriter.Harmony(keyPC: 9))
         }
         state.styleLabel = library.styleInfo(ds).label
+        let withBass = importedFlip && (flipBass || p.notes[PadID(.c, 0)] != nil)
+        if withBass, let h = session?.harmony {
+            p.notes[PadID(.c, 0)] = BassWriter.write(rhythm: BassWriter.rhythm(library, style: ds), bars: bars, harmony: h,
+                                                     kicks: PatternBuilder.kickSteps(p.lanes), padRoot: bassRoot())
+        }
         apply(p, bpm: bpm, swing: swing)
-        startGPT(plan, take: [.drums], flip: false, serial: serial)
+        if withBass {
+            state.addLog("BASS", "\(ds.rawValue) rule bass · \(bassSoundName()) · \(state.scaleKey ?? "key") · \(session?.chops?.chordsLabel ?? "")",
+                         tint: .ochre)
+        }
+        startGPT(plan, take: withBass ? [.drums, .bass] : [.drums], flip: false, serial: serial)
     }
 
     /// sample_only: new loop → bank B chops + a rule bass over its chords; drums keep playing (tempo follows the loop).
@@ -145,9 +157,14 @@ extension Orchestrator {
         var p = lastPattern
         p.lanes = p.lanes.filter { $0.key.bank != .b }
         for (k, v) in PatternBuilder.localFlip(span: c.spanBars, bars: p.bars, seed: seed) { p.lanes[k] = v }
+        if chopBank != .b { p = Self.moveChops(p, to: chopBank) }
         apply(p, bpm: nil, swing: nil)
         state.addLog("SAMPLE", "FLIP · \(c.loop.name) re-chopped", tint: .blue)
         startGPT(plan, take: [.chops], flip: true, serial: serial)
+    }
+
+    func bassSoundName() -> String {
+        (state.engine.sound(for: PadID(.c, 0)) ?? state.sounds[PadID(.c, 0)])?.name ?? "bass"
     }
 
     func bassRoot() -> Int? {
@@ -169,14 +186,20 @@ extension Orchestrator {
             switch result {
             case .success(let (arr, ms)):
                 self.lastArrangement = arr
-                let p = OpenAIClient.pattern(from: arr, base: self.lastPattern, bars: bars, take: take, bassRoot: root,
+                var p = OpenAIClient.pattern(from: arr, base: self.lastPattern, bars: bars, take: take, bassRoot: root,
                                              style: self.session?.drumStyle)
+                let chopBank = self.chopBank
+                if take.contains(.chops), chopBank != .b { p = Self.moveChops(p, to: chopBank) }
                 self.apply(p, bpm: nil, swing: take.contains(.drums) ? p.swing : nil)
+                if take.contains(.chops), chopBank != .b {
+                    self.state.addLog("FLIP", "▸ \(model) re-flip · \(arr.chops?.count ?? 0) chops · in on the next bar", ms: ms, tint: .blue)
+                }
                 self.state.gptSeconds = Double(ms) / 1000
                 let what = arr.comment.isEmpty ? arr.title.lowercased() : arr.comment
                 self.state.addLog("GPT", "✓ \(what)", ms: ms, tint: .orange)
                 DebugLog.event("gpt", ["model": model, "ms": ms, "ok": true, "title": arr.title, "comment": arr.comment,
-                                       "drums": arr.drums.count, "bass": arr.bass.count, "chops": arr.chops?.count ?? 0])
+                                       "drums": arr.drums.count, "bass": arr.bass.count, "chops": arr.chops?.count ?? 0,
+                                       "chords": arr.chords?.count ?? 0])
             case .failure(let err):
                 self.state.addLog("ERR", "GPT " + String(err.description.prefix(60)), tint: .red)
                 DebugLog.event("gpt", ["model": model, "ms": -1, "ok": false])
@@ -192,12 +215,17 @@ extension Orchestrator {
                       "chordsPerBar": c.chords.map { ($0?.symbol).map { $0 as Any } ?? NSNull() },
                       "bassPerBeat": c.bassPerBeat.map { $0.map { $0 as Any } ?? NSNull() }] as [String: Any]
         }
-        return ["request": plan.prompt, "style": s.drumStyle.rawValue, "sampleStyle": s.sampleStyle.rawValue,
+        var msg: [String: Any] = ["request": plan.prompt, "style": s.drumStyle.rawValue, "sampleStyle": s.sampleStyle.rawValue,
                 "bpm": Int(state.bpm.rounded()), "swing": Int(state.swing.rounded()), "bars": lastPattern.bars,
                 "laidback": (s.laidback * 100).rounded() / 100, "energy": (s.energy * 100).rounded() / 100,
                 "lanesAvailable": Array(BankA.slots.prefix(12)), "template": PatternBuilder.laneStrings(lastPattern),
                 "sample": sample, "flip": flip,
-                "units": "bass.len and chops.len are in 16th-note steps (4 steps = 1 beat); bar strings are 16 steps"]
+                "units": "bass.len, chops.len and chords.len are in 16th-note steps (4 steps = 1 beat); bar strings are 16 steps"]
+        if let pr = s.chordProg, s.chops == nil {
+            msg["harmony"] = ["key": pr.key, "chordsPerBar": pr.chords.map(\.symbol), "voicings": pr.chords.map(\.voicing),
+                              "stabSteps": [2, 6, 10, 14], "stabLen": 2] as [String: Any]
+        }
+        return msg
     }
 
     // MARK: - log lines

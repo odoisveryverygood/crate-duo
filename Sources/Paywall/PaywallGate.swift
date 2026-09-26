@@ -25,6 +25,12 @@ final class CratePaywall {
         if allowance.consume(log) { pending = true }
     }
 
+    /// `crate://paywall` (demo / RevenueCat pitch): show CRATE PRO now, regardless of the DIG count.
+    func presentOnDemand() async {
+        pending = true
+        await presentIfNeeded(isDigging: false)
+    }
+
     func presentIfNeeded(isDigging: Bool) async {
         guard pending, !isDigging, !isChecking, !isPresented else { return }
         pending = false
@@ -147,6 +153,9 @@ private struct PaywallGateModifier: ViewModifier {
             .onChange(of: ObservationKey(ids: state.log.map(\.id), digging: state.isDigging), initial: true) { _, _ in
                 gate.observe(state.log)
                 Task { await gate.presentIfNeeded(isDigging: state.isDigging) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("cratePresentPaywall"))) { _ in
+                Task { await gate.presentOnDemand() }
             }
             .sheet(isPresented: $gate.isPresented) {
                 CrateProSheet(gate: gate)

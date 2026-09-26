@@ -190,12 +190,31 @@ enum Retrieval {
         let bass = ranked(lib, category: bassCat, style: style, target: target, rng: &rng).first
             ?? ranked(lib, category: "808", style: style, target: target, rng: &rng).first
         if let b = bass { out[0] = padSound(b, lib: lib) }
-        if let k = ranked(lib, category: "keys", style: style, target: target, rng: &rng).first { out[1] = padSound(k, lib: lib) }
+        if ChordWriter.midiStyles.contains(style), let stab = chordStab(lib) {
+            out[1] = stab
+        } else if let k = ranked(lib, category: "keys", style: style, target: target, rng: &rng).first {
+            out[1] = padSound(k, lib: lib)
+        }
         if let s = ranked(lib, category: "synth", style: style, target: target, rng: &rng).first { out[2] = padSound(s, lib: lib) }
         if let alt = ranked(lib, category: "808", style: style, target: target, rng: &rng).first(where: { $0.id != bass?.id }) {
             out[3] = padSound(alt, lib: lib)
         }
         return out
+    }
+
+    /// Single-note keys one-shots for MIDI chord stabs, pitch measured offline (librosa pyin median and CQT peak agree;
+    /// the pack's rootNote tag is an octave off for KY08). Chord one-shots are excluded: they'd stack into mud.
+    static let chordStabs: [(id: String, root: Int)] = [("KY08", 72), ("KY06", 63)] // Rhodes C5, vibraphone Eb4
+
+    static func chordStab(_ lib: LibraryStore) -> PadSound? {
+        let pool = lib.candidates("keys") + lib.candidates("synth")
+        for (id, root) in chordStabs {
+            guard let s = pool.first(where: { $0.id == id }) else { continue }
+            var ps = padSound(s, lib: lib)
+            ps.rootNote = root
+            return ps
+        }
+        return nil
     }
 
     /// Best library match for a single-sound request (category from Jev `route` or keywords).

@@ -14,6 +14,7 @@ Rules:
 - Leave space for the sample: fewer hits where the sample is busy.
 - Bass: MIDI 28-52. Land on the chord root (chordsPerBar, else bassPerBeat, else the key's tonic) on or near beat 1 of each bar; use fifths/octaves and approach notes into the next bar's root; rhythmically lock with the kick. Dilla/jazz hop: warm, sparse, slides of feel; house: offbeat root pulses; trap/drill: 808 follows the kick, long notes.
 - chops: only when asked to FLIP the sample: re-sequence its 16 slices (0-15) into a new, musical phrase (repeat slices, stutter, reverse phrase order); otherwise null.
+- chords: only when the input has a "harmony" object (a MIDI keys beat with no sample, e.g. house); otherwise null. Write chord stabs on its chordsPerBar progression (one chord per bar, same order): 3-4 notes per stab, MIDI 55-76, only notes of the key, smooth voice leading (the template voicings are a good start). House: the pumping offbeat stab (steps 2, 6, 10, 14, len 1-2) with small rhythmic variation (a pushed stab on step 13 or 15, a skipped stab, an extra stab at the end of the phrase); vel 60-100. House drums keep the four-on-the-floor kick (steps 0, 4, 8, 12 every bar).
 - title: <= 24 chars, uppercase, like a hardware display. comment: <= 48 chars, lowercase, what you did.
 """#
 
@@ -28,7 +29,8 @@ Rules:
   "swing",
   "drums",
   "bass",
-  "chops"
+  "chops",
+  "chords"
  ],
  "properties": {
   "title": {
@@ -153,6 +155,48 @@ Rules:
      "len": {
       "type": "number",
       "description": "steps to play before choking"
+     }
+    }
+   }
+  },
+  "chords": {
+   "type": [
+    "array",
+    "null"
+   ],
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "bar",
+     "step",
+     "len",
+     "notes",
+     "vel"
+    ],
+    "properties": {
+     "bar": {
+      "type": "integer",
+      "description": "0-based bar index"
+     },
+     "step": {
+      "type": "integer",
+      "description": "0-15"
+     },
+     "len": {
+      "type": "number",
+      "description": "length in steps"
+     },
+     "notes": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "3-4 MIDI notes 55-76, in key"
+     },
+     "vel": {
+      "type": "integer",
+      "description": "1-127"
      }
     }
    }

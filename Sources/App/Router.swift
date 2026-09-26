@@ -3,7 +3,7 @@ import Foundation
 /// URL commands for the self-test harness: `xcrun simctl openurl <udid> "crate://dig?q=..."`.
 /// crate://dig?q=  crate://mode?m=keys  crate://bank?b=B  crate://pad?i=3[&b=A][&semi=5]
 /// crate://play  crate://stop  crate://perform?on=1  crate://flip  crate://punch?p=0.7
-/// crate://fx?t=lpf  crate://fxamt?v=0.7  crate://latch?on=0
+/// crate://fx?t=lpf  crate://fxamt?v=0.7  crate://latch?on=0  crate://import?path=/abs/song.wav
 enum Router {
     static func handle(_ url: URL, state: AppState, hinge: HingeFX) {
         guard url.scheme == "crate" else { return }
@@ -52,6 +52,11 @@ enum Router {
             UserDefaults.standard.set(Double(q("deg") ?? "999") ?? 999, forKey: "crateTurn")
         case "crowdrot":
             UserDefaults.standard.set(Double(q("deg") ?? "0") ?? 0, forKey: "crateCrowdTurn")
+        case "import":
+            // crate://import?path=/abs/file.wav — same copy → chop → auto-flip path as a Files drag-in
+            if let path = q("path") { Task { @MainActor in await AudioImport.importPath(path, state: state) } }
+        case "paywall":
+            NotificationCenter.default.post(name: Notification.Name("cratePresentPaywall"), object: nil)
         case "rec":
             state.setRecording(q("on") != "0")
         default:

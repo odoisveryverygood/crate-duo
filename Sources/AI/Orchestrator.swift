@@ -32,6 +32,8 @@ final class Orchestrator {
         var energy: Double
         var chops: ChopSet?
         var harmony: BassWriter.Harmony
+        /// MIDI-only beats (house): the chord progression written on C2 (GPT refines it via "chords").
+        var chordProg: ChordWriter.Progression? = nil
     }
     var session: Session?
     var lastPattern = Pattern.empty
@@ -60,6 +62,7 @@ final class Orchestrator {
 
     /// Hooks AppState's actions (onDig / onFlip / onPerformToggle) to this orchestrator.
     func wire() {
+        Orchestrator.current = self
         state.onDig = { [weak self] p in self?.submit(p) }
         state.onFlip = { [weak self] in self?.submitFlip() }
         state.onPerformToggle = { [weak self] on in self?.submitPerform(on) }
@@ -84,6 +87,7 @@ final class Orchestrator {
         let seed = Self.fnv(key) &+ UInt64(variant) &* 0x9E37_79B9
 
         var plan = KeywordParser.parse(prompt, grooves: library.grooves)
+        let kwScope = plan.scope
         let kwMs = Self.ms(t0)
         var report = DigReport(prompt: prompt, plan: plan)
         if jev.available, plan.scope != .flip {
@@ -96,6 +100,8 @@ final class Orchestrator {
             }
         }
         guard serial == digSerial else { report.superseded = true; return report }
+        // An imported song flip keeps its chops: "dilla drums for this" stays drums-only whatever Jev guesses.
+        if importedFlip, kwScope == .drumsOnly, [.fullBeat, .sampleOnly].contains(plan.scope) { plan.scope = .drumsOnly }
         if session == nil, [.sampleOnly, .bassOnly, .changeGroove, .flip].contains(plan.scope) { plan.scope = .fullBeat }
         report.plan = plan
         logPlan(plan, kwMs: kwMs)
@@ -123,12 +129,14 @@ final class Orchestrator {
         let (ds, ss) = styles(plan)
         let bars = plan.bars ?? 4
         let laid = plan.laidback ?? PatternBuilder.defaultLaidback(ds)
+        // House with no sample words: drums + MIDI bass + MIDI chord stabs, no loop/chops.
+        let midiOnly = ChordWriter.wantsMidiOnly(plan.prompt, style: ds)
         let tR = Date()
         let target = Retrieval.kitTarget(library, style: ds, vintage: plan.vintage, brightness: plan.brightness, energy: plan.energy)
         let kit = Retrieval.kit(library, style: ds, target: target, seed: seed)
         let req = LoopRequest(sampleStyle: ss, drumStyle: ds, instrument: plan.instrument, mood: plan.mood, bars: bars,
                               bpm: plan.bpm, excludeID: variant > 0 ? session?.chops?.loop.id : nil)
-        let chops = Retrieval.loop(library, req, seed: seed).map { Retrieval.chops($0, lib: library, bars: bars) }
+        let chops = midiOnly ? nil : Retrieval.loop(library, req, seed: seed).map { Retrieval.chops($0, lib: library, bars: bars) }
         let bankC = Retrieval.bankC(library, style: ds, target: target, seed: seed)
         report.retrievalMs = Self.ms(tR)
         report.kitIDs = (0..<16).compactMap { kit[$0]?.id }
@@ -144,20 +152,35 @@ final class Orchestrator {
         var p = Pattern(bars: bars, swing: swing)
         if let g = groove { p.lanes = PatternBuilder.drums(g, bars: bars, laidback: laid) }
         if let c = chops { for (k, v) in PatternBuilder.chops(span: c.spanBars, bars: bars) { p.lanes[k] = v } }
-        let harmony = chops.map { BassWriter.Harmony($0) } ?? session?.harmony ?? BassWriter.Harmony(keyPC: 9)
-        if (plan.wantsBass ?? 1) >= 0.35 {
+        let prog = midiOnly ? ChordWriter.progression(style: ds, key: ChordWriter.keyFromPrompt(plan.prompt)) : nil
+        let harmony = prog?.harmony ?? chops.map { BassWriter.Harmony($0) } ?? session?.harmony ?? BassWriter.Harmony(keyPC: 9)
+        let noBass = KeywordParser.hasAny(["no bass", "without bass", "no bassline"], plan.prompt.lowercased())
+        if midiOnly ? !noBass : (plan.wantsBass ?? 1) >= 0.35 {
             p.notes[PadID(.c, 0)] = BassWriter.write(rhythm: BassWriter.rhythm(library, style: ds), bars: bars, harmony: harmony,
                                                      kicks: PatternBuilder.kickSteps(p.lanes), padRoot: bankC[0]?.rootNote)
         }
+        if let pr = prog, bankC[1] != nil { p.notes[ChordWriter.pad] = ChordWriter.write(pr, bars: bars, style: ds) }
         session = Session(drumStyle: ds, sampleStyle: ss, bars: bars, laidback: laid, energy: plan.energy ?? 0.55,
-                          chops: chops ?? session?.chops, harmony: harmony)
+                          chops: midiOnly ? nil : (chops ?? session?.chops), harmony: harmony, chordProg: prog)
         setLabels(drum: ds, chops: chops)
+        if let pr = prog {
+            // Key guard + scale lock follow the progression's key.
+            state.scaleKey = pr.key
+            state.chordsLabel = pr.label
+            state.sampleLabel = "\(bankC[1]?.name ?? "KEYS") STABS · \(pr.key)"
+        }
         apply(p, bpm: bpm, swing: swing)
         if let c = chops { logSample(c, bpm: bpm, ms: report.loadMs) }
         if p.notes[PadID(.c, 0)] != nil {
-            state.addLog("BASS", "\(ds.rawValue) rule bass · \(bankC[0]?.name ?? "bass") · \(chops?.chordsLabel ?? "key root")", tint: .ochre)
+            state.addLog("BASS", "\(ds.rawValue) rule bass · \(bankC[0]?.name ?? "bass") · \(chops?.chordsLabel ?? prog?.label ?? "key root")",
+                         tint: .ochre)
         }
-        startGPT(plan, take: [.drums, .bass], flip: false, serial: serial)
+        if let pr = prog, p.notes[ChordWriter.pad] != nil {
+            state.addLog("KEYS", "▸ \(pr.label)", tint: .blue)
+            DebugLog.event("chords", ["key": pr.key, "label": pr.label, "voicings": pr.chords.map(\.voicing),
+                                      "pad": bankC[1]?.id ?? "", "root": bankC[1]?.rootNote ?? -1, "bpm": bpm])
+        }
+        startGPT(plan, take: prog != nil ? [.drums, .bass, .chords] : [.drums, .bass], flip: false, serial: serial)
     }
 
     // MARK: - shared helpers

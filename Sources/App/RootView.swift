@@ -89,7 +89,7 @@ struct RootView: View {
         .onHingeChange { _, context in
             if let h = context.hinge {
                 DebugLog.event("hinge", ["deg": (h.angle.degrees * 10).rounded() / 10, "status": "\(h.status)"])
-                hinge.update(angle: h.angle.degrees)
+                if h.status == .closed { hinge.released() } else { hinge.update(angle: h.angle.degrees) }
             } else {
                 state.hingeAngle = nil
             }

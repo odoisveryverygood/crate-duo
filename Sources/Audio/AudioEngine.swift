@@ -16,8 +16,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
 
     // MARK: Tunables
 
-    /// Voices per bank (A drums, B chops, C bass/keys, D free) = 32.
-    static let voicesPerBank = [16, 6, 5, 5]
+    /// Voices per bank (A drums, B chops, C bass/keys, D free) = 37. Bank C: mono bass + two 4-note chord stabs overlapping.
+    static let voicesPerBank = [16, 6, 10, 5]
     static let lookahead = 0.100
     static let startDelay = 0.060
     static let recordLatency = 0.025

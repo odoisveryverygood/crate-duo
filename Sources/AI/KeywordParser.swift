@@ -159,6 +159,9 @@ enum KeywordParser {
             plan.bars = min(8, max(1, n))
         }
         if let m = firstMatch("(\\d{2,3})\\s*bpm", text), let v = Double(m), (50...200).contains(v) { plan.bpm = v }
+        // A bare tempo ("deep house, 124"): a lone 2–3 digit number in 60–200 that isn't a bar count.
+        if plan.bpm == nil, let m = firstMatch("(?<![a-z0-9.\\-])(\\d{2,3})(?![a-z0-9]|\\s*-?\\s*bars?)", text),
+           let v = Double(m), (60...200).contains(v) { plan.bpm = v }
 
         // Feel scores.
         if hasAny(["laid back", "laid-back", "laidback", "drunk", "lazy", "behind the beat", "wonky", "loose", "unquantized", "sloppy"], text) {
