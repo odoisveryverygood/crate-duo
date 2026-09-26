@@ -1,6 +1,6 @@
 # Teammate one handoff
 
-Branch: `teamate-one`. Based on existing `teamate1` keyboard work, merged with `main` at `f640028` (September 26, 2026).
+Branch: `teamate-one`. Based on existing `teamate1` keyboard work, updated through merged `main` at `3b77107` (September 26, 2026).
 
 ## Delivered
 
@@ -9,7 +9,7 @@ Branch: `teamate-one`. Based on existing `teamate1` keyboard work, merged with `
 - R3 RECORDS option: vector vinyl, category-coloured labels using direction 07 colours, CR-1xx catalogue numbers, visible rotating label stripe, orange needle ring, 33 rpm rotation and a 350 ms coast. Reduce Motion keeps the discs static.
 - `@AppStorage("cratePadStyle")` stores `plain` / `records`. SHIFT long-press toggles with a toast; its accessibility action also toggles. `crate://padstyle?s=plain|records` sets it; invalid values are ignored.
 
-The branch retains the pre-existing WP13 transfer implementation from `teamate1`; the latest assignment gives WP13 to teammate two, so reconcile those shared commits instead of adding a second transfer implementation.
+The lead merged WP8 and teammate two's WP13 into main during this task. The final branch uses that merged transfer implementation; it does not reintroduce the older duplicate transfer code.
 
 ## Integration points for the lead
 
@@ -18,6 +18,8 @@ R3 changes only PadGridView, KeysView and new RecordPad, plus one modifier on SH
 Spin duration uses the shared pattern, held state and known sample slice duration. It is visual feedback, not an audio-engine voice meter; one-shots without an end time use a 400 ms estimate. A 60 Hz TimelineView draws Canvas vectors; hardware frame-time profiling remains outstanding.
 
 ## Verification performed on iOS 27.1 Duo
+
+The initial functional/visual checks below ran before the lead merged WP13. After updating through `3b77107`, the complete final Swift source set passed a fresh typecheck. The merged WP13 simulator suite also passed: real-engine import/chops, non-silent four-bar bounce, concurrent capture rejection, cancellation, playback-stop and tempo-change cleanup. This rerun used the separate bundle `com.shuhan.crate.teamateone`. The offline Dilla → records → pad → KEYS → house → punch/DROP → stop smoke flow also ran again successfully against that merged code; records-pad screenshots were inspected.
 
 PASS: isolated all-source compile/link/launch (RevenueCat absent, offline, separate verification bundle).
 
@@ -31,7 +33,7 @@ PASS: debug-command demo smoke flow: Dilla DIG, pad hit, KEYS, house-drums DIG, 
 
 ## Remaining / issues for integrated QA
 
-- Final QA on the lead's merged `main` awaits integration of the other work packages. This branch includes the latest fetched main, but is not itself merged upstream.
+- Final QA on the lead's merged `main` awaits integration of the other work packages. This branch includes merged WP8/WP13 from main at `3b77107`, but R1/R2/R4 and this R3 are not yet integrated together upstream.
 - The offline default library selected `SAX BM` for the headline Nujabes-piano request; the intended piano library is unavailable in this isolated app. Verify the lead's configured library before recording the demo.
 - The existing crowd display appeared rotated on this simulator's outer panel; R4 owns that view.
 - Actual pointer long-press, end-to-end Split View drag gestures, physical hinge pose transitions, live Jev/GPT, RevenueCat, hardware audio interruptions and measured frame rate remain unverified here.
