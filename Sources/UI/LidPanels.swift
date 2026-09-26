@@ -10,6 +10,7 @@ struct SeqRow {
 
 enum SeqRows {
     /// Lanes that have hits anywhere in the pattern: bank A per lane, bank B merged into CHOP, banks C/D per pad.
+    /// Each lane carries its bank's colour (tab + playhead).
     static func build(_ state: AppState, _ p: Pattern) -> [SeqRow] {
         func has(_ pad: PadID) -> Bool {
             !(p.lanes[pad]?.isEmpty ?? true) || !(p.notes[pad]?.isEmpty ?? true)
@@ -17,10 +18,10 @@ enum SeqRows {
         var rows: [SeqRow] = []
         for i in 0..<16 {
             let pad = PadID(.a, i)
-            if has(pad) { rows.append(SeqRow(label: UIHelpers.bankANames[i], color: Theme.orange, pads: [pad])) }
+            if has(pad) { rows.append(SeqRow(label: UIHelpers.bankANames[i], color: Theme.bank(.a), pads: [pad])) }
         }
         let chops = (0..<16).map { PadID(.b, $0) }.filter(has)
-        if !chops.isEmpty { rows.append(SeqRow(label: "CHOP", color: Theme.blue, pads: chops)) }
+        if !chops.isEmpty { rows.append(SeqRow(label: "CHOP", color: Theme.bank(.b), pads: chops)) }
         for bank in [Bank.c, .d] {
             for i in 0..<16 {
                 let pad = PadID(bank, i)
@@ -33,18 +34,32 @@ enum SeqRows {
     }
 
     static let placeholder = [
-        SeqRow(label: "KICK", color: Theme.orange, pads: []),
-        SeqRow(label: "SNR", color: Theme.orange, pads: []),
-        SeqRow(label: "HAT", color: Theme.orange, pads: []),
-        SeqRow(label: "CHOP", color: Theme.blue, pads: []),
-        SeqRow(label: "BASS", color: Theme.ochre, pads: []),
+        SeqRow(label: "KICK", color: Theme.bank(.a), pads: []),
+        SeqRow(label: "SNR", color: Theme.bank(.a), pads: []),
+        SeqRow(label: "HAT", color: Theme.bank(.a), pads: []),
+        SeqRow(label: "CHOP", color: Theme.bank(.b), pads: []),
+        SeqRow(label: "BASS", color: Theme.bank(.c), pads: []),
     ]
 }
 
+/// 05 dot sequencer for the current bar: bank-colour lane tabs, white hits, tiny rest dots, hollow ghosts,
+/// a step ruler (1 · 5 · 9 · 13 + the playing step) and the playhead split per lane in that lane's bank colour.
 struct SeqGridView: View {
     let state: AppState
-    var labelWidth: CGFloat = 52
-    var maxRowHeight: CGFloat = 32
+    /// Largest lane pitch (the mock's 25 pt; portrait allows a little more).
+    var maxPitch: CGFloat = 25
+
+    /// Lane label column (the mock's X0).
+    static let labelColumn: CGFloat = 54
+    /// Extra gap between 4-step groups.
+    static let groupGap: CGFloat = 10
+    /// First lane centre below the top (the ruler sits above it).
+    static let firstLane: CGFloat = 24
+    static let bottomPad: CGFloat = 19
+
+    static func fittedHeight(rows: Int, pitch: CGFloat) -> CGFloat {
+        firstLane + CGFloat(max(rows, 1) - 1) * pitch + bottomPad
+    }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60)) { _ in
@@ -56,10 +71,10 @@ struct SeqGridView: View {
             .overlay(alignment: .bottomLeading) {
                 if rows.isEmpty {
                     Text("EMPTY PATTERN · PRESS ✦ DIG OR TAP A CHIP")
-                        .crateLabel(9, tracking: 0.18)
-                        .foregroundStyle(Theme.mid)
-                        .padding(.leading, labelWidth)
-                        .padding(.bottom, 4)
+                        .fieldLabel()
+                        .foregroundStyle(Theme.lidGrey1)
+                        .padding(.leading, Self.labelColumn)
+                        .padding(.bottom, 2)
                 }
             }
         }
@@ -69,60 +84,87 @@ struct SeqGridView: View {
     }
 
     private func draw(_ ctx: GraphicsContext, size: CGSize, frame f: LiveFrame, rows: [SeqRow]) {
-        let colW = (size.width - labelWidth) / 16
-        let rowH = min(maxRowHeight, size.height / CGFloat(max(rows.count, 1)))
-        let d = max(4, min(14, rowH - 8, colW - 6))
-        let gridH = rowH * CGFloat(rows.count)
-        let barStart = f.bar * 16
+        let n = rows.count
+        let top = Self.firstLane
+        let pitch = min(maxPitch, max(11, (size.height - top - 12) / CGFloat(max(n - 1, 1))))
+        let x0 = Self.labelColumn
+        let colW = (size.width - x0 - 3 * Self.groupGap) / 16
+        func cx(_ i: Int) -> CGFloat { x0 + CGFloat(i) * colW + CGFloat(i / 4) * Self.groupGap + colW / 2 }
+        let k = min(1, max(0.7, pitch / 25))
+        let dHit = 9 * k, dNow = 10 * k, dGhost = 6 * k
+        let segH = min(19, pitch - 3)
         let playing = f.playing
-        let playCol = f.stepInBar
+        let now = f.stepInBar
+        let barStart = f.bar * 16
 
-        // playhead band
+        // step ruler: 1 · 5 · 9 · 13 in grey, the playing step in white
+        let rulerY = top - 20.5
+        for i in [0, 4, 8, 12] where !(playing && i == now) {
+            ctx.draw(Text("\(i + 1)").font(Theme.inter(7, 500)).monospacedDigit().foregroundStyle(Theme.lidGrey2),
+                     at: CGPoint(x: cx(i), y: rulerY), anchor: .center)
+        }
         if playing {
-            let x = labelWidth + CGFloat(playCol) * colW
-            ctx.fill(Path(CGRect(x: x + 1, y: 0, width: colW - 2, height: gridH)), with: .color(Theme.text.opacity(0.07)))
-            ctx.fill(Path(CGRect(x: x, y: 0, width: 1, height: gridH)), with: .color(Theme.text.opacity(0.66)))
+            ctx.draw(Text("\(now + 1)").font(Theme.inter(7, 500)).monospacedDigit().foregroundStyle(Theme.lidInk),
+                     at: CGPoint(x: cx(now), y: rulerY), anchor: .center)
         }
 
         for (r, row) in rows.enumerated() {
-            let cy = rowH * (CGFloat(r) + 0.5)
-            ctx.draw(Text(row.label).crateLabel(9, tracking: 0.12).foregroundStyle(Theme.mid),
-                     at: CGPoint(x: 0, y: cy), anchor: .leading)
+            let cy = top + CGFloat(r) * pitch
 
             // velocity (and note length) per step of this bar
             var cells = [Int: (vel: Int, len: Double)]()
             for pad in row.pads {
                 for h in f.pattern.lanes[pad] ?? [] {
                     let s = h.step - barStart
-                    if s >= 0 && s < 16 { cells[s] = (max(cells[s]?.vel ?? 0, h.velocity), 1) }
+                    if s >= 0 && s < 16 { cells[s] = (max(cells[s]?.vel ?? 0, h.velocity), max(1, cells[s]?.len ?? 1)) }
                 }
-                for n in f.pattern.notes[pad] ?? [] {
-                    let s = n.step - barStart
-                    if s >= 0 && s < 16 { cells[s] = (max(cells[s]?.vel ?? 0, n.velocity), max(1, n.length)) }
+                for note in f.pattern.notes[pad] ?? [] {
+                    let s = note.step - barStart
+                    if s >= 0 && s < 16 { cells[s] = (max(cells[s]?.vel ?? 0, note.velocity), max(1, note.length)) }
+                }
+            }
+            let hot = playing && cells[now] != nil
+
+            // bank tab + lane label
+            ctx.fill(Path(CGRect(x: 0, y: cy - 4.5, width: 2, height: 9)), with: .color(row.color))
+            ctx.draw(Text(row.label).font(Theme.inter(7.5, 500)).tracking(0.75)
+                        .foregroundStyle(hot ? Theme.lidInk : Theme.lidGrey1),
+                     at: CGPoint(x: 9, y: cy), anchor: .leading)
+
+            // held notes: a hairline to the note's end
+            for (s, c) in cells where c.len > 1.5 {
+                let end = min(15, s + Int(c.len.rounded(.up)) - 1)
+                if end > s {
+                    ctx.fill(Path(CGRect(x: cx(s), y: cy - 0.5, width: cx(end) - cx(s), height: 1)),
+                             with: .color(Theme.lidRest))
                 }
             }
 
+            // this lane's playhead, in its bank colour
+            if playing {
+                ctx.fill(Path(CGRect(x: cx(now) - 1, y: cy - segH / 2, width: 2, height: segH)), with: .color(row.color))
+            }
+
             for s in 0..<16 {
-                let cx = labelWidth + colW * (CGFloat(s) + 0.5)
-                if playing && s == playCol {
-                    let box = CGRect(x: cx - d / 2 - 2, y: cy - d / 2 - 2, width: d + 4, height: d + 4)
-                    ctx.stroke(Path(roundedRect: box, cornerRadius: 3), with: .color(Theme.text.opacity(0.33)), lineWidth: 1)
-                }
+                let x = cx(s)
                 guard let c = cells[s] else {
-                    ctx.fill(Path(ellipseIn: CGRect(x: cx - d / 2, y: cy - d / 2, width: d, height: d)),
-                             with: .color(Theme.dotOff))
+                    if !(playing && s == now) {
+                        ctx.fill(Path(ellipseIn: CGRect(x: x - 1, y: cy - 1, width: 2, height: 2)), with: .color(Theme.lidRest))
+                    }
                     continue
                 }
                 let ghost = c.vel < 60
-                let color: Color = ghost ? Theme.ghost : row.color.opacity(0.5 + 0.5 * min(1, Double(c.vel - 60) / 58))
-                if c.len > 1.5 {
-                    let endX = min(labelWidth + colW * 16, cx + colW * CGFloat(c.len - 1))
-                    ctx.fill(Path(roundedRect: CGRect(x: cx, y: cy - 1.5, width: endX - cx, height: 3), cornerRadius: 1.5),
-                             with: .color(row.color.opacity(0.35)))
+                if playing && s == now {
+                    let d = ghost ? dGhost + 2 : dNow
+                    ctx.fill(Path(ellipseIn: CGRect(x: x - d / 2, y: cy - d / 2, width: d, height: d)), with: .color(row.color))
+                } else if ghost {
+                    let d = dGhost - 1
+                    ctx.stroke(Path(ellipseIn: CGRect(x: x - d / 2, y: cy - d / 2, width: d, height: d)),
+                               with: .color(Theme.lidGhost), lineWidth: 1)
+                } else {
+                    ctx.fill(Path(ellipseIn: CGRect(x: x - dHit / 2, y: cy - dHit / 2, width: dHit, height: dHit)),
+                             with: .color(Theme.lidInk))
                 }
-                let justPlayed = playing && s == playCol && (f.local - Double(barStart + s)) < f.flashSteps + 0.3
-                let dd = justPlayed ? d * 1.25 : d
-                ctx.fill(Path(ellipseIn: CGRect(x: cx - dd / 2, y: cy - dd / 2, width: dd, height: dd)), with: .color(color))
             }
         }
     }
@@ -146,10 +188,10 @@ struct ChopWaveView: View {
             .overlay {
                 if !loaded {
                     Text("NO SAMPLE IN BANK B · PRESS ✦ DIG")
-                        .crateLabel(9, tracking: 0.18)
-                        .foregroundStyle(Theme.mid)
+                        .fieldLabel()
+                        .foregroundStyle(Theme.lidGrey1)
                         .padding(6)
-                        .background(Color.black)
+                        .background(Theme.oled)
                 }
             }
         }
@@ -168,7 +210,8 @@ struct ChopWaveView: View {
         let top: CGFloat = 16
         let h = size.height - top
         let cy = top + h / 2
-        g.fill(Path(CGRect(x: 0, y: cy - 0.5, width: size.width, height: 1)), with: .color(Theme.rule))
+        let blue = Theme.bank(.b)
+        g.fill(Path(CGRect(x: 0, y: cy - 0.25, width: size.width, height: 0.5)), with: .color(Theme.lidGrey3))
 
         // slice widths proportional to duration when known
         var durs = sounds.map { s -> Double in
@@ -182,14 +225,15 @@ struct ChopWaveView: View {
         for i in 0..<16 {
             let w = size.width * CGFloat(durs[i] / sum)
             let isCur = current == i
-            let color = isCur ? Theme.orange : Theme.text
             if isCur {
-                g.fill(Path(CGRect(x: x, y: top, width: w, height: h)), with: .color(Theme.orange.opacity(0.08)))
+                g.fill(Path(CGRect(x: x, y: top, width: w, height: h)), with: .color(blue.opacity(0.12)))
             }
-            // marker + number
-            g.fill(Path(CGRect(x: x, y: top - 2, width: 1, height: h + 2)), with: .color(isCur ? Theme.orange : Theme.dim))
-            g.draw(Text("\(i + 1)").font(Theme.label(8)).foregroundStyle(isCur ? Theme.orange : Theme.mid),
-                   at: CGPoint(x: x + 3, y: 6), anchor: .leading)
+            // marker + number (the playing slice gets bank B's colour, like its lane playhead)
+            g.fill(Path(CGRect(x: x, y: top - 2, width: isCur ? 2 : 1, height: h + 2)),
+                   with: .color(isCur ? blue : Theme.lidGrey3))
+            g.draw(Text("\(i + 1)").font(Theme.inter(7, 500)).monospacedDigit()
+                        .foregroundStyle(isCur ? Theme.lidInk : Theme.lidGrey2),
+                   at: CGPoint(x: x + 4, y: 6), anchor: .leading)
             if loaded {
                 let pts = max(4, Int(w / 3))
                 let wave = WaveCache.shared.wave(state, PadID(.b, i), points: pts)
@@ -201,7 +245,7 @@ struct ChopWaveView: View {
                         path.move(to: CGPoint(x: px, y: cy - max(0.5, amp)))
                         path.addLine(to: CGPoint(x: px, y: cy + max(0.5, amp)))
                     }
-                    g.stroke(path, with: .color(color.opacity(isCur ? 1 : 0.85)), lineWidth: 1.5)
+                    g.stroke(path, with: .color(isCur ? Theme.lidInk : Theme.lidInk.opacity(0.55)), lineWidth: 1.5)
                 }
             }
             x += w
@@ -222,7 +266,7 @@ struct KeysWaveView: View {
             let hot = ctx.date.timeIntervalSince(state.lastHitTime) < 0.15 && state.lastHitPad == pad
             Canvas { g, size in
                 let cy = size.height / 2
-                g.fill(Path(CGRect(x: 0, y: cy - 0.5, width: size.width, height: 1)), with: .color(Theme.rule))
+                g.fill(Path(CGRect(x: 0, y: cy - 0.25, width: size.width, height: 0.5)), with: .color(Theme.lidGrey3))
                 guard !env.isEmpty else { return }
                 let cycles = 16 * pow(2, semi / 12)
                 var path = Path()
@@ -236,7 +280,7 @@ struct KeysWaveView: View {
                     if x == 0 { path.move(to: CGPoint(x: x, y: y)) } else { path.addLine(to: CGPoint(x: x, y: y)) }
                     x += 1.5
                 }
-                g.stroke(path, with: .color(hot ? Theme.orange : Theme.text), lineWidth: 1.4)
+                g.stroke(path, with: .color(hot ? Theme.bank(pad.bank) : Theme.lidInk), lineWidth: 1.2)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -247,36 +291,41 @@ struct KeysWaveView: View {
 
 // MARK: - AI log
 
+/// The AI log panel (SAMPLE / PAD FX / 16 LVL, portrait SEQ): tint tab, JB tag, Inter text, JB timing.
 struct AILogView: View {
     let state: AppState
     var maxLines = 12
-    var size: CGFloat = 11
+    var size: CGFloat = 10.5
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
             if state.log.isEmpty {
                 Text("AI LOG · EMPTY")
-                    .crateLabel(9, tracking: 0.18)
-                    .foregroundStyle(Theme.dim)
+                    .fieldLabel()
+                    .foregroundStyle(Theme.lidGrey2)
             }
             ForEach(state.log.suffix(maxLines)) { line in
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .center, spacing: 0) {
+                    Rectangle().fill(tint(line.tint)).frame(width: 2, height: 9)
+                        .padding(.trailing, 7)
                     Text(line.tag.uppercased())
-                        .font(Theme.mono(size - 1, bold: true))
-                        .foregroundStyle(Theme.tint(line.tint))
-                        .frame(width: size * 5.6, alignment: .leading)
+                        .font(Theme.mono(7.5))
+                        .tracking(0.3)
+                        .foregroundStyle(Theme.lidTimingKey)
+                        .frame(width: 44, alignment: .leading)
                         .lineLimit(1)
                     Text(line.text)
-                        .font(Theme.mono(size))
-                        .foregroundStyle(Theme.text)
-                        .lineLimit(2)
+                        .font(Theme.inter(size))
+                        .foregroundStyle(line.tint == .red ? Theme.red : Theme.lidInk)
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if let ms = line.ms {
                         Text(UIHelpers.msText(ms))
-                            .font(Theme.mono(size - 1))
-                            .foregroundStyle(Theme.mid)
+                            .font(Theme.mono(7.5))
+                            .foregroundStyle(Theme.lidGrey1)
                             .lineLimit(1)
                             .fixedSize()
+                            .padding(.leading, 8)
                     }
                 }
             }
@@ -285,9 +334,19 @@ struct AILogView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ai-log")
     }
+
+    private func tint(_ t: Tint) -> Color {
+        switch t {
+        case .orange: return Theme.bank(.a)
+        case .blue: return Theme.bank(.b)
+        case .ochre: return Theme.bank(.c)
+        case .grey: return Theme.bank(.d)
+        case .red: return Theme.red
+        }
+    }
 }
 
-// MARK: - PUNCH strip (hinge FX / PAD FX), shown whenever punch > 0
+// MARK: - PUNCH strip (hinge FX / PAD FX), shown in the result line's slot whenever punch > 0
 
 struct PunchStrip: View {
     let punch: Double
@@ -301,21 +360,24 @@ struct PunchStrip: View {
         let lit = Int((p * Double(cells)).rounded())
         HStack(spacing: 10) {
             Text(fx?.label ?? (p > 0.92 ? "BREAKDOWN" : "PUNCH"))
-                .crateLabel(9, tracking: 0.16)
-                .foregroundStyle(Theme.orange)
+                .fieldLabel(7.5)
+                .foregroundStyle(Theme.lidInk)
+                .fixedSize()
             HStack(spacing: 2) {
                 ForEach(0..<cells, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(i < lit ? Theme.orange : Theme.dotOff)
-                        .frame(width: 5, height: 9)
+                    Rectangle()
+                        .fill(i < lit ? Theme.live : Theme.lidGrey3)
+                        .frame(width: 4, height: 9)
                 }
             }
             Text("\(Int(p * 100))%")
-                .font(Theme.mono(10, bold: true))
-                .foregroundStyle(Theme.text)
+                .font(Theme.inter(13))
+                .monospacedDigit()
+                .foregroundStyle(Theme.lidInk)
+                .fixedSize()
             Text(fx.map { $0.hint } ?? "LPF \(cutoff >= 1000 ? String(format: "%.1fk", cutoff / 1000) : "\(Int(cutoff))") · VERB \(Int(38 * p))")
-                .font(Theme.mono(10))
-                .foregroundStyle(Theme.mid)
+                .font(Theme.mono(7.5))
+                .foregroundStyle(Theme.lidGrey1)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 0)
@@ -328,7 +390,7 @@ struct PunchStrip: View {
 // MARK: - DIG composer (lid main area while the prompt is focused)
 
 /// Echoes the draft near the top of the lid (the keyboard may cover the bottom prompt line in book pose)
-/// and offers the canned prompts.
+/// and offers every canned prompt.
 struct DigComposer: View {
     let state: AppState
 
@@ -336,11 +398,11 @@ struct DigComposer: View {
         let ui = CrateUI.shared
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
-                SparkShape().fill(Theme.orange).frame(width: 11, height: 11)
-                Text("DIG").crateLabel(11).foregroundStyle(Theme.orange)
+                SparkShape().fill(Theme.lidInk).frame(width: 8, height: 8)
+                Text("DIG").fieldLabel(7.5).foregroundStyle(Theme.lidInk)
                 Text("DESCRIBE A BEAT, A KIT OR A SOUND · RETURN TO DIG")
-                    .crateLabel(9, tracking: 0.14)
-                    .foregroundStyle(Theme.mid)
+                    .fieldLabel()
+                    .foregroundStyle(Theme.lidGrey1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
@@ -348,17 +410,18 @@ struct DigComposer: View {
                 let on = Int(ctx.date.timeIntervalSinceReferenceDate * 2) % 2 == 0
                 let empty = ui.draft.isEmpty
                 let body = Text(empty ? "4 bar loop, dilla drums + a nujabes piano sample" : ui.draft)
-                    .foregroundStyle(empty ? Theme.dim : Theme.text)
-                let cursor = Text("▌").foregroundStyle(on ? Theme.orange : Color.clear)
+                    .foregroundStyle(empty ? Theme.lidPlaceholder : Theme.lidInk)
+                let cursor = Text("|").foregroundStyle(on ? Theme.lidInk : Color.clear)
                 Text("\(body)\(cursor)")
-                    .font(Theme.mono(18))
+                    .font(Theme.interLight(24))
+                    .tracking(-0.5)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            ActionChips(state: state)
+            LidChips(state: state)
             Spacer(minLength: 0)
         }
-        .padding(.top, 4)
+        .padding(.top, 2)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("dig-composer")
     }
