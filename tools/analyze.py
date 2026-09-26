@@ -21,7 +21,7 @@ def ev(name, after=None, before=None):
 
 results = []
 def check(name, ok, detail=""):
-    results.append((name, "PASS" if ok is True else ("SKIP" if ok is None else "FAIL"), detail))
+    results.append((name, "SKIP" if ok is None else ("PASS" if bool(ok) else "FAIL"), detail))
 
 launch = ev("launch")
 check("launch: library readable", bool(launch) and launch[0].get("libraryReadable"), str(launch[0].get("library") if launch else "no launch event"))

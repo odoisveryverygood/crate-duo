@@ -6,7 +6,6 @@ final class HingeFX {
     private let state: AppState
     var restAngle: Double = 110
     var closedAngle: Double = 25
-    private var recent: [(t: Date, p: Double)] = []
     private var lastDrop = Date.distantPast
 
     init(state: AppState) { self.state = state }
@@ -17,20 +16,32 @@ final class HingeFX {
         apply(p)
     }
 
+    private var wasHigh = false
+    private var leftHighAt: Date?
+
     /// Also used by the PAD FX slider fallback on non-hinge devices.
+    /// DROP = the punch goes from > 0.6 to < 0.1 within 0.45 s of starting to open (a snap), regardless of how
+    /// long it was held folded (hinge events only arrive while it moves).
     func apply(_ p: Double) {
         let now = Date()
-        recent.append((now, p))
-        recent.removeAll { now.timeIntervalSince($0.t) > 0.45 }
-        let peak = recent.map(\.p).max() ?? 0
-        if p < 0.1, peak > 0.6, now.timeIntervalSince(lastDrop) > 1.0 {
-            lastDrop = now
-            state.punch = 0
-            state.engine.drop()
-            state.addLog("DROP", "snap open", tint: .orange)
-            DebugLog.event("drop", ["from": peak])
-            recent.removeAll()
-            return
+        if p > 0.6 {
+            wasHigh = true
+            leftHighAt = nil
+        } else if wasHigh && leftHighAt == nil {
+            leftHighAt = now
+        }
+        if p < 0.1, wasHigh, let t = leftHighAt {
+            let fast = now.timeIntervalSince(t) < 0.45
+            wasHigh = false
+            leftHighAt = nil
+            if fast, now.timeIntervalSince(lastDrop) > 1.0 {
+                lastDrop = now
+                state.punch = 0
+                state.engine.drop()
+                state.addLog("DROP", "snap open", tint: .orange)
+                DebugLog.event("drop", ["source": "hinge"])
+                return
+            }
         }
         guard abs(p - state.punch) > 0.005 || p == 0 || p == 1 else { return }
         state.punch = p
