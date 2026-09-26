@@ -6,6 +6,7 @@ struct SampleRecordButton: View {
     let state: AppState
     let sampler: MicSampler
     @GestureState private var pressed = false
+    @State private var hold = SampleHoldState()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -45,10 +46,18 @@ struct SampleRecordButton: View {
             .overlay(RoundedRectangle(cornerRadius: Theme.padRadius)
                 .stroke(sampler.isRecording ? Theme.orange : Theme.padEdge, lineWidth: 2))
             .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0).updating($pressed) { _, held, _ in held = true })
+            .gesture(DragGesture(minimumDistance: 0)
+                .updating($pressed) { _, held, _ in held = true }
+                .onChanged { _ in
+                    if hold.begin() { sampler.startRecording() }
+                }
+                .onEnded { _ in
+                    guard hold.finish() else { return }
+                    let chop = sampler.chopType
+                    Task { await sampler.stopRecording(chop: chop) }
+                })
             .onChange(of: pressed) { _, held in
-                if held { sampler.startRecording() }
-                else { Task { await sampler.stopRecording(chop: sampler.chopType) } }
+                if !held, hold.reset() { sampler.cancelRecording() }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Sample record")
@@ -69,7 +78,10 @@ struct SampleRecordButton: View {
         }
         .padding(10)
         .background(Theme.chassis)
-        .onDisappear { sampler.cancelRecording() }
+        .onDisappear {
+            _ = hold.reset()
+            sampler.cancelRecording()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { sampler.cancelRecording() }
         }
