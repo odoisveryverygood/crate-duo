@@ -34,6 +34,10 @@ final class AppState {
     var performOn = false
     var lastPerform = ""
 
+    /// Duo outer screen (faces the audience when open) — driven by ExternalNonInteractiveAccessory availability.
+    var outerDisplayAvailable = false
+    var crowdDisplayOn = true
+
     var lastHitPad: PadID? = nil
     var lastHitTime = Date.distantPast
 

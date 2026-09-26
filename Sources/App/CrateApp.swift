@@ -4,6 +4,7 @@ import SwiftUI
 struct CrateApp: App {
     @State private var state: AppState
     private let hinge: HingeFX
+    private let commands = DebugCommands()
 
     init() {
         let s = AppState(engine: MockEngine())
@@ -18,6 +19,7 @@ struct CrateApp: App {
         WindowGroup {
             RootView(state: state, hinge: hinge)
                 .onOpenURL { Router.handle($0, state: state, hinge: hinge) }
+                .onAppear { commands.start(state: state, hinge: hinge) }
         }
     }
 }

@@ -19,13 +19,14 @@ fi
 now() { python3 -c 'import time;print(time.time())'; }
 mark() { echo "{\"event\":\"mark\",\"name\":\"$1\",\"t\":$(now)}" >> "$OUT/marks.jsonl"; echo "· $1"; }
 shot() { xcrun simctl io "$U" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
-url() { xcrun simctl openurl "$U" "crate://$1"; }
+CMD=/tmp/crate-cmd.txt; : > "$CMD"
+url() { echo "crate://$1" >> "$CMD"; sleep 0.15; }
 enc() { python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$1"; }
 
 xcrun simctl install "$U" "$APP"
 hinge 150 >/dev/null 2>&1
 xcrun simctl launch --console-pty --terminate-running-process "$U" com.shuhan.crate \
-  -crateDebugLog 1 -crateDebugRecord 1 -crateOffline $OFF > "$OUT/console.log" 2>&1 &
+  -crateDebugLog 1 -crateDebugRecord 1 -crateOffline $OFF -crateCmdFile "$CMD" > "$OUT/console.log" 2>&1 &
 sleep 3
 mark launched; shot 00-launch
 

@@ -37,6 +37,8 @@ enum Router {
             state.onFlip?()
         case "punch":
             if let p = q("p").flatMap(Double.init) { hinge.apply(p) }
+        case "cam":
+            CrowdCam.shared.start()
         case "rec":
             state.setRecording(q("on") != "0")
         default:

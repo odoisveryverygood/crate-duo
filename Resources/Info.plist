@@ -18,8 +18,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -31,8 +29,29 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CRATE_LIBRARY_PATH</key>
+	<string>$(CRATE_LIBRARY_PATH)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>CRATE films your performance while the back screen shows the crowd view.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CRATE samples sound from the mic onto pads.</string>
+	<key>OPENAI_API_KEY</key>
+	<string>$(OPENAI_API_KEY)</string>
+	<key>TYPESAFE_API_KEY</key>
+	<string>$(TYPESAFE_API_KEY)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Doto-w900.ttf</string>
+		<string>Doto-w700.ttf</string>
+		<string>SpaceMono-Regular.ttf</string>
+		<string>SpaceMono-Bold.ttf</string>
+		<string>JetBrainsMono-Regular.ttf</string>
+		<string>JetBrainsMono-Bold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -49,22 +68,5 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Doto-w900.ttf</string>
-		<string>Doto-w700.ttf</string>
-		<string>SpaceMono-Regular.ttf</string>
-		<string>SpaceMono-Bold.ttf</string>
-		<string>JetBrainsMono-Regular.ttf</string>
-		<string>JetBrainsMono-Bold.ttf</string>
-	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>CRATE samples sound from the mic onto pads.</string>
-	<key>CRATE_LIBRARY_PATH</key>
-	<string>$(CRATE_LIBRARY_PATH)</string>
-	<key>OPENAI_API_KEY</key>
-	<string>$(OPENAI_API_KEY)</string>
-	<key>TYPESAFE_API_KEY</key>
-	<string>$(TYPESAFE_API_KEY)</string>
 </dict>
 </plist>
