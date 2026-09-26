@@ -39,6 +39,8 @@ enum Router {
             if let p = q("p").flatMap(Double.init) { hinge.apply(p) }
         case "cam":
             CrowdCam.shared.start()
+        case "rot":
+            UserDefaults.standard.set(Double(q("deg") ?? "999") ?? 999, forKey: "crateTurn")
         case "rec":
             state.setRecording(q("on") != "0")
         default:
