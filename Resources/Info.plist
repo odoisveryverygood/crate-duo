@@ -45,6 +45,8 @@
 	<string>CRATE samples sound from the mic onto pads.</string>
 	<key>OPENAI_API_KEY</key>
 	<string>$(OPENAI_API_KEY)</string>
+	<key>REVENUECAT_API_KEY</key>
+	<string>$(REVENUECAT_API_KEY)</string>
 	<key>TYPESAFE_API_KEY</key>
 	<string>$(TYPESAFE_API_KEY)</string>
 	<key>UIAppFonts</key>

@@ -25,6 +25,7 @@ struct CrateApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Paywall is off in the UI; the gate lives in Sources/Paywall (re-enable with `.paywallGate(state: state)`).
             RootView(state: state, hinge: hinge)
                 .onOpenURL { Router.handle($0, state: state, hinge: hinge) }
                 .onAppear { commands.start(state: state, hinge: hinge) }
