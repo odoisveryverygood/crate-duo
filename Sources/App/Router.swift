@@ -57,8 +57,6 @@ enum Router {
         case "import":
             // crate://import?path=/abs/file.wav — same copy → chop → auto-flip path as a Files drag-in
             if let path = q("path") { Task { @MainActor in await AudioImport.importPath(path, state: state) } }
-        case "paywall":
-            NotificationCenter.default.post(name: Notification.Name("cratePresentPaywall"), object: nil)
         case "project":
             // crate://project?cmd=new|save|saveas|open&name=…
             let cmd = q("cmd") ?? "save", name = q("name")
