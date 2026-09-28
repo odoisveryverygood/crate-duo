@@ -138,7 +138,7 @@ def render_shot(i, s):
         for _ in range(n):
             enc.stdin.write(fr)
     else:
-        cap = brat_text(s["cap"], 118, fg, blur=1.6, xy=(58, 34)) if s.get("cap") else None
+        cap = brat_text(s["cap"], 118, fg, blur=0, xy=(58, 34)) if s.get("cap") else None
         dec = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(s["start"]), "-t", str(s["src_dur"]), "-i", s["src"],
                                 "-vf", f"setpts=(PTS-STARTPTS)/{speed},fps={FPS},scale={S}:{S}:flags=lanczos",
                                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
@@ -159,46 +159,68 @@ def render_shot(i, s):
             enc.stdin.write(last.convert("RGB").tobytes()); got += 1
         dec.stdout.close(); dec.wait()
     enc.stdin.close(); enc.wait()
-    # audio
-    a = s.get("a")
-    if a is None and "card" not in s and speed == 1.0:
-        a = (s["src"], s["start"])
-    if a:
-        sh(["ffmpeg", "-v", "error", "-y", "-ss", str(a[1]), "-t", str(dur), "-i", a[0], "-vn",
-            "-af", f"aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:{dur},afade=t=in:d=0.01,afade=t=out:st={max(0, dur-0.02):.3f}:d=0.02",
-            "-ar", "48000", apath])
-    else:
-        sh(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-t", str(dur), "-i", "anullsrc=r=48000:cl=stereo", apath])
     print(f"  {i:02d} {dur:5.2f}s {s.get('label', '')}")
-    return vpath, apath, dur
+    return vpath, dur
+
+
+DROP = 7.55   # the snap in 6.mp4 (high-band energy jumps -70 -> -29 dB)
 
 
 def shots():
     O, W = ORANGE, WHITE
     return [
-        dict(label="fold build", src=FOLD, start=5.6, src_dur=2.8, bg=O, cap=["fold it."]),
-        dict(label="snap drop", src=FOLD, start=8.4, src_dur=2.6, bg=W, cap=["drop it."]),
-        dict(label="title", card=card(["crate."], O, 300), dur=0.9, bg=O, a=(FOLD, 11.0)),
-        dict(label="typing", src=Z, start=1.5, src_dur=3.8, speed=3.5, bg=W, cap=["type a vibe."]),
+        dict(label="fold build", src=FOLD, start=4.2, src_dur=round(DROP - 4.2, 3), bg=W, cap=["fold it."]),
+        dict(label="snap drop", src=FOLD, start=DROP, src_dur=2.95, bg=O, cap=["drop it."]),
+        dict(label="typing", src=Z, start=1.5, src_dur=3.8, speed=3.5, bg=W, cap=["or type a vibe."]),
         dict(label="jazz drop", src=Z, start=5.3, src_dur=3.2, bg=O, cap=["get a beat."]),
-        dict(label="seq by hand", src=Z, start=37.4, src_dur=3.0, bg=W, cap=["or play it."]),
-        dict(label="chop", src=Z, start=45.2, src_dur=2.6, bg=O, cap=["chop it."]),
-        dict(label="house typing", src=Z, start=70.0, src_dur=4.4, speed=4.0, bg=W, cap=["house?"], a=(Z, 47.8)),
-        dict(label="house drop", src=Z, start=74.4, src_dur=3.0, bg=W, cap=["house."]),
-        dict(label="back screen", src=Z, start=107.4, src_dur=3.0, bg=O, cap=["back screen", "= crowd."]),
+        dict(label="seq by hand", src=Z, start=37.4, src_dur=3.0, bg=W, cap=["play it by hand."]),
+        dict(label="chop", src=Z, start=45.2, src_dur=2.3, bg=O, cap=["chop it."]),
+        dict(label="house typing", src=Z, start=70.0, src_dur=4.4, speed=5.5, bg=W, cap=["house?"]),
+        dict(label="house drop", src=Z, start=74.4, src_dur=3.0, bg=O, cap=["house."]),
+        dict(label="back screen", src=Z, start=108.0, src_dur=3.0, bg=W, cap=["the back screen", "lights up too."]),
         dict(label="close it", src=BOOK, start=1.1, src_dur=4.0, bg=W, cap=["close it.", "keep playing."]),
         dict(label="end", card=card(["crate."], O, 300, sub=["your ai foldable sampler.", "crateduo.vercel.app"]),
-             dur=2.8, bg=O, a=(BOOK, 5.1)),
+             dur=2.8, bg=O),
+    ]
+
+
+def beds(t):
+    """Continuous audio per section so the music never stutters: (file, at, src_in, dur, fade_in, fade_out)."""
+    fold = t["typing"] + 0.6 - t["fold build"]
+    jazz = min(8.4, t["house typing"] + 0.1 - t["jazz drop"])
+    house = t["_end"] - t["house drop"] + 0.8
+    return [
+        (FOLD, t["fold build"], 4.2, fold, 0.0, 0.7),                       # build -> DROP -> tail under the typing
+        (Z, t["jazz drop"], 27.8, jazz, 0.02, 0.35),                   # jazz lands with "get a beat."
+        (Z, t["house drop"] - 0.9, 73.6, house, 0.02, 1.8),            # silence, then the house drop on the cut
     ]
 
 
 if __name__ == "__main__":
-    parts = [render_shot(i, s) for i, s in enumerate(shots())]
-    vl, al = os.path.join(TMP, "v.txt"), os.path.join(TMP, "a.txt")
-    open(vl, "w").write("".join(f"file '{v}'\n" for v, _, _ in parts))
-    open(al, "w").write("".join(f"file '{a}'\n" for _, a, _ in parts))
+    sl = shots()
+    parts, t, acc = [], {}, 0.0
+    for i, s_ in enumerate(sl):
+        t[s_["label"]] = acc
+        v, d = render_shot(i, s_)
+        parts.append((v, d)); acc += d
+    t["_end"] = acc
+    vl = os.path.join(TMP, "v.txt")
+    open(vl, "w").write("".join(f"file '{v}'\n" for v, _ in parts))
+    vcat = os.path.join(TMP, "video.mov")
+    sh(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", vl, "-c", "copy", vcat])
+    ins, fl = [], []
+    for j, (f, at, si, d, fi, fo) in enumerate(beds(t)):
+        ins += ["-ss", str(si), "-t", f"{d:.3f}", "-i", f]
+        ms = int(at * 1000)
+        fl.append(f"[{j}:a]aresample=48000,aformat=channel_layouts=stereo,afade=t=in:d={max(fi,0.005)},"
+                  f"afade=t=out:st={max(0, d - fo):.3f}:d={fo},adelay={ms}|{ms}[b{j}]")
+    n = len(beds(t))
+    fl.append("".join(f"[b{j}]" for j in range(n)) + f"amix=inputs={n}:normalize=0,atrim=0:{acc:.3f},"
+              f"loudnorm=I=-14:TP=-1.5:LRA=11[a]")
     out = os.path.join(OUT, "crate_brat_30.mp4")
-    sh(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", vl, "-f", "concat", "-safe", "0", "-i", al,
-        "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p",
-        "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", out])
-    print("wrote", out, f"{sum(d for _, _, d in parts):.1f}s")
+    sh(["ffmpeg", "-v", "error", "-y", "-i", vcat] + ins + ["-filter_complex", ";".join(
+        f.replace(f"[{j}:a]", f"[{j + 1}:a]") for j, f in enumerate(fl)) if False else None] if False else
+       ["ffmpeg", "-v", "error", "-y"] + ins + ["-i", vcat, "-filter_complex", ";".join(fl),
+        "-map", f"{n}:v", "-map", "[a]", "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-movflags", "+faststart", "-t", f"{acc:.3f}", out])
+    print("wrote", out, f"{acc:.1f}s", {k: round(v, 2) for k, v in t.items()})
