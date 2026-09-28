@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CRATE</title>
+<meta name="description" content="Your AI foldable sampler. Type a vibe, get a beat.">
+<meta property="og:title" content="CRATE · Your AI foldable sampler">
+<meta property="og:description" content="Type a vibe, get a beat. An AI sampler for iPhone Duo.">
+<meta property="og:image" content="/crate-duo.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@800&display=swap">
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1d1d1f;
+    --ink2: #6e6e73;
+    --line: #d2d2d7;
+    --field: #f5f5f7;
+    --live: #fa5b1c;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body {
+    margin: 0; color: var(--ink); font: 400 17px/1.47 var(--sans);
+    -webkit-font-smoothing: antialiased; text-align: center;
+  }
+  main { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 64px 40px; }
+
+  .mark { display: inline-flex; align-items: center; gap: 8px; font: 800 20px/1 "Doto", ui-monospace, Menlo, monospace; letter-spacing: .05em; }
+  .mark i { width: 7px; height: 7px; border-radius: 50%; background: var(--live); display: block; }
+
+  h1 {
+    margin: 40px 0 0; font-weight: 600; letter-spacing: -.028em; line-height: 1.04;
+    font-size: clamp(44px, 8vw, 80px); text-wrap: balance;
+  }
+  .sub { margin: 14px 0 0; font-size: clamp(19px, 2.4vw, 24px); color: var(--ink2); letter-spacing: -.01em; }
+
+  form { margin: 36px auto 0; display: flex; gap: 8px; max-width: 420px; }
+  input[type=email] {
+    flex: 1; min-width: 0; height: 48px; padding: 0 18px; border-radius: 999px;
+    border: 1px solid transparent; background: var(--field); color: var(--ink);
+    font: 400 17px var(--sans); outline: none;
+  }
+  input[type=email]::placeholder { color: #86868b; }
+  input[type=email]:focus-visible { border-color: var(--ink); background: var(--bg); }
+  button {
+    height: 48px; padding: 0 22px; border-radius: 999px; border: 0; cursor: pointer;
+    background: var(--ink); color: #fff; font: 500 17px var(--sans); white-space: nowrap;
+  }
+  button:hover { background: #000; }
+  button:disabled { opacity: .5; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--live); outline-offset: 3px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .note { margin: 12px 0 0; min-height: 20px; font-size: 14px; color: var(--ink2); }
+  .note.ok { color: var(--ink); }
+  .note.err { color: #d70015; }
+
+  figure { margin: 48px auto 0; }
+  figure img { width: 100%; max-width: 900px; height: auto; display: block; margin: 0 auto; }
+
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12px; color: #86868b;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; text-align: left; }
+
+  @media (max-width: 480px) {
+    main { padding-block: 44px 32px; }
+    form { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark" aria-label="CRATE"><i></i>CRATE</div>
+  <h1>Your AI foldable sampler.</h1>
+  <p class="sub">Type a vibe, get a beat.</p>
+
+  <form id="waitlist" novalidate>
+    <label for="email" class="hp">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" placeholder="Email address" required>
+    <input class="hp" id="company" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit" id="join">Join waitlist</button>
+  </form>
+  <p class="note" id="note" role="status" aria-live="polite"></p>
+
+  <figure>
+    <img src="crate-duo.jpg" width="1320" height="1010" alt="CRATE running on an iPhone Duo: a beat on the top screen, 16 pads on the bottom screen.">
+  </figure>
+
+  <footer>
+    <span>CRATE for iPhone Duo</span>
+    <span>1st place · YC × Bitrig iPhone Duo hackathon</span>
+  </footer>
+</main>
+
+<script>
+  const form = document.getElementById("waitlist"), note = document.getElementById("note"),
+        input = document.getElementById("email"), btn = document.getElementById("join");
+  const say = (t, c = "") => { note.textContent = t; note.className = "note " + c; };
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { say("Enter a valid email address.", "err"); input.focus(); return; }
+    btn.disabled = true; say("");
+    try {
+      const r = await fetch("/api/waitlist", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, company: document.getElementById("company").value }),
+      });
+      if (!r.ok) throw new Error(r.status);
+      form.reset(); say("You're on the list.", "ok");
+    } catch {
+      say("Something went wrong. Try again.", "err");
+    } finally { btn.disabled = false; }
+  });
+</script>
+</body>
+</html>
