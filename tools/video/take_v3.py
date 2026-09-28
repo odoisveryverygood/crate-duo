@@ -120,6 +120,8 @@ env["SIMCTL_CHILD_CRATE_DEBUG_WAV"] = wav
 flags = ["-crateDebugLog", "1", "-crateDebugRecord", "1", "-crateCmdFile", CMD]
 if KIND != "paywall":
     flags = ["-crateNoPaywall", "1"] + flags
+if "--fresh" in args:
+    flags = ["-crateFresh", "1"] + flags
 con_f = open(con, "w")
 subprocess.Popen(["xcrun", "simctl", "launch", "--console-pty", "--terminate-running-process", UDID,
                   "com.shuhan.crate"] + flags, stdout=con_f, stderr=subprocess.STDOUT, env=env)
@@ -232,6 +234,51 @@ elif KIND == "jazz":
     mark("perform_start", t=tp)
     wait_until(tp + 4 * g.bar)
     stop_rec(inner, r1)
+    mark("inner_stopped")
+
+elif KIND == "tw":
+    # twitter cut: one continuous take -- typed prompt -> beat -> GPT -> finger drums -> hinge build -> DROP -> perform
+    r1 = start_rec(inner, "internal")
+    r2 = start_rec(outer, "1")
+    T0 = time.time(); mark("T0")
+    wait_until(T0 + 2.0)
+    cmd("crate://dig?q=" + urllib.parse.quote(opt("--prompt", "french jazz piano sample")))
+    g = grid_from_play(T0, 100.0)
+    mark("grid", t0=g.t0, bar=g.bar)
+    gpt = wait_event(con, "gpt", T0, timeout=12)
+    mark("gpt", ok=bool(gpt))
+    tb = g.next_bar(time.time(), plus=0)
+    wait_until(tb - 0.6)
+    cmd("crate://bank?b=A")
+    # bottom row: 1 kick, 2 snare, 3 clap, 4 hat
+    pat = [(0.0, 1), (0.5, 4), (1.0, 2), (1.5, 4), (2.0, 1), (2.5, 1), (3.0, 2), (3.5, 3),
+           (4.0, 1), (4.5, 4), (5.0, 2), (5.5, 4), (6.0, 1), (6.25, 1), (6.5, 4), (7.0, 2), (7.25, 3), (7.5, 3), (7.75, 2)]
+    mark("finger_start", t=tb)
+    hits(g, tb, pat, lambda i: f"crate://pad?i={i}&b=A")
+    tf = g.next_bar(time.time(), plus=0)
+    wait_until(tf - 0.7)
+    cmd("crate://mode?m=padfx")
+    time.sleep(0.3)
+    cmd("crate://fx?t=lpf")
+    tb2 = g.next_bar(time.time(), plus=0)
+    mark("build_start", t=tb2, bars=BUILD_BARS)
+    n = int(BUILD_BARS * g.bar / 0.1)
+    for i in range(n + 1):
+        wait_until(tb2 + i * 0.1)
+        v = 0.95 * (i / n) ** 1.15
+        with open(CMD, "a") as f:
+            f.write(f"crate://fxamt?v={v:.3f}\n")
+    t_drop = tb2 + BUILD_BARS * g.bar
+    wait_until(t_drop - 0.05)
+    cmd("crate://fxamt?v=0")
+    mark("snap", t_target=t_drop)
+    wait_until(t_drop + 0.6 * g.bar)
+    cmd("crate://mode?m=seq")
+    cmd("crate://perform?on=1")
+    mark("perform_start", t=t_drop + g.bar)
+    wait_until(t_drop + 4 * g.bar)
+    stop_rec(inner, r1)
+    stop_rec(outer, r2)
     mark("inner_stopped")
 
 elif KIND == "song2":
