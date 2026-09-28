@@ -25,3 +25,6 @@ demo/cache/
 demo/*.mp4
 demo/*.mov
 demo/*.m4a
+
+.vercel
+site/node_modules
