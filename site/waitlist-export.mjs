@@ -40,18 +40,28 @@ const source = r => {
   if (!h || h.endsWith("vercel.app")) return "";          // the waitlist page itself: unknown
   return /(^|\.)(x|twitter|t)\.co(m)?$/.test(h) ? "x" : h;
 };
+// personal mailbox providers; anything else is treated as a work / company address
+const PERSONAL = new Set(["gmail.com", "googlemail.com", "icloud.com", "me.com", "mac.com", "outlook.com", "hotmail.com",
+  "live.com", "msn.com", "yahoo.com", "ymail.com", "aol.com", "proton.me", "protonmail.com", "pm.me", "gmx.com", "gmx.de",
+  "mail.com", "zoho.com", "qq.com", "163.com", "126.com", "sina.com", "foxmail.com", "naver.com", "hanmail.net",
+  "yandex.ru", "yandex.com", "fastmail.com", "hey.com", "tutanota.com", "privaterelay.appleid.com"]);
+const domainOf = r => r.email.split("@")[1] || "";
+const kind = r => PERSONAL.has(domainOf(r)) ? "personal" : "work";
 const unique = [...new Map(rows.sort((a, b) => a.at.localeCompare(b.at)).map(r => [r.email, r])).values()];
 if (args.includes("--csv")) {
-  console.log("email,signed_up,country,source,role");
-  for (const r of unique) console.log(`${r.email},${r.at},${r.country},${source(r)},${roles.get(r.email) || ""}`);
+  console.log("email,signed_up,country,source,role,email_type,company_domain");
+  for (const r of unique) console.log(`${r.email},${r.at},${r.country},${source(r)},${roles.get(r.email) || ""},${kind(r)},${kind(r) === "work" ? domainOf(r) : ""}`);
 } else {
   for (const r of unique) {
     console.log(r.at.slice(0, 16).replace("T", " "), r.email.padEnd(34), (r.country || "").padEnd(3),
-                (source(r) || "-").padEnd(10), roles.get(r.email) || "");
+                (source(r) || "-").padEnd(10), (roles.get(r.email) || "-").padEnd(11),
+                kind(r) === "work" ? `work  ${domainOf(r)}` : "personal");
   }
   const tally = f => Object.entries(unique.reduce((m, r) => { const k = f(r) || "(unknown)"; m[k] = (m[k] || 0) + 1; return m; }, {}))
     .sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(" · ");
   console.log(`\n${unique.length} signup${unique.length === 1 ? "" : "s"}`);
   console.log(`by source: ${tally(source)}`);
   console.log(`by role:   ${tally(r => roles.get(r.email))}`);
+  const work = unique.filter(r => kind(r) === "work");
+  console.log(`work emails: ${work.length} of ${unique.length}${work.length ? " (" + [...new Set(work.map(domainOf))].join(", ") + ")" : ""}`);
 }
