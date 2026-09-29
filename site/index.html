@@ -70,6 +70,16 @@
   button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   .note { min-height: 22px; font-size: 18px; margin: 10px 0 0; filter: var(--soft); }
+  .ask { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .ask[hidden], form[hidden] { display: none; }
+  .ask p { margin: 0; font-size: clamp(24px, 3.4vh, 30px); line-height: 1.1; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 460px; }
+  .chip {
+    height: 44px; padding: 0 16px; border-radius: 0; border: 2px solid #fff; background: transparent; color: #fff;
+    font: 400 20px var(--narrow); cursor: pointer; white-space: nowrap;
+  }
+  .chip:hover, .chip:focus-visible { background: #fff; color: var(--bg); outline: none; }
+  .chip[aria-pressed="true"] { background: #fff; color: var(--bg); }
 
   figure { margin: 0; }
   figure img { width: auto; max-width: 100%; height: auto; max-height: 56vh; display: block; margin: 0 auto; }
@@ -105,13 +115,41 @@
     </div>
     <p class="note" id="note" role="status" aria-live="polite"></p>
   </form>
+  <div class="ask" id="ask" hidden>
+    <p id="ask-q">you're in. one tap: you…</p>
+    <div class="chips" role="group" aria-labelledby="ask-q">
+      <button type="button" class="chip" data-role="beats">make beats</button>
+      <button type="button" class="chip" data-role="sing">sing</button>
+      <button type="button" class="chip" data-role="dj">dj</button>
+      <button type="button" class="chip" data-role="instrument">play an instrument</button>
+      <button type="button" class="chip" data-role="curious">just curious</button>
+    </div>
+  </div>
   <footer>1st place · yc × bitrig iphone duo hackathon</footer>
 </main>
 
 <script>
   const form = document.getElementById("waitlist"), note = document.getElementById("note"),
-        input = document.getElementById("email"), btn = document.getElementById("join");
+        input = document.getElementById("email"), btn = document.getElementById("join"),
+        ask = document.getElementById("ask"), askQ = document.getElementById("ask-q");
   const say = t => { note.textContent = t; };
+
+  // where this visitor came from: ?r=xhs (or /xhs), else the referring site
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const params = new URLSearchParams(location.search);
+  let source = (params.get("r") || params.get("utm_source") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+  if (source) store.set("crate_r", source);
+  else {
+    source = store.get("crate_r") || "";
+    if (!source && document.referrer) {
+      const h = new URL(document.referrer).hostname.replace(/^www\./, "");
+      source = /(^|\.)(x|twitter|t)\.co(m)?$/.test(h) ? "x" : /xiaohongshu|xhslink/.test(h) ? "xhs"
+             : /linkedin|lnkd/.test(h) ? "linkedin" : h.slice(0, 24);
+    }
+  }
+  let joined = "";
+
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const email = input.value.trim();
@@ -120,13 +158,26 @@
     try {
       const r = await fetch("/api/waitlist", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, company: document.getElementById("company").value }),
+        body: JSON.stringify({ email, source, company: document.getElementById("company").value }),
       });
       if (!r.ok) throw new Error(r.status);
-      form.reset(); say("you're on the list.");
+      joined = email;
+      form.hidden = true; ask.hidden = false;
+      ask.querySelector(".chip").focus({ preventScroll: true });
     } catch {
       say("something went wrong. try again.");
     } finally { btn.disabled = false; }
+  });
+
+  ask.addEventListener("click", async e => {
+    const chip = e.target.closest(".chip");
+    if (!chip || !joined) return;
+    ask.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+    askQ.textContent = "thanks. see you soon.";
+    try {
+      await fetch("/api/waitlist", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: joined, role: chip.dataset.role }) });
+    } catch {}
   });
 </script>
 </body>

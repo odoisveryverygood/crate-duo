@@ -1,7 +1,11 @@
-// POST /api/waitlist {email} -> one JSON file per signup in the project's Vercel Blob store (waitlist/…).
-// List signups: `vercel blob list --prefix waitlist/` or tools in the repo README.
+// POST /api/waitlist
+//   {email, source?}      -> waitlist/<hash>-<rand>.json  (one per signup)
+//   {email, role}         -> roles/<hash>.json            (the one-tap "you…" answer; latest wins)
+// Private Vercel Blob store. Export: node waitlist-export.mjs [--csv]
 import { put } from "@vercel/blob";
 import { createHash } from "node:crypto";
+
+const ROLES = new Set(["beats", "sing", "dj", "instrument", "curious"]);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -20,17 +24,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "invalid_email" });
   }
   const id = createHash("sha256").update(email).digest("hex").slice(0, 20);
-  const record = {
-    email,
-    at: new Date().toISOString(),
-    country: req.headers["x-vercel-ip-country"] || "",
-    referer: req.headers.referer || "",
-  };
+
   try {
+    if (body?.role !== undefined) {
+      const role = String(body.role);
+      if (!ROLES.has(role)) return res.status(400).json({ ok: false, error: "invalid_role" });
+      await put(`roles/${id}.json`, JSON.stringify({ email, role, at: new Date().toISOString() }), {
+        access: "private", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json",
+      });
+      return res.status(200).json({ ok: true });
+    }
+    const source = String(body?.source ?? "").toLowerCase().replace(/[^a-z0-9_.-]/g, "").slice(0, 24);
+    const record = {
+      email,
+      at: new Date().toISOString(),
+      source,
+      country: req.headers["x-vercel-ip-country"] || "",
+      referer: req.headers.referer || "",
+    };
     await put(`waitlist/${id}.json`, JSON.stringify(record), {
-      access: "private",
-      addRandomSuffix: true,
-      contentType: "application/json",
+      access: "private", addRandomSuffix: true, contentType: "application/json",
     });
   } catch (e) {
     console.error("waitlist put failed", e);

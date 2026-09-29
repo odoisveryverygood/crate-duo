@@ -1,1 +1,11 @@
-{ "cleanUrls": true, "headers": [{ "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] }] }
+{
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/xhs", "destination": "/?r=xhs", "permanent": false },
+    { "source": "/x", "destination": "/?r=x", "permanent": false },
+    { "source": "/li", "destination": "/?r=linkedin", "permanent": false },
+    { "source": "/tc", "destination": "/?r=techcrunch", "permanent": false },
+    { "source": "/yc", "destination": "/?r=yc", "permanent": false }
+  ],
+  "headers": [{ "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] }]
+}
