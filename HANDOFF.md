@@ -52,7 +52,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
   - `SIMCTL_CHILD_CRATE_DEBUG_WAV=/path.wav` records the master bus. Example script: `tools/video/bitrig_fx_take.py`.
 - **Known sim issue:** the app sometimes aborts at launch in `AURemoteIO::Initialize` → `_ReportRPCTimeout` (simulator CoreAudio). It happens when several sims are booted, including Bitrig's. The fix is to shut down the extra sims and reboot the one you use. It is not an app bug. **Ask Steven before shutting down his sims or Bitrig's**, because he may be using them.
 
-## State right now (uncommitted! commit this first)
+## State right now (committed in 71d4814)
 Steven asked: "just use the current sample pack. let's code up the iphone and ipad for tonight. and yes move the ai key to a server."
 
 | Done | Where |
@@ -75,7 +75,7 @@ Steven asked: "just use the current sample pack. let's code up the iphone and ip
    - iPad → the existing flat laptop/book logic.
    - Non-hinge devices use the PAD FX slider instead of the hinge.
 3. **Check the iPad layout** in portrait and landscape on the iPad Pro 13" sim. Info.plist probably needs `UISupportedInterfaceOrientations~ipad` (all 4) or `UIRequiresFullScreen`, otherwise App Store validation complains.
-4. **Commit and push**: `site/api/ai/`, the Swift/plist/project.yml changes, this file, and the archive move. Don't commit `demo/` media junk; it is mostly untracked.
+4. Commit + push after each step (proxy work already pushed in 71d4814).
 
 ## Next big task: sampling UX redesign (propose first, then build)
 Steven's words: "the UI right now for selecting a sample and importing, and then how to record and stuff, is a little confusing. Just rethink it: really try to match teenage engineering or MPC on this or, even better, reduce the number of clicks and make it really, really intuitive… improve the experience of sampling, chopping, recording, and editing." Then: "The fewer buttons, the less mode, the simpler it is, the better."
