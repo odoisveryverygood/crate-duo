@@ -6,6 +6,8 @@ import SwiftUI
 /// KEYS mode hides the right column so the one-octave keyboard gets the full deck width.
 struct DeckView: View {
     let state: AppState
+    /// iPhone (and narrow iPad windows): modes on top, the biggest pads that fit, one row of BANK · transport · DIG.
+    var phone = false
 
     var body: some View {
         GeometryReader { geo in
@@ -14,6 +16,8 @@ struct DeckView: View {
                 DeckSurface()
                 if state.mode == .keys {
                     wideKeys(size)
+                } else if phone {
+                    phoneDeck(size)
                 } else if size.height > size.width * 1.05 {
                     portrait(size)
                 } else {
@@ -161,6 +165,37 @@ struct DeckView: View {
         .padding(.horizontal, inset)
         .padding(.top, 18)
         .padding(.bottom, 14)
+    }
+
+    /// Phone: one row of mode keys, the pads, then BANK | REC PLAY STOP | ✦ DIG. No LEVEL fader (it's cosmetic);
+    /// PAD FX keeps its knob, which stands in for the hinge. The project chip lives on the phone lid.
+    private func phoneDeck(_ size: CGSize) -> some View {
+        let short = size.height < 400
+        let key: CGFloat = short ? 24 : 28
+        return VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(modeItems, id: \.self) { item in
+                    modeButton(item, key: key, labelBelow: true)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            center
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, short ? 8 : 12)
+            HStack(alignment: .top, spacing: 0) {
+                BankGrid(state: state, key: key, spacing: short ? 6 : 9)
+                Spacer(minLength: 8)
+                TransportRow(state: state, height: key + 4)
+                    .frame(width: (key + 4) * 3 + 14)
+                Spacer(minLength: 8)
+                DigButton(state: state, height: key + 4)
+                    .frame(width: short ? 64 : 78)
+            }
+            .padding(.top, short ? 8 : 12)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, short ? 10 : 14)
+        .padding(.bottom, 6)
     }
 
     /// Landscape left column: mode keys stacked (37 pt pitch, SHIFT set apart), grille + wordmark at the foot.

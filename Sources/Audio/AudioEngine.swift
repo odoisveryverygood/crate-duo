@@ -190,8 +190,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         observeConfigChangesLocked()
         stateLock.withLock { shared.running = true }
         if !wasRunning {
-            DebugLog.event("engine_start", ["sr": fmt.sampleRate, "voices": allVoices.count,
-                                            "hw_sr": engine.outputNode.outputFormat(forBus: 0).sampleRate])
+            DebugLog.event("engine_start", ["sr": fmt.sampleRate, "voices": allVoices.count, "silent": AppConfig.silentAudio,
+                                            "hw_sr": AppConfig.silentAudio ? 0 : engine.outputNode.outputFormat(forBus: 0).sampleRate])
         }
     }
 
@@ -204,6 +204,14 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
 
     private func formatLocked() -> AVAudioFormat {
         if let f = engineFormat { return f }
+        if AppConfig.silentAudio {
+            let f = AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 2)!
+            do { try engine.enableManualRenderingMode(.offline, format: f, maximumFrameCount: 4096) } catch {
+                DebugLog.event("audio_error", ["where": "silent_mode", "error": "\(error)"])
+            }
+            engineFormat = f
+            return f
+        }
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
         do { try session.setCategory(.playback, mode: .default, options: []) } catch {
@@ -333,7 +341,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         if ok && now - lastRestartDone < 1.0 { graphLock.unlock(); return true }   // already healed (tick beat the notification)
         if !ok && graphBuilt {
             #if os(iOS)
-            try? AVAudioSession.sharedInstance().setActive(true)
+            if !AppConfig.silentAudio { try? AVAudioSession.sharedInstance().setActive(true) }
             #endif
             engine.prepare()
             do { try engine.start(); ok = true } catch {
@@ -350,7 +358,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         }
         if playingQ { reanchor(step: nextStep, time: Clock.now() + Self.startDelay, keepPrev: false) }
         lastRestartDone = Clock.now()
-        DebugLog.event("engine_restart", ["reason": reason, "hw_sr": engine.outputNode.outputFormat(forBus: 0).sampleRate])
+        DebugLog.event("engine_restart", ["reason": reason,
+                                          "hw_sr": AppConfig.silentAudio ? 0 : engine.outputNode.outputFormat(forBus: 0).sampleRate])
         return true
     }
 

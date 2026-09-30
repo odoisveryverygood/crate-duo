@@ -124,6 +124,8 @@ struct LidDisplayView: View {
 struct LidTitleRow: View {
     let state: AppState
     var narrow = false
+    /// The phone lid prints the LOOP bar on its own top row.
+    var showLoop = true
 
     var body: some View {
         Group {
@@ -132,7 +134,7 @@ struct LidTitleRow: View {
                     HStack(alignment: .center, spacing: 12) {
                         titleBlock(withSubtitle: false)
                         Spacer(minLength: 8)
-                        LoopBar(state: state)
+                        if showLoop { LoopBar(state: state) }
                     }
                     subtitleText
                         .lineLimit(1)
@@ -143,7 +145,7 @@ struct LidTitleRow: View {
                 HStack(alignment: .center, spacing: 12) {
                     titleBlock(withSubtitle: true)
                     Spacer(minLength: 8)
-                    LoopBar(state: state)
+                    if showLoop { LoopBar(state: state) }
                 }
             }
         }
@@ -178,6 +180,7 @@ struct LidTitleRow: View {
         .contentShape(Rectangle())
         // Long-press cycles the back (outer) screen's rotation 0 → 90 → 180 → 270, for whichever way the Duo is held.
         .onLongPressGesture(minimumDuration: 0.6) {
+            guard CrateUI.shared.isDuo else { return }
             let d = UserDefaults.standard
             let next = (d.double(forKey: "crateCrowdTurn") + 90).truncatingRemainder(dividingBy: 360)
             d.set(next, forKey: "crateCrowdTurn")

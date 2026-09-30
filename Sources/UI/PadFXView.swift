@@ -105,7 +105,7 @@ struct PadFXView: View {
     private var readout: some View {
         let fx = state.fx
         return VStack(alignment: .leading, spacing: 4) {
-            SilkLabel("FX KNOB · HINGE", color: Theme.mid)
+            SilkLabel(CrateUI.shared.isDuo ? "FX KNOB · HINGE" : "FX KNOB", color: Theme.mid)
             Text(fx?.label ?? "PUNCH")
                 .font(Theme.mono(13, bold: true))
                 .foregroundStyle(Theme.silk)

@@ -2,7 +2,7 @@ name: Crate
 options:
   bundleIdPrefix: com.shuhan
   deploymentTarget:
-    iOS: "27.1"
+    iOS: "27.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -45,6 +45,7 @@ targets:
       - path: Resources/Fonts
       - path: Resources/AI
       - path: Resources/Assets.xcassets
+      - path: Resources/PrivacyInfo.xcprivacy
       - path: Resources/DefaultKit
         type: folder
       - path: /Users/shuhanzhang/duo-hack/library
@@ -56,6 +57,10 @@ targets:
         type: folder
     settings:
       base:
+        # Duo APIs (fold, hinge, back screen) exist only from the iOS 27.1 SDK (Xcode 27.1 beta). A release
+        # Xcode 27.0 build leaves them out, so the iPhone / iPad app can ship before Xcode 27.1 is final.
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos27.0*]": "$(inherited) NO_DUO_SDK"
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphonesimulator27.0*]": "$(inherited) NO_DUO_SDK"
         PRODUCT_BUNDLE_IDENTIFIER: com.shuhan.crate
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: NO

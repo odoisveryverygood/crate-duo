@@ -25,6 +25,9 @@ enum AppConfig {
     static var offline: Bool { UserDefaults.standard.bool(forKey: "crateOffline") }
     static var debugRecord: Bool { UserDefaults.standard.bool(forKey: "crateDebugRecord") }
     static var debugLog: Bool { UserDefaults.standard.bool(forKey: "crateDebugLog") }
+    /// Dev only (`-crateSilentAudio 1`): run the engine with no audio hardware (manual rendering), for layout
+    /// checks when the simulator can't reach the Mac's output (lid closed → CoreAudio RPC timeouts at launch).
+    static var silentAudio: Bool { UserDefaults.standard.bool(forKey: "crateSilentAudio") }
 }
 
 /// One JSON line per event (stdout + os_log) for the self-test harness. Enabled with `-crateDebugLog 1`.

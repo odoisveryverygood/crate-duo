@@ -26,8 +26,19 @@ final class CrateUI {
     /// Optional hook for the PAD FX PUNCH fader (0…1), e.g. `{ hinge.apply($0) }` so the fader shares the
     /// hinge's smoothing + DROP detection. Unset → the fader drives state.punch + engine.setPunch directly.
     @ObservationIgnored var onPunch: ((Double) -> Void)?
+    /// Running on an iPhone Duo (fold or hinge seen). False on iPhone / iPad: no hinge, no back screen.
+    private(set) var isDuo = DeviceInfo.simulatorDuo || DeviceInfo.rememberedDuo
 
     func level(_ pad: PadID) -> Double { levels[pad] ?? 0.66 }
+
+    /// Called when a fold or hinge shows up; remembered so the next launch lays out as a Duo right away.
+    func markDuo() {
+        DeviceInfo.rememberDuo()
+        if !isDuo {
+            isDuo = true
+            DebugLog.event("device", ["duo": true, "machine": DeviceInfo.machine])
+        }
+    }
 
     /// ✦ DIG: dig the draft if there is one, otherwise focus the prompt field.
     func digPressed(_ state: AppState) {
