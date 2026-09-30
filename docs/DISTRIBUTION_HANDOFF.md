@@ -148,6 +148,25 @@ Never publish or share individual emails. Aggregate numbers only.
 > We shipped to TestFlight on <date>; N people made M beats; X% came back on day 7. The surprise: <what interviews showed>.
 > The Duo was the wedge; the insight is instrument-not-generator, which works on every phone.
 
+**小红书 post #1 copy (ready to use, Steven approved the direction on 9/29):**
+
+> 标题：我做了个能折叠的AI乐器，拿了YC第一🏆
+>
+> 上周末在旧金山 YC 的 iPhone 折叠屏黑客松
+> 4 个小时，从零做了一个 AI 乐器 CRATE
+> 最后拿了第一名🥇
+>
+> 输入一句「法式爵士钢琴」
+> 0.3 秒就给你一段 beat 🎹
+> 下面那块屏可以直接用手指打鼓
+> 最好玩的是：把手机折起来 = 蓄力
+> 啪一下打开 = 音乐 drop 🔥
+>
+> 想第一批试用的姐妹 评论区扣「1」
+> 我会私信你内测链接 💌
+>
+> #AI #音乐制作 #黑客松 #YC #折叠屏 #iPhone #创业 #独立开发 #做音乐 #beat
+
 ## 9. Channel rules (learned the hard way)
 
 - **X**: no hashtags. Link in the first reply, not the main post. Post Tue–Thu ~8:30–10:30 am PT. Line up early engagers.
