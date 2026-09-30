@@ -58,6 +58,8 @@ struct SeqGridView: View {
     let state: AppState
     /// Largest lane pitch (the mock's 25 pt; portrait allows a little more).
     var maxPitch: CGFloat = 25
+    /// How far dots may grow with the pitch (1 = the mock's sizes; the big iPad lid allows more).
+    var dotCap: CGFloat = 1
 
     /// Lane label column (the mock's X0).
     static let labelColumn: CGFloat = 54
@@ -126,7 +128,7 @@ struct SeqGridView: View {
         let x0 = Self.labelColumn
         let colW = (size.width - x0 - 3 * Self.groupGap) / 16
         func cx(_ i: Int) -> CGFloat { x0 + CGFloat(i) * colW + CGFloat(i / 4) * Self.groupGap + colW / 2 }
-        let k = min(1, max(0.7, pitch / 25))
+        let k = min(dotCap, max(0.7, pitch / 25))
         let dHit = 9 * k, dNow = 10 * k, dGhost = 6 * k
         let segH = min(19, pitch - 3)
         let playing = f.playing

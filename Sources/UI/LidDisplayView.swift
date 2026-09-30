@@ -22,7 +22,7 @@ struct LidDisplayView: View {
                     if focused {
                         DigComposer(state: state)
                     } else {
-                        mainArea(portrait: portrait)
+                        mainArea(portrait: portrait, big: geo.size.height > 600 && !portrait)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -78,11 +78,14 @@ struct LidDisplayView: View {
         }
     }
 
+    /// `big`: an iPad-sized wide lid, where the step grid spreads out to use the height.
     @ViewBuilder
-    private func mainArea(portrait: Bool) -> some View {
+    private func mainArea(portrait: Bool, big: Bool = false) -> some View {
         switch state.mode {
         case .seq:
-            if portrait {
+            if big {
+                SeqGridView(state: state, maxPitch: 40, dotCap: 1.35)
+            } else if portrait {
                 VStack(alignment: .leading, spacing: 16) {
                     SeqGridView(state: state, maxPitch: 30)
                         .frame(height: seqHeight)
