@@ -2,6 +2,7 @@
 
 Last updated 2026-09-30 by the previous engineering agent, whose context ran out. You are the **engineering agent**.
 Marketing and distribution belong to a separate agent (`docs/DISTRIBUTION_HANDOFF.md`). Don't post, email or DM anything.
+**Detailed code maps (sampling UX tap flows + confusion points, layout decision tree, proxy/infra, tooling + all crate:// commands): `docs/CODE_MAPS.md`. Read its sampling-ux section before the redesign.**
 The old hackathon-day handoff is in `docs/archive/HACKATHON_HANDOFF.md` and is history only.
 
 ## What CRATE is
