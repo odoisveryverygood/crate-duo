@@ -1,9 +1,9 @@
 # CRATE: engineering handoff
 
-Last updated 2026-09-30 by the previous engineering agent, whose context ran out. You are the **engineering agent**.
+Last updated 2026-09-30, overnight, by the engineering agent. You are the **engineering agent**.
 Marketing and distribution belong to a separate agent (`docs/DISTRIBUTION_HANDOFF.md`). Don't post, email or DM anything.
-**Detailed code maps (sampling UX tap flows + confusion points, layout decision tree, proxy/infra, tooling + all crate:// commands): `docs/CODE_MAPS.md`. Read its sampling-ux section before the redesign.**
-The old hackathon-day handoff is in `docs/archive/HACKATHON_HANDOFF.md` and is history only.
+**Detailed code maps (sampling UX tap flows + confusion points, layout decision tree, proxy/infra, tooling + all crate:// commands): `docs/CODE_MAPS.md`** (written at 71d4814; the layout section predates the iPhone/iPad work below).
+The old hackathon-day handoff is in `docs/archive/HACKATHON_HANDOFF.md` and is history only. `docs/EAR-PLAN.md` is another session's research plan for a taste model; not engineering work yet.
 
 ## What CRATE is
 CRATE is an AI sampler for the iPhone Duo, Apple's foldable. It won **1st place at the YC × Bitrig iPhone Duo hackathon** on 2026-09-26.
@@ -22,95 +22,81 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - Before any big UI rebuild, propose it in a few bullets or a mockup. Build once he approves.
 - "The AI part is actually great already." Don't rework the AI flow.
 
+## Waiting on Steven
+1. **Sampling redesign: yes / changes?** Proposal with an interactive Duo + iPhone mockup: https://claude.ai/artifact/456fEQCZqNCoLhUD4f2inF (private to Steven). Nothing is built. Summary: SAMPLE → hold a pad records into it; ＋ in the prompt bar imports a song as 16 chops on bank D; the lid always shows the selected pad (trim handles, ‹ › next similar sound); ● REC counts in; hold FX + tap a pad picks the effect, the fader is the amount. 7 mode keys → 3 (SAMPLE, KEYS, FX). Undo covers takes, imports and overdubs.
+2. **Apple Developer account** (never answered). With it, TestFlight is one command: `tools/testflight.sh` (see below).
+3. **New OpenAI + Jev keys** (pasted in chat on 9/30). They work (tested directly: OpenAI 200, Jev 200 in 0.17 s) and are saved in `~/duo-hack/.secrets/keys.new.env`, but **Vercel still runs the old keys** (which also still work): the agent's permission mode blocked writing secrets to Vercel. To switch, Steven runs in `~/crate-build/site`:
+   ```
+   set -a; source ~/duo-hack/.secrets/keys.new.env; set +a
+   printf %s "$OPENAI_API_KEY"   | vercel env add OPENAI_API_KEY production --sensitive --force
+   printf %s "$TYPESAFE_API_KEY" | vercel env add TYPESAFE_API_KEY production --sensitive --force
+   vercel deploy --prod --yes
+   ```
+   Then move the two lines into `keys.env`, delete `keys.new.env`, and revoke the old keys. The ElevenLabs key from 9/26 still needs rotating too.
+
 ## Repo, build, run
-- Repo: `~/crate-build` → github `Shuhan-Zhang/crate-duo`, branch `main`.
-- SwiftUI and XcodeGen. Xcode 27.1 lives at `~/Downloads/Xcode.app`; it is the only version with the Duo SDK:
+- Repo: `~/crate-build` → github `Shuhan-Zhang/crate-duo`, branch `main`. Commit + push after each step.
+- SwiftUI and XcodeGen. **Deployment target iOS 27.0** (was 27.1: the iOS 27.1 runtime is Duo-only, so a 27.1 target can't install on any iPhone or iPad; regular iPhones are expected to go from 27.0 to 27.2).
+- Two Xcodes, both build the app:
+  - `~/Downloads/Xcode.app`: **Xcode 27.1 beta** (27A9269), the only one with the Duo SDK. Use it for the Duo and day-to-day work.
+  - `/Applications/Xcode.app`: **Xcode 27.0 release** (27A266a). Duo APIs compile out via `NO_DUO_SDK` (set in `project.yml` for the 27.0 SDKs), so the result is an iPhone/iPad-only app that App Store review accepts. On a Duo it runs with the phone layout and no hinge FX.
   ```
   export DEVELOPER_DIR=~/Downloads/Xcode.app/Contents/Developer
   xcodegen generate
   xcodebuild -project Crate.xcodeproj -scheme Crate -destination "generic/platform=iOS Simulator" -derivedDataPath build/dd build
   xcrun simctl install <UDID> build/dd/Build/Products/Debug-iphonesimulator/Crate.app   # bundle id com.shuhan.crate
   ```
-- Simulators:
+- The iOS 26.x floor would need AVAudioEngine fallbacks: `AudioEngine` uses iOS 27.0-only APIs (`connectNode`, `playAudio`, `AVReadOnlyAudioPCMBuffer`).
+- Simulators (keep at most 2 booted; first boot of a new sim spikes the load for minutes):
 
-  | Simulator | UDID / name |
-  |---|---|
-  | Steven's Duo sim | `0F3EDA96-26C2-468E-AAC2-2B28AE79F3B4` |
-  | Test/video Duo sim | `E82B9354-4493-4C8B-A6B8-52BA5EE92C7F` ("Duo-Video-3") |
-  | iPhone 17 Pro | `46B2AB32-0CE8-434E-9037-5C66CCB0A38A` |
-  | iPad Pro 13" | `01F69029-E71F-43A3-B02B-8C22F009EE75` |
-  | Bitrig's own set: iPhone Duo | `9193E59E-E5A1-449D-BF60-C48438FE33AC` |
-  | Bitrig's own set: iPad Pro | `3058DE90-…` |
+  | Simulator | UDID | Runtime |
+  |---|---|---|
+  | Steven's Duo sim ("iPhone Duo") | `0F3EDA96-26C2-468E-AAC2-2B28AE79F3B4` | 27.1 |
+  | Test/video Duo sim ("Duo-Video-3") | `E82B9354-4493-4C8B-A6B8-52BA5EE92C7F` | 27.1 |
+  | iPhone 18 Pro | `825C8398-869F-4650-9E7A-4BE00AC51B60` | 27.0 |
+  | iPad Pro 13" (M5) | `145D9367-05C9-47FA-AEB0-DDA8CCACA2B1` | 27.0 |
+  | Bitrig's set: iPhone Duo / iPad Pro | `9193E59E-E5A1-449D-BF60-C48438FE33AC` / `3058DE90-F371-4E2C-AED1-88BEB8818D37` | 27.1 / 27.0 |
 
   Bitrig's set lives at `"$HOME/Library/Application Support/app.bitrig.bitrigapp/SimulatorHost/Devices"`; reach it with `xcrun simctl --set "$B" …`.
+- **Xcode 27.1 has no Simulator.app; it's `~/Downloads/Xcode.app/Contents/Applications/DeviceHub.app`.** A Duo sim booted headless (`simctl boot`) only has its outer display; open DeviceHub once so the inner display exists. `simctl io <udid> screenshot` defaults to the outer display; for the inner one pass its UUID: `ID=$(xcrun simctl io $U enumerate | awk '/UUID:/{u=$2} /Default width: 2007/{print u}' | head -1); xcrun simctl io $U screenshot --display="$ID" out.png`.
 - Hinge control:
   - Default set: `hinge -d <UDID> <deg>`, `hinge -d <UDID> sweep a b secs`, `hinge -d <UDID> get`.
   - Bitrig's set: `xcrun simctl --set "$B" spawn <UDID> ~/.cache/hinge/hinge_helper-* set|sweep`.
   - The Duo moves the app to the outer screen below about 55°.
 - **Debug command channel**:
-  - Launch with `-crateCmdFile /tmp/x.txt -crateNoPaywall 1 -crateDebugLog 1 [-crateFresh 1] [-crateDebugRecord 1]`. Append `crate://…` lines to the file to drive the app.
-  - Commands: `dig?q=`, `mode?m=`, `bank`, `pad`, `play`, `stop`, `perform`, `flip`, `punch`, `fx?t=`, `fxamt`, `latch`, `rot`, `crowdrot`, `import`, `project?cmd=new|save|saveas|open&name=`, `rec`, `padstyle`, `undo`, `redo`, `bpm?v=`, `bars?n=`, `slice?b=&i=&t=`.
-  - `SIMCTL_CHILD_CRATE_DEBUG_WAV=/path.wav` records the master bus. Example script: `tools/video/bitrig_fx_take.py`.
-- **Known sim issue:** the app sometimes aborts at launch in `AURemoteIO::Initialize` → `_ReportRPCTimeout` (simulator CoreAudio). It happens when several sims are booted, including Bitrig's. The fix is to shut down the extra sims and reboot the one you use. It is not an app bug. **Ask Steven before shutting down his sims or Bitrig's**, because he may be using them.
+  - Launch with `-crateCmdFile /tmp/x.txt -crateDebugLog 1 [-crateFresh 1] [-crateDebugRecord 1] [-crateSilentAudio 1]`. Append `crate://…` lines to the file to drive the app.
+  - Commands: `dig?q=`, `mode?m=`, `bank`, `pad`, `play`, `stop`, `perform`, `flip`, `punch`, `fx?t=`, `fxamt`, `latch`, `rot`, `crowdrot`, `import`, `project?cmd=new|save|saveas|open&name=`, `rec`, `padstyle`, `undo`, `redo`, `bpm?v=`, `bars?n=`, `slice?b=&i=&t=`, **`orient?o=landscape|portrait`** (iPhone only; iPadOS refuses programmatic rotation in windowed mode).
+  - Debug events worth grepping: `layout` (size, duo, window insets), `device`, `jev_plan`, `gpt`, `engine_start` (`silent`).
+  - `SIMCTL_CHILD_CRATE_DEBUG_WAV=/path.wav` records the master bus. Example script: `tools/video/bitrig_fx_take.py`. `-crateNoPaywall` does nothing (paywall is off anyway).
+- **Known sim issue: launch abort in `AURemoteIO::Initialize` / `Cleanup` → `_ReportRPCTimeout`** (simulator CoreAudio, before any app code). Causes seen: several sims booted at once, a load spike, and **the Mac lid closed** (clamshell: every sim crashed at launch overnight, even alone). For layout work launch with **`-crateSilentAudio 1`**: the engine runs in offline manual-rendering mode with no audio hardware (dev only; normal launches are unchanged). For audio work, open the lid / fix the output device, shut down extra sims and reboot the one you use. **Ask Steven before shutting down his sims or Bitrig's.**
 
-## State right now (committed in 71d4814)
-Steven asked: "just use the current sample pack. let's code up the iphone and ipad for tonight. and yes move the ai key to a server."
+## Device layouts (RootView)
+- **Duo** = a `.division` fold is present, a hinge event arrived, or a Duo simulator; remembered per device model (`crateDuoMachine`). Duo branches are unchanged: laptop / book / flat / counter-rotated, `CompactView` on the outer screen.
+- **iPhone**: `PhoneLidView` (project chip, LOOP bar, hero, the mode's main area, result line, `›` prompt + chips) over `DeckView(phone: true)` (mode row, pads, BANK · REC PLAY STOP · DIG; no LEVEL fader). Lid ≈ 40 % in portrait, side by side in landscape (lid 44 %). Padded by the **window's** safe-area insets (`DeviceInfo.windowEdgeInsets`; the root ignores the safe area, so its GeometryProxy reports zero). The step grid scrolls when a beat has more lanes than fit.
+- **iPad** (regular width): the flat split with a 1 pt hairline, deck kept above the home indicator; the step grid spreads out on the tall lid. Compact-width iPad windows get the phone layout. No counter-rotation outside the Duo, which fixed the Stage Manager 90° bug.
+- The Duo scene hooks (`sceneAccessory` camera/external crowd screens, `onHingeChange`) live in `DuoSceneHooks`, gated on iOS 27.1 and the SDK. The external-display crowd view is Duo-only for now.
+- PAD FX keeps its knob as the hinge stand-in; the label drops "· HINGE" off the Duo. The long-press crowd rotation only works on the Duo.
 
-| Done | Where |
-|---|---|
-| AI keys are off the device. The app calls the proxy `https://crateduo.vercel.app/api/ai/{openai,jev}` with the header `x-crate-token` | `site/api/ai/openai.js`, `site/api/ai/jev.js` (**untracked**), `Sources/AI/OpenAIClient.swift`, `Sources/AI/JevClient.swift`, `Sources/Core/Support.swift` (AppConfig.aiBase/appToken) |
-| The proxy is deployed and tested: no token → 401; OpenAI works (~4 s); bad model → 400; Jev reachable | Vercel project "crate" (team simtra). Env vars: OPENAI_API_KEY, TYPESAFE_API_KEY, CRATE_APP_TOKEN. Deploy with `cd site && vercel deploy --prod --yes` |
-| Proxy guards: model allowlist gpt-6-luna/gpt-6-sol, 20k-char input cap; best-effort per-IP rate limit (in-memory, so weak); `max_output_tokens` 4000 | same files |
-| Info.plist now carries only `CRATE_APP_TOKEN` and `REVENUECAT_API_KEY`. `Config/Secrets.xcconfig` (gitignored) holds only those two. OpenAI/TypeSafe keys can still come from env vars, for local experiments only | `Resources/Info.plist` |
-| Sample library bundled into the app (~300 MB of one-shots and loops). `libraryURL` resolves in order: `CRATE_LIBRARY_PATH` override → bundle `library/` → dev Mac path | `project.yml` folder resource `/Users/shuhanzhang/duo-hack/library`; **absolute path, so it only builds on this Mac** |
-| iPad enabled: `TARGETED_DEVICE_FAMILY: "1,2"` | `project.yml` |
-| Build succeeded, and the bundle was grepped: no OpenAI/TypeSafe/ElevenLabs key values inside | — |
+## Verified overnight (2026-09-30)
+- Proxy runtime test on the Duo sim: `jev_plan` via proxy 524 ms (source jev), `gpt` ok in 5.3 s ("NUJ DILLA POCKET"). On the iPad: Jev 264–309 ms; GPT 5.9 s, once timed out at the 8 s arrange limit on a cold start.
+- Duo inner (laptop pose) and outer screens unchanged; iPhone 18 Pro portrait + landscape, all modes (SEQ, KEYS, PAD FX, SAMPLE, CHOP); iPad Pro 13" portrait. Screenshots were checked by eye.
+- The Release archive builds with Xcode 27.0: `DRY_RUN=1 tools/testflight.sh` → 329 MB app, min iOS 27.0.
+- **Not verified:** iPad landscape, iPad Split View / Stage Manager windows (no scriptable rotation or resize in DeviceHub yet; the landscape path is the Duo's existing flat-wide `book` layout), hold-to-record on the mic (sims had no audio), real devices.
 
-**Not done:**
-1. **Runtime test through the proxy.** Launch on a Duo sim, `dig`, and confirm the `jev_plan` / `gpt` events in the debug log. The last attempt hit the CoreAudio crash above.
-2. **A real iPhone layout.** `Sources/App/RootView.swift` treats any compact size class as the Duo *outer screen* and shows `CompactView`, the mini UI. A normal iPhone in portrait would therefore get the wrong UI. Plan:
-   - Detect the Duo. Candidates: a fold region present (`reservedRegions(.division)`), a first `onHingeChange` event (persist a flag), or, in the sim, `SIMULATOR_MODEL_IDENTIFIER` / `SIMULATOR_DEVICE_NAME` containing "Duo".
-   - Duo + compact → `CompactView`, as today.
-   - iPhone portrait → lid stacked over deck.
-   - iPhone landscape → side by side.
-   - iPad → the existing flat laptop/book logic.
-   - Non-hinge devices use the PAD FX slider instead of the hinge.
-3. **Check the iPad layout** in portrait and landscape on the iPad Pro 13" sim. Info.plist probably needs `UISupportedInterfaceOrientations~ipad` (all 4) or `UIRequiresFullScreen`, otherwise App Store validation complains.
-4. Commit + push after each step (proxy work already pushed in 71d4814).
-
-## Next big task: sampling UX redesign (propose first, then build)
-Steven's words: "the UI right now for selecting a sample and importing, and then how to record and stuff, is a little confusing. Just rethink it: really try to match teenage engineering or MPC on this or, even better, reduce the number of clicks and make it really, really intuitive… improve the experience of sampling, chopping, recording, and editing." Then: "The fewer buttons, the less mode, the simpler it is, the better."
-
-How to approach it:
-1. Map today's flows and count taps for each: import a song → play a chop; mic record → pad; swap a pad's sound; move a chop slice; edit sequencer steps; undo; BPM/bars; FX.
-   - Relevant files: `Sources/UI/{DeckView,DeckControls,LidDisplayView,LidPanels,PadGridView,PromptBar,KeysView,PadFXView}.swift`, `Sources/Transfer/AudioImport.swift`, `Sources/Sampler/MicSampler.swift`, `Sources/AI/Orchestrator+Edit.swift`.
-   - Background: `research-mpc-te.md` covers the MPC Sample and TE KO II workflow.
-2. Direction to pitch (MPC Sample / KO II feel):
-   - **Hold a pad = record into it.** Mic, or the imported song if one is loaded.
-   - **Drop or import a song = auto-chop it across the pads.** No separate chop mode.
-   - **Tap a pad = select and play it.** The lid always shows the selected pad's waveform, with draggable slice or trim points.
-   - **One REC button** records the pattern live, quantized.
-   - Keep the sequencer tap-to-toggle that already exists; undo/redo stays prominent.
-   - Remove modes rather than adding them.
-3. Show Steven 3–5 bullets or a quick mockup, get a yes, then build and verify on the sim with screenshots.
-
-## Already built this session (committed)
-- Undo/redo (`EditHistory`), BPM/bars editing, tap-to-edit sequencer, prompt-based sound removal. Files: `Orchestrator+Edit.swift`, `LidPanels.swift`, `LidDisplayView.swift`.
-- Draggable chop slices for banks B and D. The playing pad is highlighted on the sequencer. A "BAR n/N" page marker with auto-flip. An AI status pill.
-- Kick/snare/clap/hat default on the bottom row at every launch (`Models.swift` BankA.defaultSlots). The AI can reorder pads (`Orchestrator+Reorder.swift`).
-- Default projects FRENCH JAZZ / HIP HOP / HOUSE (`Resources/DefaultProjects`, `ProjectStore.swift` seedDefaults V3).
-- Hinge FX tuned so the full effect lands at a 65° fold (`HingeFX.swift`).
-- The paywall is removed from the UI; the code is kept (`Sources/Paywall`, see `CrateApp.swift`).
-- Waitlist site plus private Blob signups: `site/`. Export with `cd site && node waitlist-export.mjs [--csv]`.
+## TestFlight / App Store
+- Done: iPad in the device family, iOS 27.0 target, `Resources/PrivacyInfo.xcprivacy` (UserDefaults CA92.1, boot time 35F9.1 for `mach_absolute_time`, prompts as user content for app functionality, no tracking), `ITSAppUsesNonExemptEncryption = false`, single 1024 icon (fine), all 4 orientations (fine for iPad multitasking). RevenueCat ships its own privacy manifest.
+- `tools/testflight.sh`: xcodegen → Release archive → export with `destination: upload` via an App Store Connect API key. Default `XCODE=release` (27.0, App Store eligible); `XCODE=beta` for the full Duo build (Apple takes beta-SDK uploads for TestFlight only when it enables that SDK, never for review). Timestamp build numbers.
+- Needs Steven: paid developer account → App ID `com.shuhan.crate` → App Store Connect app record → API key (App Manager). External testers need Beta App Review and a privacy policy URL (the site has none yet; the site is the marketing agent's). `MARKETING_VERSION` is still 0.1.
+- For Duo launch day: build with Xcode 27.1 RC/GM once Apple ships it; one binary then covers Duo, iPhone and iPad.
 
 ## Later / backlog
-- TestFlight needs an Apple Developer account. Steven hasn't answered whether he has one; ask him.
-- **The sample library is commercial packs** (Jazz Hop合集, LofiHiphop合集, Cymatics, Golden Trap). That's OK for a private beta per Steven, but it must be swapped for licensed sounds before a public launch.
-- The proxy token ships inside the app, so it is a speed bump, not auth. Later: App Attest/DeviceCheck plus OpenAI spend caps.
+- Build the sampling redesign once Steven says yes (plan and file list are in the proposal).
+- **The sample library is commercial packs** (Jazz Hop合集, LofiHiphop合集, Cymatics, Golden Trap). OK for a private beta per Steven; swap for licensed sounds before a public launch. It's bundled from an absolute path (`/Users/shuhanzhang/duo-hack/library`, 308 MB), so archives only build on this Mac.
+- The proxy token ships inside the app, so it's a speed bump, not auth. Later: App Attest/DeviceCheck plus OpenAI spend caps. Rate limit is per serverless instance.
+- GPT arrange budget is 8 s and a cold start can miss it (falls back to the template silently).
 - Marketing asked for a **"share your beat" 15 s vertical video export** (brat end card + "made with crate") and **in-app analytics**: prompts, sessions, D2/D7 retention, shares.
 
 ## Security rules (non-negotiable)
-- Keys live only in `~/duo-hack/.secrets/keys.env` and the gitignored `Config/Secrets.xcconfig`. Never print, echo or commit them. Never put them back in Info.plist.
+- Keys live only in `~/duo-hack/.secrets/` (`keys.env`, and `keys.new.env` until the swap above) and the gitignored `Config/Secrets.xcconfig`. Never print, echo or commit them. Never put them back in Info.plist.
 - Never send keys to jevapi.org or tokenra.io; they are lookalike phishing hosts. The real host is api.typesafe.ai.
 - Don't search other projects' env files for keys. Don't delete `~/Downloads/Omnisphere`.
-- The ElevenLabs key was pasted in chat on 9/26 and still needs rotating. Remind Steven.
