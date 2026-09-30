@@ -11,7 +11,7 @@ settings:
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
     DEVELOPMENT_TEAM: ""
-    TARGETED_DEVICE_FAMILY: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_PREVIEWS: YES
     DEBUG_INFORMATION_FORMAT: dwarf
 packages:
@@ -47,6 +47,11 @@ targets:
       - path: Resources/Assets.xcassets
       - path: Resources/DefaultKit
         type: folder
+      - path: /Users/shuhanzhang/duo-hack/library
+        type: folder
+        excludes:
+          - "*.md"
+          - "*.backup-*.json"
       - path: Resources/DefaultProjects
         type: folder
     settings:

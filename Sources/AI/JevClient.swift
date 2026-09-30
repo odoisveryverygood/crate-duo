@@ -35,7 +35,7 @@ final class JevClient: @unchecked Sendable {
     private let session: URLSession
     private let questions: [String: Any]
 
-    var available: Bool { AppConfig.typesafeKey != nil && !AppConfig.offline }
+    var available: Bool { (AppConfig.appToken != nil || AppConfig.typesafeKey != nil) && !AppConfig.offline }
 
     init() {
         let cfg = URLSessionConfiguration.ephemeral
@@ -83,10 +83,16 @@ final class JevClient: @unchecked Sendable {
     }
 
     func ask(state: String, questions q: [String: Any], timeout: Double) async -> (answers: JevAnswers, ms: Int)? {
-        guard let key = AppConfig.typesafeKey, !AppConfig.offline else { return nil }
-        var req = URLRequest(url: Self.endpoint)
+        guard available else { return nil }
+        var req: URLRequest
+        if let token = AppConfig.appToken {                 // via our server, which holds the key
+            req = URLRequest(url: AppConfig.aiBase.appendingPathComponent("jev"))
+            req.setValue(token, forHTTPHeaderField: "x-crate-token")
+        } else {                                             // local experiments only (env var key)
+            req = URLRequest(url: Self.endpoint)
+            req.setValue("Bearer \(AppConfig.typesafeKey ?? "")", forHTTPHeaderField: "Authorization")
+        }
         req.httpMethod = "POST"
-        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = max(1, timeout + 0.5)
         let body: [String: Any] = ["model": "jev-latest", "state": state, "questions": q]

@@ -31,7 +31,7 @@ final class OpenAIClient: @unchecked Sendable {
     static let flipModel = "gpt-6-sol"
     private let session: URLSession
 
-    var available: Bool { AppConfig.openAIKey != nil && !AppConfig.offline }
+    var available: Bool { (AppConfig.appToken != nil || AppConfig.openAIKey != nil) && !AppConfig.offline }
 
     init() {
         let cfg = URLSessionConfiguration.ephemeral
@@ -43,7 +43,7 @@ final class OpenAIClient: @unchecked Sendable {
 
     /// `userMessage` is the JSON object from the prompt's user template.
     func arrange(_ userMessage: [String: Any], model: String, timeout: Double = 8) async -> Result<(Arrangement, Int), OpenAIError> {
-        guard let key = AppConfig.openAIKey, !AppConfig.offline else { return .failure(OpenAIError("offline")) }
+        guard available else { return .failure(OpenAIError("offline")) }
         guard let userData = try? JSONSerialization.data(withJSONObject: userMessage, options: [.sortedKeys]),
               let userText = String(data: userData, encoding: .utf8) else { return .failure(OpenAIError("bad request")) }
         let body: [String: Any] = [
@@ -54,9 +54,15 @@ final class OpenAIClient: @unchecked Sendable {
             "text": ["format": ["type": "json_schema", "name": "arrangement", "strict": true, "schema": OpenAIPrompts.schema]],
         ]
         guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return .failure(OpenAIError("bad body")) }
-        var req = URLRequest(url: Self.endpoint)
+        var req: URLRequest
+        if let token = AppConfig.appToken {                 // via our server, which holds the key
+            req = URLRequest(url: AppConfig.aiBase.appendingPathComponent("openai"))
+            req.setValue(token, forHTTPHeaderField: "x-crate-token")
+        } else {                                             // local experiments only (env var key)
+            req = URLRequest(url: Self.endpoint)
+            req.setValue("Bearer \(AppConfig.openAIKey ?? "")", forHTTPHeaderField: "Authorization")
+        }
         req.httpMethod = "POST"
-        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = timeout + 1
         req.httpBody = payload

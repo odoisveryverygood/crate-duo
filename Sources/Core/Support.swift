@@ -8,11 +8,18 @@ enum AppConfig {
         if let v = Bundle.main.object(forInfoDictionaryKey: key) as? String, !v.isEmpty, !v.hasPrefix("$(") { return v }
         return nil
     }
+    /// Sample library: `CRATE_LIBRARY_PATH` (dev override) → the copy bundled in the app → the dev Mac path.
     static var libraryURL: URL {
-        URL(fileURLWithPath: string("CRATE_LIBRARY_PATH") ?? "/Users/shuhanzhang/duo-hack/library", isDirectory: true)
+        if let p = string("CRATE_LIBRARY_PATH") { return URL(fileURLWithPath: p, isDirectory: true) }
+        if let u = Bundle.main.url(forResource: "library", withExtension: nil) { return u }
+        return URL(fileURLWithPath: "/Users/shuhanzhang/duo-hack/library", isDirectory: true)
     }
-    static var openAIKey: String? { string("OPENAI_API_KEY") }
-    static var typesafeKey: String? { string("TYPESAFE_API_KEY") }
+    /// AI calls go through our server (site/api/ai), which holds the OpenAI / TypeSafe keys.
+    static var aiBase: URL { URL(string: string("CRATE_AI_BASE") ?? "https://crateduo.vercel.app/api/ai")! }
+    static var appToken: String? { string("CRATE_APP_TOKEN") }
+    /// Direct keys only for local experiments via environment variables; never in the app bundle.
+    static var openAIKey: String? { ProcessInfo.processInfo.environment["OPENAI_API_KEY"].flatMap { $0.isEmpty ? nil : $0 } }
+    static var typesafeKey: String? { ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"].flatMap { $0.isEmpty ? nil : $0 } }
 
     /// Launch args like `-crateOffline 1` land in UserDefaults.
     static var offline: Bool { UserDefaults.standard.bool(forKey: "crateOffline") }
