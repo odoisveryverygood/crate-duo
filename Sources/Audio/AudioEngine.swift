@@ -129,8 +129,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
 
     // Optional consumer of the EXISTING master tap (WP13). No second tap is installed.
     private let captureLock = NSLock()
-    private var masterCapture: (UUID, (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void)?
-    func attachMasterCapture(_ handler: @escaping (AVReadOnlyAudioPCMBuffer, AVAudioTime) -> Void) -> UUID? {
+    private var masterCapture: (UUID, (TapBuffer, AVAudioTime) -> Void)?
+    func attachMasterCapture(_ handler: @escaping (TapBuffer, AVAudioTime) -> Void) -> UUID? {
         captureLock.withLock {
             guard masterCapture == nil else { return nil }
             let id = UUID()
@@ -183,7 +183,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             if isRunning { q.async { self.restartOnQ(reason: "start") } }   // restart after a stop: reset voices
         }
         for v in allVoices where !v.player.isPlaying {
-            do { try v.player.playAudio() } catch { DebugLog.event("audio_error", ["where": "player_play", "error": "\(error)"]) }
+            do { try v.player.cratePlay() } catch { DebugLog.event("audio_error", ["where": "player_play", "error": "\(error)"]) }
         }
         installTapLocked()
         startTimerLocked()
@@ -242,28 +242,28 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             for v in pools[bank.rawValue] {
                 engine.attach(v.player)
                 engine.attach(v.varispeed)
-                try engine.connectNode(v.player, to: v.varispeed, format: fmt)
-                try engine.connectNode(v.varispeed, to: mixer, fromBus: 0, toBus: AVAudioNodeBus(v.slot), format: fmt)
+                try engine.crateConnect(v.player, to: v.varispeed, format: fmt)
+                try engine.crateConnect(v.varispeed, to: mixer, fromBus: 0, toBus: AVAudioNodeBus(v.slot), format: fmt)
             }
             mixer.outputVolume = Self.bankGain
-            try engine.connectNode(mixer, to: sumMixer, fromBus: 0, toBus: AVAudioNodeBus(bank.rawValue), format: fmt)
+            try engine.crateConnect(mixer, to: sumMixer, fromBus: 0, toBus: AVAudioNodeBus(bank.rawValue), format: fmt)
         }
         for node in [fxDist, eq, distortion, delayFX, reverb, limiter] as [AVAudioNode] { engine.attach(node) }
-        try engine.connectNode(sumMixer, to: fxDist, format: fmt)
+        try engine.crateConnect(sumMixer, to: fxDist, format: fmt)
         // Crush before the low-pass: the decimator's aliasing re-adds highs, so after the filter it
         // cancelled the "filter closing" (measured: centroid stayed ~1.3 kHz at a 400 Hz cutoff).
         if Self.crushBeforeFilter {
-            try engine.connectNode(fxDist, to: distortion, format: fmt)
-            try engine.connectNode(distortion, to: eq, format: fmt)
-            try engine.connectNode(eq, to: delayFX, format: fmt)
+            try engine.crateConnect(fxDist, to: distortion, format: fmt)
+            try engine.crateConnect(distortion, to: eq, format: fmt)
+            try engine.crateConnect(eq, to: delayFX, format: fmt)
         } else {
-            try engine.connectNode(fxDist, to: eq, format: fmt)
-            try engine.connectNode(eq, to: distortion, format: fmt)
-            try engine.connectNode(distortion, to: delayFX, format: fmt)
+            try engine.crateConnect(fxDist, to: eq, format: fmt)
+            try engine.crateConnect(eq, to: distortion, format: fmt)
+            try engine.crateConnect(distortion, to: delayFX, format: fmt)
         }
-        try engine.connectNode(delayFX, to: reverb, format: fmt)
-        try engine.connectNode(reverb, to: limiter, format: fmt)
-        try engine.connectNode(limiter, to: main, format: fmt)
+        try engine.crateConnect(delayFX, to: reverb, format: fmt)
+        try engine.crateConnect(reverb, to: limiter, format: fmt)
+        try engine.crateConnect(limiter, to: main, format: fmt)
         main.outputVolume = Self.masterGain
         configureFX(sampleRate: fmt.sampleRate)
     }
@@ -353,7 +353,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         for v in allVoices {
             v.token &+= 1
             v.player.stop()
-            try? v.player.playAudio()
+            try? v.player.cratePlay()
             v.busyUntil = 0; v.pad = nil; v.live = false; v.fading = false
         }
         if playingQ { reanchor(step: nextStep, time: Clock.now() + Self.startDelay, keepPrev: false) }
@@ -589,7 +589,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
             DebugLog.event("debug_record", ["path": url.path, "sr": outFmt.sampleRate, "ok": wavWriter != nil])
         }
         do {
-            try main.installAudioTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, time in
+            try main.crateInstallTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, time in
                 self?.handleTap(buf)
                 let capture = self?.captureLock.withLock { self?.masterCapture?.1 }
                 capture?(buf, time)
@@ -601,7 +601,7 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     }
 
     /// Tap thread (not the render thread): RMS per 10 ms block for level(), optional debug WAV.
-    private func handleTap(_ buf: AVReadOnlyAudioPCMBuffer) {
+    private func handleTap(_ buf: TapBuffer) {
         let n = buf.frameLength
         let fmt = buf.format
         guard n > 0, fmt.commonFormat == .pcmFormatFloat32 else { return }

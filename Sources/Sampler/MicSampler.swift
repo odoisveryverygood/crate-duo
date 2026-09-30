@@ -26,8 +26,14 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
     init(state: AppState) {
         self.state = state
         super.init()
+        let inactive: Notification.Name
+        if #available(iOS 27.0, *) {
+            inactive = AVAudioSession.didBecomeInactiveNotification
+        } else {
+            inactive = AVAudioSession.interruptionNotification   // iOS 26
+        }
         interruptionObserver = NotificationCenter.default.addObserver(
-            forName: AVAudioSession.didBecomeInactiveNotification, object: nil, queue: .main
+            forName: inactive, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.isRecording || self.isPreparing else { return }

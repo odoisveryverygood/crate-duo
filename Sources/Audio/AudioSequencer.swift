@@ -492,7 +492,7 @@ extension AudioEngine {
     func cancel(_ v: Voice) {
         v.token &+= 1
         v.player.stop()
-        try? v.player.playAudio()
+        try? v.player.cratePlay()
         v.busyUntil = 0
         v.pad = nil
         v.live = false

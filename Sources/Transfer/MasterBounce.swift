@@ -51,7 +51,7 @@ final class MasterBounce: @unchecked Sendable {
 
     func cancel() { queue.async { self.finish(.failure(AudioEngine.BounceError.interrupted)) } }
 
-    private func capture(_ input: AVReadOnlyAudioPCMBuffer, time: AVAudioTime) {
+    private func capture(_ input: TapBuffer, time: AVAudioTime) {
         guard lock.withLock({ accepting }) else { return }
         guard let engine else { cancel(); return }
         let snapshot = engine.stateLock.withLock { engine.shared }
