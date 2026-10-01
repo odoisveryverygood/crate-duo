@@ -22,10 +22,23 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - Before any big UI rebuild, propose it in a few bullets or a mockup. Build once he approves.
 - "The AI part is actually great already." Don't rework the AI flow.
 
-## Waiting on Steven
-1. **Sampling redesign: yes / changes?** Proposal with an interactive Duo + iPhone mockup: https://claude.ai/artifact/456fEQCZqNCoLhUD4f2inF (private to Steven). Nothing is built. Summary: SAMPLE → hold a pad records into it; ＋ in the prompt bar imports a song as 16 chops on bank D; the lid always shows the selected pad (trim handles, ‹ › next similar sound); ● REC counts in; hold FX + tap a pad picks the effect, the fader is the amount. 7 mode keys → 3 (SAMPLE, KEYS, FX). Undo covers takes, imports and overdubs.
-2. **Apple Developer account** (never answered). With it, TestFlight is one command: `tools/testflight.sh` (see below).
-3. **New OpenAI + Jev keys** (pasted in chat on 9/30). They work (tested directly: OpenAI 200, Jev 200 in 0.17 s) and are saved in `~/duo-hack/.secrets/keys.new.env`, but **Vercel still runs the old keys** (which also still work): the agent's permission mode blocked writing secrets to Vercel. To switch, Steven runs in `~/crate-build/site`:
+## TestFlight (live since 2026-09-30)
+- App Store Connect app **"CRATE: AI Sampler"** (Apple ID 6818032563), bundle **com.shuhan.crate**, team **9R86FG9KG8** (Shuhan Zhang). Xcode on this Mac is signed in to that team.
+- **Public link: https://testflight.apple.com/join/NTU9XppA** (external group "Public", open to anyone). Every new *version* needs Beta App Review; later builds of an approved version usually don't.
+- Internal group "Team" = Steven (account holder) with automatic distribution: every upload reaches his TestFlight app after processing, no review. On 9/30 Steven had every other App Store Connect user removed; the team is just him.
+- Upload a build: `TEAM_ID=9R86FG9KG8 tools/testflight.sh` (release Xcode 27.0, iPhone/iPad build; timestamp build number). Then add the build to "Public" (TestFlight → Public → Builds → +, "What to Test", Submit for Review).
+- Builds: 0.1 (202609302158) = pre-redesign UI, submitted for review 22:15. Build 2 = the redesign (see below).
+- Test information is filled in (description, feedback email, contact phone, review notes, no sign-in). Privacy policy: https://crateduo.vercel.app/privacy (`site/privacy.html`, deployed with `cd site && vercel deploy --prod --yes`).
+
+## Sampling redesign (built 9/30, on main)
+- Deck: **SAMPLE · KEYS · FX** only. SAMPLE arms (pads blink; hold a pad to record the mic into it; silence trimmed; one UNDO). KEYS toggles. Hold FX and tap a pad to pick an effect (quick tap latches one pick). The fader / phone slider is the FX amount everywhere (the hinge on a Duo); pull it from high to zero for the DROP.
+- Lid: one **pad line** (bank tag, name, ‹ › next similar library sound, EDIT). **EDIT** = the sound big, drag its two edges (a song slice shows in context; its edges move the neighbours). Steven rejected deck knobs ("horrible on touch") and then trim strips ("too complex"): keep editing to dragging the edges.
+- **＋** next to the prompt imports a song (16 chops on bank D, chop 1 auditions, FLIP IT glows, no auto-flip) or a short sound (onto the selected pad). Drag-and-drop does the same.
+- **● REC** from stop counts in one bar (clicks via `CountIn`), then plays + records; tap again to stop recording. Takes, imports, swaps, trims and REC passes are each one UNDO step.
+- Not verified end to end: a real mic take into a pad (the Mac's CoreAudio got wedged by an earlier simulator mic session; every sim then aborts in `AURemoteIO` at launch. `sudo killall coreaudiod` fixes it and needs Steven's password). Everything else was driven by taps on the iPhone 17 Pro (iOS 26.5) sim and checked on the Duo sim.
+
+## Still waiting on Steven
+1. **New OpenAI + Jev keys** are in `~/duo-hack/.secrets/keys.new.env`; Vercel still runs the old (working) keys because the agent can't write secrets to Vercel. To switch, in `~/crate-build/site`:
    ```
    set -a; source ~/duo-hack/.secrets/keys.new.env; set +a
    printf %s "$OPENAI_API_KEY"   | vercel env add OPENAI_API_KEY production --sensitive --force
@@ -33,11 +46,10 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
    vercel deploy --prod --yes
    ```
    Then move the two lines into `keys.env`, delete `keys.new.env`, and revoke the old keys. The ElevenLabs key from 9/26 still needs rotating too.
-4. **Reach iOS 26 testers?** iOS 27.0 is two weeks old, so many testers can't install a 27.0-minimum build. Branch `ios26` lowers the floor to 26.0; merge it after an audio check.
 
 ## Repo, build, run
 - Repo: `~/crate-build` → github `Shuhan-Zhang/crate-duo`, branch `main`. Commit + push after each step.
-- SwiftUI and XcodeGen. **Deployment target iOS 27.0** (was 27.1: the iOS 27.1 runtime is Duo-only, so a 27.1 target can't install on any iPhone or iPad; regular iPhones are expected to go from 27.0 to 27.2).
+- SwiftUI and XcodeGen. **Deployment target iOS 26.0** (`Sources/Audio/AudioCompat.swift` wraps the iOS 27-only AVAudioEngine calls; 27.1 was Duo-only, so a 27.1 target couldn't install on any iPhone or iPad).
 - Two Xcodes, both build the app:
   - `~/Downloads/Xcode.app`: **Xcode 27.1 beta** (27A9269), the only one with the Duo SDK. Use it for the Duo and day-to-day work.
   - `/Applications/Xcode.app`: **Xcode 27.0 release** (27A266a). Duo APIs compile out via `NO_DUO_SDK` (set in `project.yml` for the 27.0 SDKs), so the result is an iPhone/iPad-only app that App Store review accepts. On a Duo it runs with the phone layout and no hinge FX.
@@ -47,7 +59,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
   xcodebuild -project Crate.xcodeproj -scheme Crate -destination "generic/platform=iOS Simulator" -derivedDataPath build/dd build
   xcrun simctl install <UDID> build/dd/Build/Products/Debug-iphonesimulator/Crate.app   # bundle id com.shuhan.crate
   ```
-- **iOS 26 support is ready on branch `ios26`** (not merged): `Sources/Audio/AudioCompat.swift` wraps the iOS 27-only AVAudioEngine calls (`connectNode`, `playAudio`, `installAudioTap` / `AVReadOnlyAudioPCMBuffer`) and falls back to the older calls on 26; min iOS 26.0. Checked on iOS 26.5 and 27.0 sims with `-crateSilentAudio` (launch, layout, DIG, pads, play). Hear it with real audio on iOS 26 before merging.
+- Saved and demo projects store library sounds as `~lib/<relative>` (old absolute paths are remapped at load). The bundled demos used to point at this Mac's disk, which only worked in simulators.
 - Simulators (keep at most 2 booted; first boot of a new sim spikes the load for minutes):
 
   | Simulator | UDID | Runtime |
