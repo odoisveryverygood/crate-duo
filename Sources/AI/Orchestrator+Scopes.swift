@@ -130,11 +130,13 @@ extension Orchestrator {
         }
         let cat = category ?? "perc"
         let style = session?.drumStyle ?? plan.drumStyle ?? .boombap
-        guard let snd = Retrieval.single(library, category: cat, style: style, prompt: plan.prompt, seed: seed) else {
+        let pad = singleSoundPad(cat)
+        let current = (state.engine.sound(for: pad) ?? state.sounds[pad])?.id
+        guard let snd = Retrieval.single(library, category: cat, style: style, prompt: plan.prompt, seed: seed,
+                                         exclude: current) else {
             state.addLog("ERR", "no \(cat) in the crates", tint: .red)
             return
         }
-        let pad = state.selectedPad
         var bank: [Int: PadSound] = [:]
         for i in 0..<16 {
             let id = PadID(pad.bank, i)
@@ -143,9 +145,27 @@ extension Orchestrator {
         bank[pad.index] = snd
         report.kitIDs = [snd.id]
         report.loadMs = await loadBanks([(pad.bank, bank)])
+        state.bank = pad.bank
+        state.selectedPad = pad          // the pad line shows it, so ‹ › keeps browsing from here
         state.engine.trigger(pad, velocity: 110, semitones: 0)
         state.addLog("KIT", "PAD \(pad.bank.letter)\(pad.number) ← \(snd.name) (\(cat))", ms: report.loadMs, tint: .orange)
         DebugLog.event("kit", ["style": style.rawValue, "ids": [snd.id], "pad": "\(pad.bank.letter)\(pad.number)"])
+    }
+
+    /// Where a described sound goes: the selected pad if it already holds that kind of sound ("punchier" with the
+    /// snare selected), else that instrument's home: its bank-A drum slot, or the bank-C pad holding (or meant for)
+    /// bass / keys / synth. Anything else lands on the selected pad.
+    func singleSoundPad(_ cat: String) -> PadID {
+        let sel = state.selectedPad
+        func category(_ p: PadID) -> String? { (state.engine.sound(for: p) ?? state.sounds[p])?.category.rawValue }
+        if category(sel) == cat { return sel }
+        if let i = BankA.slots.firstIndex(of: cat) { return PadID(.a, i) }
+        let homes = ["bass": 0, "keys": 1, "synth": 2]
+        if let home = homes[cat] {
+            if let i = (0..<16).first(where: { category(PadID(.c, $0)) == cat }) { return PadID(.c, i) }
+            return PadID(.c, home)
+        }
+        return sel
     }
 
     /// flip: instant local re-chop, then gpt-6-sol re-sequences the 16 slices.

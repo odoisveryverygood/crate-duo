@@ -225,11 +225,14 @@ enum Retrieval {
     }
 
     /// Best library match for a single-sound request (category from Jev `route` or keywords).
-    static func single(_ lib: LibraryStore, category: String, style: Style, prompt: String, seed: UInt64) -> PadSound? {
+    /// The best match for a described sound; `exclude` (what's on the pad now) is skipped so asking again changes it.
+    static func single(_ lib: LibraryStore, category: String, style: Style, prompt: String, seed: UInt64,
+                       exclude: String? = nil) -> PadSound? {
         var rng = SeededRNG(seed: seed ^ 0x51_51)
         let words = prompt.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         let target = lib.styleInfo(style).kit
-        return ranked(lib, category: category, style: style, target: target, rng: &rng, words: words).first
+        return ranked(lib, category: category, style: style, target: target, rng: &rng, words: words)
+            .first { $0.id != exclude }
             .map { padSound($0, lib: lib) }
     }
 }
