@@ -79,7 +79,7 @@ enum Router {
         case "rec":
             state.setRecording(q("on") != "0")
         // Sampling (redesign): crate://arm?on=1  crate://editor?open=1  crate://swap?dir=1  crate://trim?s=0.1&e=0.5
-        // crate://recpress  crate://fxhold?on=1  crate://fxpick?i=15
+        // crate://recpress  crate://fxhold?on=1  crate://fxpick?i=15  crate://take?pad=A3&path=…
         case "arm":
             Task { @MainActor in
                 if (q("on") != "0") != CrateUI.shared.sampleArmed { CrateUI.shared.toggleSample(state) }
@@ -99,6 +99,22 @@ enum Router {
         case "fxpick":
             if let i = q("i").flatMap(Int.init), (1...16).contains(i) {
                 Task { @MainActor in CrateUI.shared.pickFX(i - 1, state) }
+            }
+        case "take":
+            // crate://take?pad=A3&path=/abs/take.wav — a finished SAMPLE take on that pad (sim mics can't record unattended)
+            if let path = q("path"), let p = q("pad"), p.count >= 2,
+               let bank = Bank.allCases.first(where: { $0.letter == p.prefix(1).uppercased() }),
+               let n = Int(p.dropFirst()), (1...16).contains(n), let sampler = CrateUI.shared.sampler {
+                Task { @MainActor in
+                    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    let dir = docs.appendingPathComponent("samples", isDirectory: true)
+                    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                    let url = dir.appendingPathComponent("rec-test-\(UUID().uuidString.prefix(8)).wav")
+                    do { try FileManager.default.copyItem(at: URL(fileURLWithPath: path), to: url) } catch {
+                        DebugLog.event("error", ["where": "take", "msg": error.localizedDescription]); return
+                    }
+                    if await sampler.placeTake(url, on: PadID(bank, n - 1)) { CrateUI.shared.editorOpen = true }
+                }
             }
         case "orient":
             // crate://orient?o=portrait|landscape — rotate the interface (simulator layout checks)

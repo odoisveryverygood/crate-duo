@@ -53,7 +53,7 @@ final class KeyboardPlayer {
         case "\t":
             releaseAll()
             if shift {
-                let modes = Mode.allCases
+                let modes: [Mode] = [.seq, .keys]   // the deck's modes; SAMPLE and FX are keys of their own
                 let next = modes[((modes.firstIndex(of: state.mode) ?? 0) + 1) % modes.count]
                 if let selectMode { selectMode(next) } else { state.mode = next }
             } else {

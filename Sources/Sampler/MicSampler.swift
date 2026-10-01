@@ -22,6 +22,8 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
     @ObservationIgnored private var interruptionObserver: NSObjectProtocol?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var sessionChanged = false
+    /// Hold-a-pad take: the lift places it, even after the 120 s cap has stopped the recorder.
+    @ObservationIgnored private var intoPad = false
 
     init(state: AppState) {
         self.state = state
@@ -53,8 +55,9 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
         if let interruptionObserver { NotificationCenter.default.removeObserver(interruptionObserver) }
     }
 
-    func startRecording() {
+    func startRecording(intoPad: Bool = false) {
         guard !isPreparing, !isRecording, !isProcessing else { return }
+        self.intoPad = intoPad
         errorMessage = nil
         seconds = 0
         level = 0
@@ -108,7 +111,7 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
                     recorder.updateMeters()
                     let db = Double(recorder.averagePower(forChannel: 0))
                     self.level = db.isFinite ? min(1, max(0, pow(10, db / 20))) : 0
-                    self.seconds = recorder.currentTime
+                    self.seconds = max(self.seconds, recorder.currentTime)
                 }
             }
         } catch {
@@ -164,15 +167,23 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
 
     @ObservationIgnored private var takeNumber = 0
 
+    enum TakeResult { case placed, tooShort, failed }
+
+    /// Anything shorter is a tap, not a take: nothing is replaced and SAMPLE stays armed.
+    static let minTake = 0.2
+
     /// SAMPLE + hold a pad: the take goes onto that one pad, silence trimmed, as one UNDO step. Nothing else changes.
-    func stopRecording(intoPad pad: PadID) async {
+    func stopRecording(intoPad pad: PadID) async -> TakeResult {
         generation += 1
         permissionTask?.cancel()
         permissionTask = nil
         isPreparing = false
-        guard isRecording, let take = recorder else { return }
+        guard isRecording, let take = recorder else {
+            if errorMessage != nil { return .failed }   // the mic never started; fail() already said why
+            state.addLog("SAMPLE", "too short · hold the pad while you record", tint: .grey)
+            return .tooShort
+        }
         isRecording = false
-        isProcessing = true
         meterTask?.cancel()
         meterTask = nil
         seconds = max(seconds, take.currentTime)
@@ -180,9 +191,20 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
         recorder = nil
         level = 0
         restorePlayback()
+        guard seconds >= Self.minTake else {
+            try? FileManager.default.removeItem(at: take.url)
+            state.addLog("SAMPLE", "too short · hold the pad while you record", tint: .grey)
+            return .tooShort
+        }
+        return await placeTake(take.url, on: pad) ? .placed : .failed
+    }
+
+    /// Trims a recorded WAV and puts it on `pad`. Also `crate://take?pad=A3&path=…`, which tests this on a simulator
+    /// without a working microphone.
+    func placeTake(_ url: URL, on pad: PadID) async -> Bool {
+        isProcessing = true
         defer { isProcessing = false }
         do {
-            let url = take.url
             let cut = try await Task.detached(priority: .userInitiated) { try SampleChopper.trim(url: url) }.value
             takeNumber += 1
             let sound = PadSound(id: "take-\(url.lastPathComponent)", name: "TAKE \(takeNumber)", category: .chop,
@@ -203,8 +225,10 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
                                           pad.bank.letter, pad.number, cut.end - cut.start), tint: .grey)
             DebugLog.event("sample_take", ["pad": "\(pad.bank.letter)\(pad.number)", "sec": cut.duration,
                                            "start": cut.start, "end": cut.end])
+            return true
         } catch {
             fail("Couldn't use the take: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -247,7 +271,7 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
         let id = ObjectIdentifier(recorder)
         Task { @MainActor [weak self] in
             guard let self, let current = self.recorder, ObjectIdentifier(current) == id, self.isRecording else { return }
-            if flag { await self.stopRecording(chop: self.chopType) }
+            if flag { if !self.intoPad { await self.stopRecording(chop: self.chopType) } }
             else { self.cancelRecording(); self.fail("Recording stopped unexpectedly. Please try another take.") }
         }
     }

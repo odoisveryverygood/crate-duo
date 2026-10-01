@@ -150,7 +150,7 @@ struct SeqGridView: View {
             let shownBar = f.bar % f.bars
             ctx.draw(Text("BAR \(shownBar + 1)/\(f.bars)").font(Theme.inter(6.5, 700)).tracking(0.6)
                         .foregroundStyle(playing ? Theme.lidInk : Theme.lidGrey1),
-                     at: CGPoint(x: 0, y: rulerY - 3), anchor: .leading)
+                     at: CGPoint(x: 0, y: 0), anchor: .topLeading)   // inside the canvas, which clips
             let seg: CGFloat = f.bars <= 4 ? 8 : max(2, 36 / CGFloat(f.bars) - 1.5)
             for b in 0..<min(f.bars, 16) {
                 let r = CGRect(x: CGFloat(b) * (seg + 1.5), y: rulerY + 4, width: seg, height: 2)

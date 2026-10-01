@@ -77,18 +77,22 @@ final class CrateUI {
     @MainActor func beginTake(_ pad: PadID) {
         guard sampleArmed, recordingPad == nil, let sampler else { return }
         recordingPad = pad
-        sampler.startRecording()
+        sampler.startRecording(intoPad: true)
         DebugLog.event("take_start", ["pad": "\(pad.bank.letter)\(pad.number)"])
     }
 
     /// The finger lifts: the take lands on that pad, SAMPLE disarms and the editor opens on the new sound.
+    /// A tap too short to be a take changes nothing and leaves SAMPLE armed.
     @MainActor func endTake(_ pad: PadID) {
         guard recordingPad == pad, let sampler else { return }
         recordingPad = nil
         sampleArmed = false
         Task { @MainActor in
-            await sampler.stopRecording(intoPad: pad)
-            if sampler.errorMessage == nil { self.editorOpen = true }
+            switch await sampler.stopRecording(intoPad: pad) {
+            case .placed: self.editorOpen = true
+            case .tooShort: self.sampleArmed = true
+            case .failed: break
+            }
         }
     }
 
