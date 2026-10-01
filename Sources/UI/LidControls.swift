@@ -26,12 +26,13 @@ struct TempoChip: View {
                 .frame(height: 26)
                 .background(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.chipStroke, lineWidth: 0.6))
                 .contentShape(Rectangle())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Tempo")
+                .accessibilityValue("\(Int(currentBPM(state).rounded())) BPM")
             }
         }
         .buttonStyle(ChipPressStyle())
         .accessibilityIdentifier("tempo-chip")
-        .accessibilityLabel("Tempo")
-        .accessibilityValue("\(Int(currentBPM(state).rounded())) BPM")
         .sheet(isPresented: $open) {
             TempoSheet(state: state)
                 .presentationDetents([.height(330)])

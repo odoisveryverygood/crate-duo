@@ -14,10 +14,15 @@ struct PadLine: View {
         HStack(spacing: 8) {
             if let pad = ui.recordingPad {
                 tag("● REC", Theme.live)
-                Text("\(pad.bank.letter)\(pad.number) · \(String(format: "%.1f", ui.sampler?.seconds ?? 0)) s · LET GO TO STOP")
+                Text("\(pad.bank.letter)\(pad.number) · \(String(format: "%.1f", ui.sampler?.seconds ?? 0)) s · "
+                     + (ui.recordLocked ? "LOCKED" : "LET GO TO STOP · SLIDE UP TO LOCK"))
                     .font(Theme.inter(9, 600)).tracking(0.9).foregroundStyle(Theme.lidInk).lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Spacer(minLength: 6)
-                MicMeter(level: ui.sampler?.level ?? 0).frame(width: 70, height: 6)
+                MicMeter(level: ui.sampler?.level ?? 0).frame(width: ui.recordLocked ? 44 : 70, height: 6)
+                if ui.recordLocked {
+                    chip("STOP", id: "take-stop", filled: true) { ui.endTake(pad) }
+                }
             } else if ui.sampleArmed {
                 tag("MIC", Theme.live)
                 Text("HOLD A PAD TO RECORD INTO IT")

@@ -273,7 +273,7 @@ struct ModeKey: View {
                 } else {
                     HStack(spacing: 9) {
                         face
-                        DeckLabel(label, size: 6.6, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
+                        DeckLabel(label, size: 7.5, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
                         Spacer(minLength: 0)
                     }
                 }
@@ -322,7 +322,7 @@ struct FXHoldKey: View {
             } else {
                 HStack(spacing: 9) {
                     face(on)
-                    DeckLabel("FX", size: 6.6, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
+                    DeckLabel("FX", size: 7.5, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
                     Spacer(minLength: 0)
                 }
             }

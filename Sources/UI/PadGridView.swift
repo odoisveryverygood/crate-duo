@@ -9,6 +9,8 @@ struct PadGridView: View {
     var gap: CGFloat = 5
 
     @State private var fingers: [ObjectIdentifier: Int] = [:]
+    /// Where each finger went down (a take locks when its finger slides up).
+    @State private var downAt: [ObjectIdentifier: CGPoint] = [:]
     /// Fingers holding an effect pad on the FX layer (punch-in), newest last.
     @State private var fxFingers: [ObjectIdentifier] = []
     @State private var liveHits: [Int: Date] = [:]
@@ -155,6 +157,12 @@ struct PadGridView: View {
             let vel = Int((127 - 57 * yIn / ch).rounded())
             let ui = CrateUI.shared
             fingers[id] = i
+            downAt[id] = pt
+            if let rec = ui.recordingPad, ui.recordLocked {
+                ui.endTake(rec)   // a locked take: any pad stops it
+                fingers[id] = nil
+                return
+            }
             if ui.fxLayer {
                 liveHits[i] = Date()
                 fxFingers.append(id)
@@ -165,6 +173,13 @@ struct PadGridView: View {
                 fire(i, velocity: vel)
             }
         case .moved:
+            // recording: slide the finger up off the pad to lock the take (hands-free)
+            if let i = fingers[id], let start = downAt[id], CrateUI.shared.recordingPad == PadID(state.bank, i),
+               !CrateUI.shared.recordLocked, start.y - pt.y > 44 {
+                CrateUI.shared.recordLocked = true
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                DebugLog.event("take_lock", ["pad": "\(state.bank.letter)\(i + 1)"])
+            }
             // the newest finger on an effect pad sets the amount: slide up for more
             if fxFingers.last == id, let i = fingers[id] {
                 let row = 3 - i / 4
@@ -172,9 +187,10 @@ struct PadGridView: View {
                 CrateUI.shared.punchMove(amount: punchAmount(yIn, ch), state)
             }
         case .ended:
-            if let i = fingers[id], CrateUI.shared.recordingPad == PadID(state.bank, i) {
+            if let i = fingers[id], CrateUI.shared.recordingPad == PadID(state.bank, i), !CrateUI.shared.recordLocked {
                 CrateUI.shared.endTake(PadID(state.bank, i))
             }
+            downAt[id] = nil
             if let k = fxFingers.firstIndex(of: id) {
                 fxFingers.remove(at: k)
                 if let other = fxFingers.last, let j = fingers[other], CrateUI.shared.fxLayer {

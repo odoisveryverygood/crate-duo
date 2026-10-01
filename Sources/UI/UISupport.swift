@@ -37,6 +37,9 @@ final class CrateUI {
     var sampleArmed = false
     /// The pad a finger is recording into right now.
     var recordingPad: PadID? = nil
+    /// Slid up while recording: the take keeps going hands-free (to play an instrument into the mic) until a pad or
+    /// STOP is tapped.
+    var recordLocked = false
     /// FX layer over the pads: up while the FX key is held, or latched by a quick tap for one pick.
     var fxHeld = false
     var fxLatched = false
@@ -86,6 +89,7 @@ final class CrateUI {
     @MainActor func endTake(_ pad: PadID) {
         guard recordingPad == pad, let sampler else { return }
         recordingPad = nil
+        recordLocked = false
         sampleArmed = false
         Task { @MainActor in
             switch await sampler.stopRecording(intoPad: pad) {
