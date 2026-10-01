@@ -29,6 +29,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - Upload a build: `TEAM_ID=9R86FG9KG8 tools/testflight.sh` (release Xcode 27.0, iPhone/iPad build; timestamp build number). Then add the build to "Public" (TestFlight → Public → Builds → +, "What to Test", Submit for Review).
 - The upload signs in with the Xcode account, which **fails while the Mac is locked** ("missing Xcode-Token"; `git push` hangs the same way). Re-run with `BUILD_NUMBER=<n>` to upload an existing archive.
 - Builds (all version 0.1): **202609302158** = pre-redesign UI, waiting for Beta App Review since 22:15. **202609302329** = the redesign (uploaded 23:55). **202609302356** = redesign + the SAMPLE tap fix below.
+- **Next:** Apple lets only one build per version wait for Beta App Review. When 202609302158 is approved (the public link page stops saying "isn't accepting any new testers"), add **202609302356** to "Public" (Public → Builds → +) with What to Test, then submit. Builds of an approved version usually pass quickly.
 - Test information is filled in (description, feedback email, contact phone, review notes, no sign-in). Privacy policy: https://crateduo.vercel.app/privacy (`site/privacy.html`, deployed with `cd site && vercel deploy --prod --yes`).
 
 ## Sampling redesign (built 9/30, on main)
