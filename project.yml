@@ -14,6 +14,9 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_PREVIEWS: YES
     DEBUG_INFORMATION_FORMAT: dwarf
+  configs:
+    Release:
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym   # TestFlight crash reports need the dSYM
 packages:
   RevenueCat:
     url: https://github.com/RevenueCat/purchases-ios-spm.git
