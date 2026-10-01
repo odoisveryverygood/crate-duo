@@ -26,6 +26,7 @@ struct TempoChip: View {
                 .frame(height: 26)
                 .background(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.chipStroke, lineWidth: 0.6))
                 .contentShape(Rectangle())
+                .fixedSize()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Tempo")
                 .accessibilityValue("\(Int(currentBPM(state).rounded())) BPM")

@@ -272,7 +272,7 @@ struct LoopBar: View {
     }
 
     private func label(_ bars: Int) -> String {
-        if state.mode == .keys {
+        if state.mode == .keys && !compact {   // the phone header keeps the loop length; the keys print the notes
             let root = UIHelpers.rootNote(state, state.selectedPad)
             let base = KeysView.baseMidi(root: root, octave: state.keysOctave)
             let oct = (base + 7) / 12 - 1   // octave of the first C on the keyboard
