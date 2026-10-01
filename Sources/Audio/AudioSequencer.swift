@@ -177,6 +177,7 @@ extension AudioEngine {
         if let p = pending { active = p; pending = nil; logPatternApplied(active) }
         fills.removeAll()
         skipOnce.removeAll()
+        clearJamQ()
         nextStep = 0
         schedBar = 0
         if repeatLen > 0 { captureRepeat(from: 0) }
@@ -544,8 +545,12 @@ extension AudioEngine {
             end = nextCutTime(victim: pad, after: now + 0.003, fromStep: s)
         }
         startVoice(pa, pad: pad, at: nil, velocity: velocity, semitones: semitones, endAt: end, live: true, now: now)
-        if record && playingQ && stateLock.withLock({ shared.recording }) {
-            recordLive(pad, velocity: velocity, semitones: semitones, tapTime: tapTime, audio: pa)
+        if record && playingQ {
+            if stateLock.withLock({ shared.recording }) {
+                recordLive(pad, velocity: velocity, semitones: semitones, tapTime: tapTime, audio: pa)
+            } else {
+                noteJam(pad, velocity: velocity, semitones: semitones, tapTime: tapTime, audio: pa)
+            }
         }
     }
 
@@ -580,6 +585,59 @@ extension AudioEngine {
         if qStep >= nextStep { skipOnce.insert(SkipKey(step: qStep, pad: pad)) }
         publishPattern()
         DebugLog.event("rec_hit", ["pad": "\(pad.bank.letter)\(pad.index)", "step": step, "abs": qStep, "semi": semi])
+    }
+
+    // MARK: - Jam → KEEP (q)
+
+    struct JamHit {
+        let pad: PadID
+        let step: Int
+        let velocity: Int
+        let semi: Int
+        let root: Int
+    }
+
+    /// A pad played over the loop with REC off: remembered (quantized like a recorded hit) so KEEP can add it later.
+    /// Only the newest loop's worth is kept.
+    func noteJam(_ pad: PadID, velocity: Int, semitones: Double, tapTime: Double, audio pa: PadAudio) {
+        let qStep = Int(timelineQ.position(at: tapTime - Self.recordLatency).rounded())
+        jam.append(JamHit(pad: pad, step: qStep, velocity: max(1, min(127, velocity)),
+                          semi: Int(semitones.rounded()), root: Self.rootNote(pa.sound)))
+        let total = max(16, active.pattern.bars * 16)
+        jam.removeAll { $0.step <= qStep - total }
+        let n = jam.count
+        stateLock.withLock { shared.jamCount = n; shared.jamAt = Clock.now() }
+    }
+
+    func clearJamQ() {
+        jam.removeAll()
+        stateLock.withLock { shared.jamCount = 0 }
+    }
+
+    /// Hits waiting for KEEP and seconds since the newest one.
+    func jamInfo() -> (count: Int, age: Double) {
+        stateLock.withLock { (shared.jamCount, shared.jamCount > 0 ? Clock.now() - shared.jamAt : .infinity) }
+    }
+
+    /// KEEP: overdub the waiting jam into the pattern, as REC would have. `done` gets how many hits landed.
+    func captureJam(_ done: @escaping @MainActor (Int) -> Void) {
+        q.async {
+            let take = self.jam
+            if !take.isEmpty {
+                var p = self.active.pattern
+                for h in take { _ = Self.insert(into: &p, pad: h.pad, absStep: h.step, velocity: h.velocity, semi: h.semi, root: h.root) }
+                self.active = CompiledPattern(p)
+                if var pp = self.pending?.pattern {
+                    for h in take { _ = Self.insert(into: &pp, pad: h.pad, absStep: h.step, velocity: h.velocity, semi: h.semi, root: h.root) }
+                    self.pending = CompiledPattern(pp)
+                }
+                self.publishPattern()
+                DebugLog.event("jam_keep", ["hits": take.count])
+            }
+            self.clearJamQ()
+            let n = take.count
+            DispatchQueue.main.async { MainActor.assumeIsolated { done(n) } }
+        }
     }
 
     /// Returns the pattern step used.

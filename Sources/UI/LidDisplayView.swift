@@ -141,7 +141,7 @@ struct LidTitleRow: View {
                     HStack(alignment: .center, spacing: 12) {
                         titleBlock(withSubtitle: false)
                         Spacer(minLength: 8)
-                        if showLoop { LoopBar(state: state) }
+                        if showLoop { LoopMenu(state: state) }
                     }
                     subtitleText
                         .lineLimit(1)
@@ -152,7 +152,7 @@ struct LidTitleRow: View {
                 HStack(alignment: .center, spacing: 12) {
                     titleBlock(withSubtitle: true)
                     Spacer(minLength: 8)
-                    if showLoop { LoopBar(state: state) }
+                    if showLoop { LoopMenu(state: state) }
                 }
             }
         }
@@ -233,9 +233,11 @@ struct LidTitleRow: View {
 }
 
 /// `LOOP · 4 BARS` + one 15×3 segment per bar: played bars grey, the current bar fills white as it plays.
-/// KEYS mode prints the root and octave instead.
+/// KEYS mode prints the root and octave instead. `LoopMenu` makes it a tap target (1 / 2 / 4 / 8 bars).
 struct LoopBar: View {
     let state: AppState
+    /// "4 BARS" without the LOOP prefix (the phone header).
+    var compact = false
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30)) { _ in
@@ -266,19 +268,7 @@ struct LoopBar: View {
                 }
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            let f = LiveFrame(state)
-            let empty = f.pattern.lanes.isEmpty && f.pattern.notes.isEmpty
-            let cur = max(1, empty ? state.bars : f.bars)
-            let next = [1, 2, 4, 8].first { $0 > cur } ?? 1
-            Orchestrator.current?.setBars(next)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Tap to change the loop length")
-        .accessibilityIdentifier("loop-bar")
-        .accessibilityLabel("Loop")
+        .accessibilityHidden(true)
     }
 
     private func label(_ bars: Int) -> String {
@@ -288,7 +278,8 @@ struct LoopBar: View {
             let oct = (base + 7) / 12 - 1   // octave of the first C on the keyboard
             return "ROOT \(UIHelpers.noteName(root, flat: "♭")) · OCT \(oct)"
         }
-        return "LOOP · \(bars) \(bars == 1 ? "BAR" : "BARS")"
+        let n = "\(bars) \(bars == 1 ? "BAR" : "BARS")"
+        return compact ? n : "LOOP · " + n
     }
 }
 
@@ -301,6 +292,16 @@ struct LidHero: View {
     var gap: CGFloat = 44
 
     var body: some View {
+        heroRow
+            .sheet(isPresented: $tempoOpen) {
+                TempoSheet(state: state)
+                    .presentationDetents([.height(330)])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(Theme.oled)
+            }
+    }
+
+    private var heroRow: some View {
         HStack(alignment: .top, spacing: gap) {
             if let n = CrateUI.shared.countIn {
                 readout(Text("\(n)").foregroundStyle(Theme.live), plain: "\(n)", label: "COUNT-IN", id: "count-in")
@@ -348,7 +349,8 @@ struct LidHero: View {
                 let b = "\(Int(bpm.rounded()))"
                 readout(Text(b), plain: b, label: "BPM", id: "bpm")
                     .contentShape(Rectangle())
-                    .gesture(tempoDrag)
+                    .onTapGesture { tempoOpen = true }
+                    .accessibilityAddTraits(.isButton)
                 if swing {
                     let s = "\(Int(state.engine.swing.rounded()))"
                     readout(Text(s), plain: s, label: "SWING", id: "swing")
@@ -360,24 +362,8 @@ struct LidHero: View {
         }
     }
 
-    @State private var dragStartBPM: Double?
-
-    /// Drag the BPM number: up = faster, 1 BPM per 4 pt; one undo step per drag.
-    private var tempoDrag: some Gesture {
-        DragGesture(minimumDistance: 2)
-            .onChanged { g in
-                guard let orch = Orchestrator.current else { return }
-                if dragStartBPM == nil {
-                    dragStartBPM = state.bpm
-                    orch.checkpoint("tempo \(Int(state.bpm)) BPM")
-                }
-                orch.setTempo((dragStartBPM ?? state.bpm) - Double(g.translation.height) / 4, checkpoint: false)
-            }
-            .onEnded { _ in
-                dragStartBPM = nil
-                state.addLog("TEMPO", "\(Int(state.bpm)) BPM", tint: .orange)
-            }
-    }
+    /// Tap the BPM number: the tempo sheet (TAP tempo, ±1, swing).
+    @State private var tempoOpen = false
 
     private func currentSlice(_ f: LiveFrame, now: Date) -> Int? {
         if let p = state.lastHitPad, p.bank == .b, now.timeIntervalSince(state.lastHitTime) < 1.2 { return p.index }
@@ -752,6 +738,8 @@ struct LidPromptRow: View {
     let state: AppState
     var narrow = false
     var showChips = true
+    /// Which chips sit on the row (the phone moves UNDO / REDO to its header).
+    var chipIDs: [String] = LidChips.lidSet
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -760,14 +748,17 @@ struct LidPromptRow: View {
                 ImportButton(state: state)
                 LidPromptLine(state: state)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if showChips {
+                    KeepJamChip(state: state)
+                }
                 if showChips && !narrow {
-                    LidChips(state: state, ids: LidChips.lidSet, wrap: false)
+                    LidChips(state: state, ids: chipIDs, wrap: false)
                 }
             }
             .frame(height: 28)
             .padding(.top, 4)
             if showChips && narrow {
-                LidChips(state: state, ids: LidChips.lidSet, wrap: true)
+                LidChips(state: state, ids: chipIDs, wrap: true)
                     .padding(.top, 4)
             }
         }
@@ -859,6 +850,8 @@ struct LidChips: View {
 
     /// The chips the mock prints on the prompt row.
     static let lidSet = ["chip-undo", "chip-redo", "chip-flip-it", "chip-ai-perform"]
+    /// The phone's prompt row (UNDO / REDO are icons in its header).
+    static let phoneSet = ["chip-flip-it", "chip-ai-perform"]
 
     var body: some View {
         let items = ActionChips.items.filter { ids?.contains($0.id) ?? true }

@@ -69,6 +69,9 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
         var swing: Double = 56
         var playing = false
         var recording = false
+        /// Jam hits waiting for KEEP, and the host time of the newest.
+        var jamCount = 0
+        var jamAt: Double = 0
         var running = false
         var transportGen = 0
         var loadGen = [0, 0, 0, 0]
@@ -90,6 +93,8 @@ final class AudioEngine: SamplerEngine, @unchecked Sendable {
     var pending: CompiledPattern?
     var fills: [Int: FillDef] = [:]
     var skipOnce = Set<SkipKey>()
+    /// Pads played over the loop while REC is off: the last loop's worth, for KEEP (q only).
+    var jam: [JamHit] = []
     var timelineQ = Timeline()
     var lastRestartAttempt: Double = 0
     var lastRestartDone: Double = 0

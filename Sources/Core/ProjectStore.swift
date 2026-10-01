@@ -320,12 +320,12 @@ final class ProjectStore {
         let pattern = p.pattern.pattern
         e.setPattern(pattern, timing: .now)
         Orchestrator.current?.lastPattern = pattern
-        Orchestrator.current?.session = nil
         state.bars = pattern.bars
         state.scaleKey = p.scaleKey
         state.styleLabel = p.styleLabel.isEmpty ? "CRATE" : p.styleLabel
         state.sampleLabel = p.sampleLabel
         state.chordsLabel = p.chordsLabel
+        Orchestrator.current?.restoreSession()
         state.selectFX(p.fxType.flatMap(FXType.init(rawValue:)))
         current = p
         UserDefaults.standard.set(p.id, forKey: Self.lastKey)

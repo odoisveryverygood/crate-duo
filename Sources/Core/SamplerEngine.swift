@@ -40,6 +40,11 @@ protocol SamplerEngine: AnyObject {
     /// PAD FX: which effect `setPunch` drives (nil = the default PUNCH chain). Default impl is a no-op.
     func setFX(_ type: FXType?)
 
+    /// Pads played over the loop with REC off, waiting for KEEP: how many, and seconds since the newest.
+    func jamInfo() -> (count: Int, age: Double)
+    /// KEEP: write that jam into the pattern; `done` gets how many hits landed.
+    func captureJam(_ done: @escaping @MainActor (Int) -> Void)
+
     /// Master RMS 0...1 for meters.
     func level() -> Float
     /// Peak envelope for display (0...1), `points` long.

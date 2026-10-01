@@ -103,8 +103,10 @@ struct KeysView: View {
                     .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6))
             }
             VStack(spacing: 3) {
-                Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
-                    .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : Theme.mid)
+                if DeviceInfo.hasHardwareKeyboard {
+                    Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
+                        .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : Theme.mid)
+                }
                 if played == root {
                     Circle().fill(Theme.orange).frame(width: 4, height: 4)
                 }
@@ -133,9 +135,11 @@ struct KeysView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
-                .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : PadFinish.key)
-                .padding(.bottom, 12)
+            if DeviceInfo.hasHardwareKeyboard {
+                Text(MusicalTyping.label(midi: midi, octave: state.keysOctave))
+                    .font(Theme.label(9)).foregroundStyle(held ? Theme.orange : PadFinish.key)
+                    .padding(.bottom, 12)
+            }
         }
         .modifier(KeyAccessibility(id: "key-\(midi)", label: Music.name(snap(midi, scale))) {
             tapKey(midi)

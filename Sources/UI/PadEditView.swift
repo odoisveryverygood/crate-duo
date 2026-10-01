@@ -27,7 +27,7 @@ struct PadLine: View {
                 chip("CANCEL", id: "sample-cancel") { ui.sampleArmed = false }
             } else if ui.fxLayer {
                 tag("FX", Theme.live)
-                Text("TAP A PAD TO PICK AN EFFECT")
+                Text("HOLD A PAD FOR ITS EFFECT · HIGHER = MORE")
                     .font(Theme.inter(9, 600)).tracking(0.9).foregroundStyle(Theme.lidInk).lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Spacer(minLength: 6)
@@ -44,6 +44,9 @@ struct PadLine: View {
                 if Orchestrator.current?.canSwap(pad) == true {
                     chip("‹", id: "pad-prev") { swap(pad, -1) }
                     chip("›", id: "pad-next") { swap(pad, 1) }
+                } else if Orchestrator.current?.canSwapSample(pad) == true {
+                    chip("‹", id: "sample-prev") { swapSample(-1) }
+                    chip("›", id: "sample-next") { swapSample(1) }
                 }
                 Spacer(minLength: 6)
                 if sound != nil {
@@ -59,6 +62,11 @@ struct PadLine: View {
 
     private func swap(_ pad: PadID, _ step: Int) {
         Task { @MainActor in await Orchestrator.current?.swapSound(pad, step: step) }
+    }
+
+    /// The whole sample (all 16 chops) for the next / previous library loop.
+    private func swapSample(_ step: Int) {
+        Task { @MainActor in await Orchestrator.current?.swapSample(step: step) }
     }
 
     private func tag(_ text: String, _ color: Color) -> some View {
@@ -108,12 +116,18 @@ struct MicMeter: View {
 
 // MARK: - Pad editor (lid main area)
 
-/// EDIT: the selected pad's sound, big. Drag its two edges. A slice of a song is
-/// shown in context with its neighbours; moving its edge moves theirs (they share the line). DONE on the pad line closes.
+/// EDIT: the selected pad's sound, big. Drag its two edges; pinch to zoom, drag elsewhere to scroll when zoomed,
+/// tap to hear it. A slice of a song is shown in context with its neighbours: moving its edge moves theirs (they share
+/// the line), and tapping a neighbour moves to that slice. DONE on the pad line closes.
 struct PadEditorView: View {
     let state: AppState
-    @State private var dragging: DragEdge? = nil
-    enum DragEdge { case start, end }
+    @State private var dragging: DragMode? = nil
+    enum DragMode { case start, end, pan }
+    /// The visible span once pinched or scrolled (seconds in the source file); nil = the default view for the pad.
+    @State private var view: ClosedRange<Double>? = nil
+    @State private var pinch: (anchor: Double, frac: Double, span: Double)? = nil
+    @State private var panFrom: ClosedRange<Double>? = nil
+    @State private var pinchEndedAt = Date.distantPast
 
     var body: some View {
         let ui = CrateUI.shared
@@ -124,14 +138,24 @@ struct PadEditorView: View {
             let end = ui.editPreviewEnd ?? (s.end ?? dur)
             let edges = orch.sharedEdges(pad)
             let slice = edges.prev != nil || edges.next != nil
-            let win = Self.window(start: s.start, end: s.end ?? dur, duration: dur, slice: slice)
+            let win = view ?? Self.window(start: s.start, end: s.end ?? dur, duration: dur, slice: slice)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
                     Text(String(format: "%.2f – %.2f s", start, end))
                         .font(Theme.mono(11)).monospacedDigit().foregroundStyle(Theme.lidInk)
-                    Text(slice ? "SLICE \(pad.number) · DRAG THE EDGES" : "DRAG THE EDGES")
-                        .fieldLabel().foregroundStyle(Theme.lidGrey1).lineLimit(1)
+                    Text(slice ? "SLICE \(pad.number) · DRAG EDGES · PINCH TO ZOOM" : "DRAG EDGES · PINCH TO ZOOM")
+                        .fieldLabel().foregroundStyle(Theme.lidGrey1).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer(minLength: 0)
+                    if view != nil {
+                        Button { view = nil } label: {
+                            Text("FIT").font(Theme.inter(7, 600)).tracking(0.7).foregroundStyle(Theme.chipText)
+                                .padding(.horizontal, 9).frame(height: 21)
+                                .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.chipStroke, lineWidth: 0.5))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(ChipPressStyle())
+                        .accessibilityIdentifier("editor-fit")
+                    }
                 }
                 GeometryReader { geo in
                     let inset: CGFloat = 9   // the edge grips stay whole at the very start / end of the sound
@@ -149,24 +173,71 @@ struct PadEditorView: View {
                         handle(at: x(start), height: geo.size.height, color: Theme.bank(pad.bank))
                         handle(at: x(end), height: geo.size.height, color: Theme.bank(pad.bank))
                     }
+                    .clipped()
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { g in
+                                guard pinch == nil, Date().timeIntervalSince(pinchEndedAt) > 0.25 else { return }
                                 if dragging == nil {
                                     let ds = abs(g.startLocation.x - x(start)), de = abs(g.startLocation.x - x(end))
-                                    guard min(ds, de) < 44 else { return }
-                                    dragging = ds <= de ? .start : .end
+                                    if min(ds, de) < 44 {
+                                        dragging = ds <= de ? .start : .end
+                                    } else if abs(g.translation.width) > 6 {
+                                        dragging = .pan
+                                        panFrom = win
+                                    } else {
+                                        return
+                                    }
                                 }
-                                let v = min(win.upperBound, max(win.lowerBound, t(g.location.x)))
-                                if dragging == .start { ui.editPreviewStart = min(v, end - 0.02) }
-                                else { ui.editPreviewEnd = max(v, start + 0.02) }
+                                switch dragging {
+                                case .start?:
+                                    ui.editPreviewStart = min(min(win.upperBound, max(win.lowerBound, t(g.location.x))), end - 0.02)
+                                case .end?:
+                                    ui.editPreviewEnd = max(min(win.upperBound, max(win.lowerBound, t(g.location.x))), start + 0.02)
+                                case .pan?:
+                                    guard let from = panFrom else { return }
+                                    let span = from.upperBound - from.lowerBound
+                                    view = Self.clamp(from.lowerBound - Double(g.translation.width / max(1, w)) * span,
+                                                      span: span, duration: dur)
+                                case nil:
+                                    break
+                                }
                             }
                             .onEnded { g in
-                                let edge = dragging
+                                let mode = dragging
                                 dragging = nil
-                                if edge == nil, abs(g.translation.width) < 4 { state.hit(pad); return }
-                                commit(pad)
+                                panFrom = nil
+                                guard pinch == nil, Date().timeIntervalSince(pinchEndedAt) > 0.25 else {
+                                    ui.editPreviewStart = nil
+                                    ui.editPreviewEnd = nil
+                                    return
+                                }
+                                switch mode {
+                                case .start?, .end?: commit(pad)
+                                case .pan?: break
+                                case nil: if abs(g.translation.width) < 6 { tap(at: t(g.location.x), pad: pad) }
+                                }
+                            }
+                    )
+                    .simultaneousGesture(
+                        MagnifyGesture()
+                            .onChanged { m in
+                                if pinch == nil {
+                                    dragging = nil
+                                    ui.editPreviewStart = nil
+                                    ui.editPreviewEnd = nil
+                                    let frac = min(1, max(0, Double((m.startLocation.x - inset) / max(1, w))))
+                                    let span = win.upperBound - win.lowerBound
+                                    pinch = (win.lowerBound + frac * span, frac, span)
+                                }
+                                guard let p = pinch else { return }
+                                let span = min(dur, max(0.02, p.span / Double(max(0.05, m.magnification))))
+                                view = Self.clamp(p.anchor - p.frac * span, span: span, duration: dur)
+                            }
+                            .onEnded { _ in
+                                pinch = nil
+                                pinchEndedAt = Date()
                             }
                     )
                 }
@@ -175,6 +246,7 @@ struct PadEditorView: View {
                 .accessibilityLabel("Pad editor")
                 .accessibilityValue(String(format: "start %.2f seconds, end %.2f seconds", start, end))
             }
+            .onChange(of: pad) { _, _ in view = nil }
         } else {
             Text("EMPTY PAD · TAP SAMPLE AND HOLD A PAD, OR ＋ A SONG")
                 .fieldLabel().foregroundStyle(Theme.lidGrey1)
@@ -188,6 +260,28 @@ struct PadEditorView: View {
         let len = max(0.05, end - start)
         let lo = max(0, start - len * 1.2), hi = min(duration, end + len * 1.2)
         return lo...max(lo + 0.1, hi)
+    }
+
+    /// A `span`-long view starting near `lo`, kept inside the file.
+    static func clamp(_ lo: Double, span: Double, duration: Double) -> ClosedRange<Double> {
+        let s = min(span, duration)
+        let l = min(max(0, lo), duration - s)
+        return l...(l + s)
+    }
+
+    /// Tap inside the pad's sound plays it; tap a neighbouring slice of the same song to move to that slice.
+    private func tap(at t: Double, pad: PadID) {
+        if let s = state.sound(pad), t < s.start || t > (s.end ?? .infinity) {
+            for i in 0..<16 {
+                let p = PadID(pad.bank, i)
+                if let x = state.sound(p), x.fileURL == s.fileURL, t >= x.start, t < (x.end ?? .infinity) {
+                    state.selectedPad = p
+                    state.hit(p)
+                    return
+                }
+            }
+        }
+        state.hit(pad)
     }
 
     private func sliceMarks(_ pad: PadID) -> [Double] {

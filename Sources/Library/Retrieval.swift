@@ -98,6 +98,11 @@ enum Retrieval {
     }
 
     static func loop(_ lib: LibraryStore, _ req: LoopRequest, seed: UInt64) -> LoopEntry? {
+        rankedLoops(lib, req, seed: seed).first
+    }
+
+    /// Every candidate loop for the request, best first (the same scoring `loop` picks its winner by).
+    static func rankedLoops(_ lib: LibraryStore, _ req: LoopRequest, seed: UInt64) -> [LoopEntry] {
         var rng = SeededRNG(seed: seed ^ 0xA5A5_5A5A)
         var pool = lib.loops
         if let set = instrumentSet(req.instrument) {
@@ -110,7 +115,7 @@ enum Retrieval {
         if let ex = req.excludeID, pool.count > 1 { pool.removeAll { $0.id == ex } }
         let range = lib.styleInfo(req.drumStyle).bpmRange
         let hipHop: Set<Style> = [.dilla, .jazzhop, .boombap, .lofi, .vintage]
-        var best: (LoopEntry, Double)?
+        var scored: [(LoopEntry, Double)] = []
         for l in pool {
             var s = 1.0 * l.style(req.sampleStyle)
             if let m = req.mood { s += 0.3 * ((l.moods ?? []).contains(m) ? 1 : 0) }
@@ -131,9 +136,11 @@ enum Retrieval {
             s += 0.1 * (l.bars >= req.bars ? 1 : 0)
             if l.instrument == req.instrument { s += 0.35 } // an explicitly named instrument beats its neighbours
             s += 0.08 * rng.unit()
-            if best == nil || s > best!.1 { best = (l, s) }
+            scored.append((l, s))
         }
-        return best?.0
+        // Stable: equal scores keep pool order, so the first of them wins as before.
+        return scored.enumerated().sorted { a, b in a.element.1 != b.element.1 ? a.element.1 > b.element.1 : a.offset < b.offset }
+            .map { $0.element.0 }
     }
 
     /// First `bars` of the loop as 16 slices (equal over the span, snapped to onsets within 40 ms).

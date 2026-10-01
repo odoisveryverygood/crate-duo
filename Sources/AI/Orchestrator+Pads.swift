@@ -34,6 +34,80 @@ extension Orchestrator {
         DebugLog.event("swap", ["pad": "\(pad.bank.letter)\(pad.number)", "id": snd.id, "step": step])
     }
 
+    // MARK: Session after a project opens
+
+    /// Projects don't store the AI session. Rebuild it from the pads (the library loop behind bank B's chops) and the
+    /// saved style label, so ‹ › on a chop, FLIP IT and the bass keep working after a relaunch. Imported songs and
+    /// beats without a library sample get no session, as before.
+    func restoreSession() {
+        session = nil
+        let chopSounds = (0..<16).compactMap { state.engine.sound(for: PadID(.b, $0)) ?? state.sounds[PadID(.b, $0)] }
+        guard let path = chopSounds.first?.fileURL.standardizedFileURL.path,
+              let loop = library.loops.first(where: { library.fileURL($0.file).standardizedFileURL.path == path })
+        else { return }
+        let bars = max(1, state.engine.pattern.bars)
+        let chops = Retrieval.chops(loop, lib: library, bars: bars)
+        let sampleStyle = Style.allCases.max { loop.style($0) < loop.style($1) } ?? .boombap
+        let label = state.styleLabel.uppercased()
+        let drumStyle = Style.allCases.first { library.styleInfo($0).label.uppercased() == label } ?? sampleStyle
+        session = Session(drumStyle: drumStyle, sampleStyle: sampleStyle, bars: bars, laidback: 0.5, energy: 0.5,
+                          chops: chops, harmony: BassWriter.Harmony(chops))
+        DebugLog.event("session_restore", ["loop": loop.id, "drum": drumStyle.rawValue, "sample": sampleStyle.rawValue])
+    }
+
+    // MARK: Sample swap (crate digging)
+
+    /// The beat's sample (bank B chops from a DIG) can be swapped for another library loop; an imported song can't.
+    func canSwapSample(_ pad: PadID) -> Bool {
+        guard pad.bank == .b, chopBank == .b, let c = session?.chops, let s = state.sound(pad) else { return false }
+        return c.sounds.values.contains { $0.fileURL == s.fileURL }
+    }
+
+    /// ‹ › on a chop: the previous / next library loop for this beat (same instrument and style, close to the tempo),
+    /// chopped onto bank B under the same rhythm while the beat keeps playing. The bass follows the new chords.
+    /// One UNDO step each; no GPT round trip, so it's instant.
+    func swapSample(step: Int) async {
+        guard var s = session, let cur = s.chops else { return }
+        let e = state.engine
+        let bars = max(1, e.pattern.bars)
+        let req = LoopRequest(sampleStyle: s.sampleStyle, drumStyle: s.drumStyle, instrument: cur.loop.instrument,
+                              bars: bars, bpm: currentBPM(state))
+        if !sampleCrate.contains(where: { $0.id == cur.loop.id }) {
+            sampleCrate = Retrieval.rankedLoops(library, req, seed: 0x5A3D)
+        }
+        let ranked = sampleCrate
+        guard ranked.count > 1 else { return }
+        let at = ranked.firstIndex { $0.id == cur.loop.id } ?? (step > 0 ? -1 : 0)
+        let next = ranked[((at + step) % ranked.count + ranked.count) % ranked.count]
+        checkpoint("sample \(cur.loop.name)")
+        digSerial += 1                      // a GPT rewrite still in flight was for the old sample
+        gptTask?.cancel()
+        gptTask = nil
+        let chops = Retrieval.chops(next, lib: library, bars: bars)
+        let ms = await loadBanks([(.b, chops.sounds)])
+        var p = e.pattern
+        if chops.spanBars != cur.spanBars {
+            p.lanes = p.lanes.filter { $0.key.bank != .b }
+            for (k, v) in PatternBuilder.chops(span: chops.spanBars, bars: bars) { p.lanes[k] = v }
+        }
+        let harmony = BassWriter.Harmony(chops)
+        if p.notes[PadID(.c, 0)] != nil {
+            p.notes[PadID(.c, 0)] = BassWriter.write(rhythm: BassWriter.rhythm(library, style: s.drumStyle), bars: bars,
+                                                     harmony: harmony, kicks: PatternBuilder.kickSteps(p.lanes),
+                                                     padRoot: bassRoot())
+        }
+        s.chops = chops
+        s.harmony = harmony
+        session = s
+        setLabels(drum: s.drumStyle, chops: chops)
+        setTempo(next.bpm, checkpoint: false)
+        e.setPattern(p, timing: e.isPlaying ? .nextBar : .now)
+        lastPattern = p
+        logSample(chops, bpm: next.bpm, ms: ms)
+        if !e.isPlaying { state.hit(state.selectedPad.bank == .b ? state.selectedPad : PadID(.b, 0)) }
+        DebugLog.event("sample_swap", ["from": cur.loop.id, "to": next.id, "step": step, "ms": ms])
+    }
+
     // MARK: Trim
 
     /// Seconds of audio in a pad's source file (cached).

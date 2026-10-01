@@ -268,7 +268,7 @@ struct ModeKey: View {
                 if labelBelow {
                     VStack(spacing: 5) {
                         face
-                        DeckLabel(label, size: 5.8, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2.opacity(0.8))
+                        DeckLabel(label, size: 7.2, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
                     }
                 } else {
                     HStack(spacing: 9) {
@@ -317,7 +317,7 @@ struct FXHoldKey: View {
             if labelBelow {
                 VStack(spacing: 5) {
                     face(on)
-                    DeckLabel("FX", size: 5.8, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2.opacity(0.8))
+                    DeckLabel("FX", size: 7.2, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
                 }
             } else {
                 HStack(spacing: 9) {
@@ -394,7 +394,7 @@ struct BankButton: View {
                 }
                 .frame(width: key, height: key)
                 Text(bank.letter)
-                    .font(Deck05.font(7, 600))
+                    .font(Deck05.font(8.5, 600))
                     .foregroundStyle(selected ? Deck05.ink : Deck05.ink2)
             }
             .contentShape(Rectangle().inset(by: -3))
@@ -541,7 +541,7 @@ struct TransportRow: View {
                 }
                 .frame(width: height, height: height)
                 if captions {
-                    DeckLabel(caption, size: 5.8, color: lit ? Deck05.ink : Deck05.ink2)
+                    DeckLabel(caption, size: 7.2, color: lit ? Deck05.ink : Deck05.ink2)
                 }
             }
             .contentShape(Rectangle())

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - SEQ: 16-step dot grid of the current bar
 
@@ -85,6 +86,7 @@ struct SeqGridView: View {
                 .gesture(SpatialTapGesture().onEnded { tap in
                     handleTap(at: tap.location, size: geo.size, rows: rows)
                 })
+                .overlay(alignment: .topLeading) { laneLabels(rows, size: geo.size) }
             }
             .overlay(alignment: .bottomLeading) {
                 if rows.isEmpty {
@@ -97,23 +99,63 @@ struct SeqGridView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityHint("Tap a step to add or remove it. Tap a lane name to remove that sound.")
+        .accessibilityHint("Tap a step to add or remove it. Tap a lane name to select and hear that sound; hold it to clear the lane.")
         .accessibilityIdentifier("seq-grid")
         .accessibilityLabel("Sequencer")
     }
 
-    /// Tap a dot = toggle that step (in every bar of the loop); tap a lane name = remove that sound from the beat.
+    /// Lane pitch for `rows` lanes in `size` (the same spacing `draw` uses).
+    private func pitch(_ size: CGSize, rows: Int) -> CGFloat {
+        min(maxPitch, max(11, (size.height - Self.firstLane - 12) / CGFloat(max(rows - 1, 1))))
+    }
+
+    /// Lane names: tap = select that sound and hear it (the pad line then edits / swaps it); hold = clear the lane.
+    private func laneLabels(_ rows: [SeqRow], size: CGSize) -> some View {
+        let p = pitch(size, rows: rows.count)
+        let w = Self.labelColumn - 4
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
+                Color.clear
+                    .frame(width: w, height: max(14, p))
+                    .contentShape(Rectangle())
+                    .gesture(
+                        LongPressGesture(minimumDuration: 0.5)
+                            .onEnded { _ in
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                Orchestrator.current?.clearLane(row.pads, label: row.label)
+                            }
+                            .exclusively(before: TapGesture().onEnded { selectLane(row) })
+                    )
+                    .position(x: w / 2, y: Self.firstLane + CGFloat(r) * p)
+                    .accessibilityElement()
+                    .accessibilityLabel(row.label)
+                    .accessibilityIdentifier("lane-\(row.label.lowercased().replacingOccurrences(of: " ", with: "-"))")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { selectLane(row) }
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private func selectLane(_ row: SeqRow) {
+        let pad = row.pads.contains(state.selectedPad) ? state.selectedPad
+            : row.pads.first { !(state.engine.pattern.lanes[$0]?.isEmpty ?? true) } ?? row.pads.first
+        guard let pad else { return }
+        CrateUI.shared.selectBank(pad.bank, state)
+        state.selectedPad = pad
+        state.hit(pad)
+        DebugLog.event("lane_select", ["lane": row.label, "pad": "\(pad.bank.letter)\(pad.number)"])
+    }
+
+    /// Tap a dot = toggle that step (in every bar of the loop). Lane names are handled by `laneLabels`.
     private func handleTap(at p: CGPoint, size: CGSize, rows: [SeqRow]) {
         guard !rows.isEmpty, let orch = Orchestrator.current else { return }
         let top = Self.firstLane
-        let pitch = min(maxPitch, max(11, (size.height - top - 12) / CGFloat(max(rows.count - 1, 1))))
+        let pitch = pitch(size, rows: rows.count)
         let r = Int(((p.y - top) / pitch).rounded())
         guard r >= 0, r < rows.count, abs(p.y - (top + CGFloat(r) * pitch)) <= pitch / 2 + 2 else { return }
         let row = rows[r]
-        if p.x < Self.labelColumn - 4 {
-            orch.clearLane(row.pads, label: row.label)
-            return
-        }
+        guard p.x >= Self.labelColumn - 4 else { return }
         let x0 = Self.labelColumn
         let colW = (size.width - x0 - 3 * Self.groupGap) / 16
         func cx(_ i: Int) -> CGFloat { x0 + CGFloat(i) * colW + CGFloat(i / 4) * Self.groupGap + colW / 2 }
@@ -525,7 +567,7 @@ struct DigComposer: View {
             HStack(spacing: 8) {
                 SparkShape().fill(Theme.lidInk).frame(width: 8, height: 8)
                 Text("DIG").fieldLabel(7.5).foregroundStyle(Theme.lidInk)
-                Text("DESCRIBE A BEAT, A KIT OR A SOUND · RETURN TO DIG")
+                Text("DESCRIBE IT AND PRESS RETURN · OR TAP A STYLE")
                     .fieldLabel()
                     .foregroundStyle(Theme.lidGrey1)
                     .lineLimit(1)
@@ -543,11 +585,42 @@ struct DigComposer: View {
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            LidChips(state: state, ids: LidChips.lidSet)
+            ChipFlow(spacing: 6, lineSpacing: 6) {
+                ForEach(Self.vibes, id: \.label) { v in
+                    Button {
+                        ui.draft = ""
+                        ui.blurRequest += 1
+                        state.dig(v.prompt)
+                        DebugLog.event("vibe", ["label": v.label])
+                    } label: {
+                        Text(v.label)
+                            .font(Theme.inter(8, 600)).tracking(0.8)
+                            .foregroundStyle(Theme.lidInk)
+                            .padding(.horizontal, 11)
+                            .frame(height: 30)
+                            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.chipStroke, lineWidth: 0.6))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(ChipPressStyle())
+                    .accessibilityIdentifier("vibe-\(v.label.lowercased().replacingOccurrences(of: " ", with: "-"))")
+                }
+            }
             Spacer(minLength: 0)
         }
         .padding(.top, 2)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("dig-composer")
     }
+
+    /// One tap = a whole beat in that style (the prompt a musician would have typed).
+    static let vibes: [(label: String, prompt: String)] = [
+        ("DUSTY JAZZ HOP", "dusty jazz hop with a rhodes sample"),
+        ("BOOM BAP", "90s boom bap with a piano sample"),
+        ("DILLA", "j dilla drums with a nujabes piano"),
+        ("LOFI", "lofi hip hop with a guitar sample"),
+        ("R&B", "smooth r&b with rhodes chords"),
+        ("HOUSE", "deep house with piano chords"),
+        ("TRAP", "trap beat with 808s and hi hat rolls"),
+        ("DRILL", "uk drill beat with dark strings"),
+    ]
 }

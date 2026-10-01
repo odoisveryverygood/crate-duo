@@ -1,30 +1,28 @@
 import SwiftUI
 
-/// The lid on an iPhone (about 40 % of the screen, over the deck): project + LOOP bar, the hero readouts,
-/// the mode's main area (SEQ grid / CHOP / KEYS waveform / AI log), the result line and the `›` prompt with chips.
-/// Same parts as `LidDisplayView`, minus the BANKS legend (the deck's bank keys carry the colours).
+/// The lid on an iPhone (about 40 % of the screen, over the deck), five rows so the beat gets the room:
+/// one header line (project · tempo · bar · loop length · undo / redo), the pad line, the main area (step grid,
+/// pad editor or the DIG composer), the result line, and the `›` prompt with FLIP IT / AI PERFORM.
 struct PhoneLidView: View {
     let state: AppState
 
     var body: some View {
         GeometryReader { geo in
-            // Tall phones (Pro Max) also get the style line and the timing strip.
-            let roomy = geo.size.height >= 340 && geo.size.width >= 300
             let focused = CrateUI.shared.promptFocused
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: 8) {
                     LidProjectChip(state: state)
-                    Spacer(minLength: 8)
-                    LoopBar(state: state)
+                        .frame(maxWidth: geo.size.width * 0.3, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    TempoChip(state: state, size: 12)
+                    BarReadout(state: state, size: 12)
+                    Spacer(minLength: 4)
+                    LoopMenu(state: state, compact: true)
+                    HistoryButtons(size: 28)
                 }
-                if roomy {
-                    LidTitleRow(state: state, showLoop: false)
-                        .padding(.top, 8)
-                }
-                LidHero(state: state, size: geo.size.height < 330 ? 32 : 38, gap: 28)
-                    .padding(.top, roomy ? 12 : 8)
+                .frame(height: 30)
                 PadLine(state: state)
-                    .padding(.top, 8)
+                    .padding(.top, 10)
                 Group {
                     if focused {
                         DigComposer(state: state)
@@ -37,28 +35,21 @@ struct PhoneLidView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
                 .padding(.top, 8)
-                if !CrateUI.shared.editorOpen || roomy {
-                    Group {
-                        if state.punch > 0.04 {
-                            PunchStrip(punch: state.punch, fx: state.fx)
-                        } else {
-                            LidResultLine(state: state)
-                        }
+                Group {
+                    if state.punch > 0.04 {
+                        PunchStrip(punch: state.punch, fx: state.fx)
+                    } else {
+                        LidResultLine(state: state)
                     }
-                    .frame(height: 16)
+                }
+                .frame(height: 16)
+                .padding(.top, 6)
+                LidPromptRow(state: state, narrow: false, showChips: !focused, chipIDs: LidChips.phoneSet)
                     .padding(.top, 6)
-                }
-                if roomy {
-                    LidTimingStrip(state: state)
-                        .frame(height: 8)
-                        .padding(.top, 6)
-                }
-                LidPromptRow(state: state, narrow: true, showChips: !focused)
-                    .padding(.top, 8)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
+            .padding(.top, 6)
+            .padding(.bottom, 8)
             .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
         .background(Theme.oled)

@@ -36,6 +36,9 @@ final class Orchestrator {
         var chordProg: ChordWriter.Progression? = nil
     }
     var session: Session?
+    /// The loops ‹ › walks for the beat's sample, ranked once when browsing starts (each swap changes the tempo,
+    /// so re-ranking every time would reshuffle the list and ‹ wouldn't retrace ›).
+    var sampleCrate: [LoopEntry] = []
     var lastPattern = Pattern.empty
     var digSerial = 0
     var lastPromptKey = ""

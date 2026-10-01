@@ -167,8 +167,8 @@ struct DeckView: View {
         .padding(.bottom, 14)
     }
 
-    /// Phone: SAMPLE · KEYS · FX, the pads, the FX amount (the hinge's job on a Duo), then BANK | REC PLAY STOP | DIG.
-    /// The project chip lives on the lid.
+    /// Phone: SAMPLE · KEYS · FX, the pads, then BANK | REC PLAY STOP | DIG. Effects are punch-in (hold FX, hold an
+    /// effect pad), so there's no FX slider. The project chip lives on the lid.
     private func phoneDeck(_ size: CGSize) -> some View {
         let short = size.height < 400
         let key: CGFloat = short ? 24 : 28
@@ -182,9 +182,6 @@ struct DeckView: View {
             center
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, short ? 8 : 12)
-            PunchSlider(state: state)
-                .frame(height: 22)
-                .padding(.top, short ? 8 : 10)
             HStack(alignment: .top, spacing: 0) {
                 BankGrid(state: state, key: key, spacing: short ? 6 : 9)
                 Spacer(minLength: 8)

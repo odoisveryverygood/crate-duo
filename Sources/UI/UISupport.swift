@@ -106,6 +106,7 @@ final class CrateUI {
         }
         if state.isRecording {
             state.setRecording(false)
+            Orchestrator.current?.syncFromEngine()
             DebugLog.event("rec", ["on": false])
             return
         }
@@ -129,7 +130,10 @@ final class CrateUI {
         CountIn.shared.cancel()
         countIn = nil
         if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
-        if state.isRecording { state.setRecording(false) }
+        if state.isRecording {
+            state.setRecording(false)
+            Orchestrator.current?.syncFromEngine()
+        }
     }
 
     /// FX key down: the pads show the effects while it's held.
@@ -146,12 +150,39 @@ final class CrateUI {
         fxDownAt = nil
     }
 
-    /// A pad tapped on the FX layer picks that effect (at half amount if the fader is down, so it's heard).
+    /// What was on before a punch-in (put back when the last finger lifts).
+    @ObservationIgnored private var punchBase: (fx: FXType?, amount: Double)?
+
+    /// Punch-in FX (as on the EP-133): while a finger holds an effect pad on the FX layer, that effect is on at the
+    /// finger's height (top of the pad = full). Lifting puts back what was there: nothing on a phone, the fader's
+    /// amount on iPad / Duo.
+    @MainActor func punchIn(_ index: Int, amount: Double, _ state: AppState) {
+        if punchBase == nil { punchBase = (state.fx, state.punch) }
+        state.selectFX(FXType.padLayout[index])
+        state.punch = amount
+        state.engine.setPunch(amount)
+    }
+
+    @MainActor func punchMove(amount: Double, _ state: AppState) {
+        guard punchBase != nil else { return }
+        state.punch = amount
+        state.engine.setPunch(amount)
+    }
+
+    @MainActor func punchOut(_ state: AppState) {
+        guard let base = punchBase else { return }
+        punchBase = nil
+        state.selectFX(base.fx)
+        state.punch = base.amount
+        state.engine.setPunch(base.amount)
+        DebugLog.event("punch_out", ["fx": base.fx?.rawValue ?? "punch", "amt": base.amount])
+    }
+
+    /// Picks an effect to stay on (router / accessibility; at half amount if the fader is down, so it's heard).
     @MainActor func pickFX(_ index: Int, _ state: AppState) {
         let fx = FXType.padLayout[index]
         state.selectFX(fx)
         if state.punch < 0.05 { onPunch?(0.5) }
-        if fxLatched { fxLatched = false }
     }
 
     /// Called when a fold or hinge shows up; remembered so the next launch lays out as a Duo right away.

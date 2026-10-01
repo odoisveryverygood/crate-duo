@@ -79,7 +79,7 @@ enum Router {
         case "rec":
             state.setRecording(q("on") != "0")
         // Sampling (redesign): crate://arm?on=1  crate://editor?open=1  crate://swap?dir=1  crate://trim?s=0.1&e=0.5
-        // crate://recpress  crate://fxhold?on=1  crate://fxpick?i=15  crate://take?pad=A3&path=…
+        // crate://recpress  crate://fxhold?on=1  crate://fxpick?i=15  crate://take?pad=A3&path=…  crate://sampleswap?dir=1  crate://keepjam
         case "arm":
             Task { @MainActor in
                 if (q("on") != "0") != CrateUI.shared.sampleArmed { CrateUI.shared.toggleSample(state) }
@@ -100,6 +100,13 @@ enum Router {
             if let i = q("i").flatMap(Int.init), (1...16).contains(i) {
                 Task { @MainActor in CrateUI.shared.pickFX(i - 1, state) }
             }
+        case "sampleswap":
+            // crate://sampleswap?dir=1 — the chop pads' ‹ › (next / previous library loop under the same rhythm)
+            let step = Int(q("dir") ?? "1") ?? 1
+            Task { @MainActor in await Orchestrator.current?.swapSample(step: step) }
+        case "keepjam":
+            // crate://keepjam — the KEEP JAM chip
+            Task { @MainActor in Orchestrator.current?.keepJam() }
         case "take":
             // crate://take?pad=A3&path=/abs/take.wav — a finished SAMPLE take on that pad (sim mics can't record unattended)
             if let path = q("path"), let p = q("pad"), p.count >= 2,

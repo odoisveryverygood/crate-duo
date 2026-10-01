@@ -75,6 +75,9 @@ enum FXType: String, CaseIterable, Codable, Hashable {
 extension SamplerEngine {
     /// Default for engines without PAD FX (MockEngine): ignore.
     func setFX(_ type: FXType?) {}
+    /// Default for engines without a jam buffer (MockEngine).
+    func jamInfo() -> (count: Int, age: Double) { (0, .infinity) }
+    func captureJam(_ done: @escaping @MainActor (Int) -> Void) { Task { @MainActor in done(0) } }
 }
 
 extension AppState {

@@ -9,6 +9,8 @@ struct PadGridView: View {
     var gap: CGFloat = 5
 
     @State private var fingers: [ObjectIdentifier: Int] = [:]
+    /// Fingers holding an effect pad on the FX layer (punch-in), newest last.
+    @State private var fxFingers: [ObjectIdentifier] = []
     @State private var liveHits: [Int: Date] = [:]
     @State private var dropHover = false
     @State private var importing = false
@@ -42,6 +44,12 @@ struct PadGridView: View {
                     handle(phase, id, pt, cw: cw, ch: ch)
                 }
             )
+            .onChange(of: CrateUI.shared.fxLayer) { _, on in
+                if !on, !fxFingers.isEmpty {
+                    fxFingers.removeAll()
+                    CrateUI.shared.punchOut(state)
+                }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 6)
                     .strokeBorder(Theme.blue, lineWidth: 3)
@@ -149,20 +157,39 @@ struct PadGridView: View {
             fingers[id] = i
             if ui.fxLayer {
                 liveHits[i] = Date()
-                ui.pickFX(i, state)
+                fxFingers.append(id)
+                ui.punchIn(i, amount: punchAmount(yIn, ch), state)
             } else if ui.sampleArmed {
                 ui.beginTake(PadID(state.bank, i))   // hold = record into this pad; lift = done
             } else {
                 fire(i, velocity: vel)
             }
         case .moved:
-            break
+            // the newest finger on an effect pad sets the amount: slide up for more
+            if fxFingers.last == id, let i = fingers[id] {
+                let row = 3 - i / 4
+                let yIn = min(max(pt.y - CGFloat(row) * (ch + gap), 0), ch)
+                CrateUI.shared.punchMove(amount: punchAmount(yIn, ch), state)
+            }
         case .ended:
             if let i = fingers[id], CrateUI.shared.recordingPad == PadID(state.bank, i) {
                 CrateUI.shared.endTake(PadID(state.bank, i))
             }
+            if let k = fxFingers.firstIndex(of: id) {
+                fxFingers.remove(at: k)
+                if let other = fxFingers.last, let j = fingers[other], CrateUI.shared.fxLayer {
+                    CrateUI.shared.punchIn(j, amount: state.punch, state)   // the finger still down takes over
+                } else if fxFingers.isEmpty {
+                    CrateUI.shared.punchOut(state)
+                }
+            }
             fingers[id] = nil
         }
+    }
+
+    /// Punch-in depth from where the finger is on its pad: bottom edge 25 %, top edge 100 %.
+    private func punchAmount(_ yIn: CGFloat, _ ch: CGFloat) -> Double {
+        Double(min(1, max(0.25, 0.25 + 0.75 * (1 - yIn / max(1, ch)))))
     }
 
     private func fire(_ i: Int, velocity: Int) {

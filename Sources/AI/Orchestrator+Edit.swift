@@ -195,6 +195,24 @@ extension Orchestrator {
         gptTask = nil
     }
 
+    /// KEEP: the pads just played over the loop with REC off go into the pattern, as one UNDO step.
+    func keepJam() {
+        guard state.engine.jamInfo().count > 0 else { return }
+        checkpoint("keep jam")
+        takeOverPattern()
+        state.engine.captureJam { [weak self] n in
+            guard let self else { return }
+            self.lastPattern = self.state.engine.pattern
+            self.state.addLog("REC", n > 0 ? "kept \(n) hit\(n == 1 ? "" : "s") from your jam · undo takes them out" : "nothing to keep",
+                              tint: .orange)
+        }
+    }
+
+    /// REC and KEEP write straight into the engine's pattern: pull them in before the next edit builds on it.
+    func syncFromEngine() {
+        lastPattern = state.engine.pattern
+    }
+
     /// Removes a lane (or the merged CHOP lane) from the beat.
     func clearLane(_ pads: [PadID], label: String) {
         var p = state.engine.pattern

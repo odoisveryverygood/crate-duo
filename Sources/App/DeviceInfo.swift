@@ -1,9 +1,13 @@
 import SwiftUI
 import UIKit
+import GameController
 
 /// What CRATE is running on. There is no public "is this a Duo" check, so the Duo is recognised by its fold
 /// (`.division` reserved region) or its hinge (`onHingeChange`), remembered per device model once seen.
 enum DeviceInfo {
+    /// A hardware keyboard is attached (the computer-key legends on the KEYS keyboard only help then).
+    static var hasHardwareKeyboard: Bool { GCKeyboard.coalesced != nil }
+
     static var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     /// `utsname.machine`, e.g. "iPhone18,1" ("arm64" in the simulator).
