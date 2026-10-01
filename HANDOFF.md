@@ -28,8 +28,8 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - Internal group "Team" = Steven (account holder) with automatic distribution: every upload reaches his TestFlight app after processing, no review. On 9/30 Steven had every other App Store Connect user removed; the team is just him.
 - Upload a build: `TEAM_ID=9R86FG9KG8 tools/testflight.sh` (release Xcode 27.0, iPhone/iPad build; timestamp build number). Then add the build to "Public" (TestFlight → Public → Builds → +, "What to Test", Submit for Review).
 - The upload signs in with the Xcode account, which **fails while the Mac is locked** ("missing Xcode-Token"; `git push` hangs the same way). Re-run with `BUILD_NUMBER=<n>` to upload an existing archive.
-- Builds (all version 0.1): **202609302158** = pre-redesign UI, waiting for Beta App Review since 22:15. **202609302329** = the redesign (uploaded 23:55). **202609302356** = redesign + the SAMPLE tap fix below.
-- **Next:** Apple lets only one build per version wait for Beta App Review. When 202609302158 is approved (the public link page stops saying "isn't accepting any new testers"), add **202609302356** to "Public" (Public → Builds → +) with What to Test, then submit. Builds of an approved version usually pass quickly.
+- Builds (all version 0.1): **202609302158** = pre-redesign UI, waiting for Beta App Review since 22:15. **202609302329** = the redesign (uploaded 23:55). **202609302356** = redesign + the SAMPLE tap fix below. **202610010115** = the same with the library as AAC (app about 75 MB instead of 330).
+- **Next:** Apple lets only one build per version wait for Beta App Review. When 202609302158 is approved (the public link page stops saying "isn't accepting any new testers"), add the newest build (**202610010115**) to "Public" (Public → Builds → +) with What to Test, then submit. Builds of an approved version usually pass quickly.
 - Test information is filled in (description, feedback email, contact phone, review notes, no sign-in). Privacy policy: https://crateduo.vercel.app/privacy (`site/privacy.html`, deployed with `cd site && vercel deploy --prod --yes`).
 
 ## Sampling redesign (built 9/30, on main)
@@ -105,7 +105,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - For Duo launch day: build with Xcode 27.1 RC/GM once Apple ships it; one binary then covers Duo, iPhone and iPad.
 
 ## Later / backlog
-- **The sample library is commercial packs** (Jazz Hop合集, LofiHiphop合集, Cymatics, Golden Trap). OK for a private beta per Steven; swap for licensed sounds before a public launch. It's bundled from an absolute path (`/Users/shuhanzhang/duo-hack/library`, 308 MB), so archives only build on this Mac.
+- **The sample library is commercial packs** (Jazz Hop合集, LofiHiphop合集, Cymatics, Golden Trap). OK for a private beta per Steven; swap for licensed sounds before a public launch. The app bundles an AAC copy, `~/duo-hack/build/library` (55 MB; the WAV originals in `~/duo-hack/library` are 308 MB), made by `tools/encode_library.sh`. Re-run it after changing the library. Saved projects that name `.wav` files find the `.caf`. The paths are absolute, so archives only build on this Mac.
 - The proxy token ships inside the app, so it's a speed bump, not auth. Later: App Attest/DeviceCheck plus OpenAI spend caps. Rate limit is per serverless instance.
 - GPT arrange budget is 14 s (16 s for a flip); a cold start on cellular can still miss it and falls back to the template silently.
 - An imported song's chop session isn't saved with the project: after a relaunch, FLIP IT on those chops makes a new beat instead.
