@@ -63,6 +63,8 @@ samplers) are summarised in the 10/1 session; the decisions:
 - **SAMPLE lock**: while holding a pad to record, slide up = the take keeps going hands-free (to play an instrument into
   the mic); tap any pad or STOP to land it.
 - Fixed on the way: live REC and KEEP now sync the AI's copy of the pattern (FLIP IT used to drop recorded hits).
+  Typed sound requests ("punchier snare") used to replace whatever pad was selected (the bass) and could return the same
+  sound; they now go to that instrument's pad (bank-A slot, or bank C for bass/keys/synth) and always change it.
 - Tap counts (phone): new beat 2 (DIG, style) · sample into a pad 2 (SAMPLE, hold) · audition next sound / next sample 1 ·
   keep a jam 1 · punch an effect 2 (FX, hold pad) · loop length 2 · tap tempo 2+taps · trim 1 (EDIT) + drags.
 - Verified on the iPhone 16 Pro Max (iOS 26.5) and iPhone 17 Pro sims by real taps (XcodeBuildMCP) and on the iPad Pro
