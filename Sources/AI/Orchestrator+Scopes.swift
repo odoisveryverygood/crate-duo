@@ -181,7 +181,8 @@ extension Orchestrator {
         let root = bassRoot()
         gptTask = Task { [weak self] in
             guard let self else { return }
-            let result = await self.openAI.arrange(msg, model: model, timeout: flip ? 12 : 8)
+            // GPT only upgrades a beat that's already playing, so give phones on cellular room (8 s missed often).
+            let result = await self.openAI.arrange(msg, model: model, timeout: flip ? 16 : 14)
             guard !Task.isCancelled, serial == self.digSerial else { return }
             switch result {
             case .success(let (arr, ms)):

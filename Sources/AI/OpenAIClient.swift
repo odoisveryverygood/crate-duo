@@ -35,7 +35,7 @@ final class OpenAIClient: @unchecked Sendable {
 
     init() {
         let cfg = URLSessionConfiguration.ephemeral
-        cfg.timeoutIntervalForRequest = 12
+        cfg.timeoutIntervalForRequest = 20
         cfg.waitsForConnectivity = false
         cfg.urlCache = nil
         session = URLSession(configuration: cfg)
