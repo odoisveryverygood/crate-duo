@@ -4,12 +4,12 @@
 # One-time setup (needs a paid Apple Developer account):
 #   1. developer.apple.com → Identifiers → App ID "com.shuhan.crate".
 #   2. appstoreconnect.apple.com → Apps → + New App (iOS, bundle id com.shuhan.crate, SKU "crate").
-#   3. App Store Connect → Users and Access → Integrations → App Store Connect API → Generate a key
-#      (role: App Manager). Download AuthKey_<KEYID>.p8 once; keep it outside the repo.
+#   3. Either sign in to Xcode with the developer Apple ID (Xcode → Settings → Accounts), or create an
+#      App Store Connect API key (Users and Access → Integrations, role App Manager) and pass ASC_KEY_ID,
+#      ASC_ISSUER_ID and ASC_KEY_PATH (keep the .p8 outside the repo).
 #
-# Upload a build:
-#   TEAM_ID=ABCDE12345 ASC_KEY_ID=XXXXXXXXXX ASC_ISSUER_ID=<issuer uuid> ASC_KEY_PATH=~/keys/AuthKey_XXXXXXXXXX.p8 \
-#     tools/testflight.sh
+# Upload a build (Shuhan's team is 9R86FG9KG8):
+#   TEAM_ID=9R86FG9KG8 tools/testflight.sh
 #
 # Check that a Release archive builds, without signing or uploading anything:
 #   DRY_RUN=1 tools/testflight.sh
@@ -47,15 +47,20 @@ if [ -n "${DRY_RUN:-}" ]; then
 fi
 
 : "${TEAM_ID:?set TEAM_ID (developer.apple.com → Membership details)}"
-: "${ASC_KEY_ID:?set ASC_KEY_ID}"; : "${ASC_ISSUER_ID:?set ASC_ISSUER_ID}"; : "${ASC_KEY_PATH:?set ASC_KEY_PATH}"
-AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
-      -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+AUTH=(-allowProvisioningUpdates)   # uses the Apple ID signed in to Xcode…
+if [ -n "${ASC_KEY_ID:-}" ]; then  # …or an App Store Connect API key
+  AUTH+=(-authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+fi
 
-xcodebuild -project Crate.xcodeproj -scheme Crate -configuration Release -destination "generic/platform=iOS" \
-  -archivePath "$ARCHIVE" -derivedDataPath build/dd-release \
-  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" DEVELOPMENT_TEAM="$TEAM_ID" \
-  CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" \
-  "${AUTH[@]}" archive -quiet
+if [ ! -d "$ARCHIVE" ]; then
+  xcodebuild -project Crate.xcodeproj -scheme Crate -configuration Release -destination "generic/platform=iOS" \
+    -archivePath "$ARCHIVE" -derivedDataPath build/dd-release \
+    CURRENT_PROJECT_VERSION="$BUILD_NUMBER" DEVELOPMENT_TEAM="$TEAM_ID" \
+    CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" \
+    "${AUTH[@]}" archive -quiet
+  echo "Archived: $ARCHIVE"
+fi
+[ -n "${ARCHIVE_ONLY:-}" ] && exit 0   # e.g. before the App Store Connect app record exists; rerun with the same BUILD_NUMBER to upload
 
 cat > "$OUT/ExportOptions.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
