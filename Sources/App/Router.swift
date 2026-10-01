@@ -78,6 +78,28 @@ enum Router {
             }
         case "rec":
             state.setRecording(q("on") != "0")
+        // Sampling (redesign): crate://arm?on=1  crate://editor?open=1  crate://swap?dir=1  crate://trim?s=0.1&e=0.5
+        // crate://recpress  crate://fxhold?on=1  crate://fxpick?i=15
+        case "arm":
+            Task { @MainActor in
+                if (q("on") != "0") != CrateUI.shared.sampleArmed { CrateUI.shared.toggleSample(state) }
+            }
+        case "editor":
+            CrateUI.shared.editorOpen = q("open") != "0"
+        case "swap":
+            let step = Int(q("dir") ?? "1") ?? 1
+            Task { @MainActor in await Orchestrator.current?.swapSound(state.selectedPad, step: step) }
+        case "trim":
+            let s = q("s").flatMap(Double.init), e = q("e").flatMap(Double.init)
+            Task { @MainActor in await Orchestrator.current?.trimPad(state.selectedPad, start: s, end: e) }
+        case "recpress":
+            Task { @MainActor in CrateUI.shared.recPressed(state) }
+        case "fxhold":
+            Task { @MainActor in if q("on") != "0" { CrateUI.shared.fxDown() } else { CrateUI.shared.fxHeld = false } }
+        case "fxpick":
+            if let i = q("i").flatMap(Int.init), (1...16).contains(i) {
+                Task { @MainActor in CrateUI.shared.pickFX(i - 1, state) }
+            }
         case "orient":
             // crate://orient?o=portrait|landscape — rotate the interface (simulator layout checks)
             let mask: UIInterfaceOrientationMask = q("o") == "landscape" ? .landscapeRight : .portrait

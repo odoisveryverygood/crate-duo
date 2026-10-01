@@ -11,7 +11,6 @@ struct PadGridView: View {
     @State private var fingers: [ObjectIdentifier: Int] = [:]
     @State private var liveHits: [Int: Date] = [:]
     @State private var dropHover = false
-    @State private var pendingChop: ImportedAudio?
     @State private var importing = false
 
     var body: some View {
@@ -50,7 +49,7 @@ struct PadGridView: View {
                     .allowsHitTesting(false)
             }
             .onDrop(of: [UTType.audio.identifier, UTType.fileURL.identifier], isTargeted: $dropHover) { providers, point in
-                guard !importing, pendingChop == nil else { return false }
+                guard !importing else { return false }
                 importing = true
                 let col = min(3, max(0, Int((point.x + gap / 2) / (cw + gap))))
                 let row = min(3, max(0, Int((point.y + gap / 2) / (ch + gap))))
@@ -58,8 +57,8 @@ struct PadGridView: View {
                 let accepted = AudioImport.receive(providers, at: pad) { result in
                     switch result {
                     case .success(let audio):
-                        if AudioImport.autoChops(audio) { Task { await AudioImport.chop16(audio, state: state); importing = false } }
-                        else if audio.duration > 2 { pendingChop = audio; importing = false }
+                        // A song becomes 16 chops on bank D; a short sound lands on the pad it was dropped on.
+                        if audio.duration > 2 { Task { await AudioImport.chop16(audio, state: state); importing = false } }
                         else { Task { await AudioImport.loadOnPad(audio, state: state); importing = false } }
                     case .failure(let error):
                         importing = false
@@ -68,29 +67,6 @@ struct PadGridView: View {
                 }
                 if !accepted { importing = false }
                 return accepted
-            }
-        }
-        .confirmationDialog("Import audio", isPresented: Binding(
-            get: { pendingChop != nil }, set: { if !$0 {
-                if let audio = pendingChop { try? FileManager.default.removeItem(at: audio.url) }
-                pendingChop = nil
-            } }
-        ), titleVisibility: .visible) {
-            if let audio = pendingChop {
-                Button("CHOP 16 into Bank D") {
-                    pendingChop = nil
-                    importing = true
-                    Task { await AudioImport.chop16(audio, state: state); importing = false }
-                }
-                Button("Load on pad \(audio.pad.bank.letter)\(audio.pad.number)") {
-                    pendingChop = nil
-                    importing = true
-                    Task { await AudioImport.loadOnPad(audio, state: state); importing = false }
-                }
-            }
-        } message: {
-            if let audio = pendingChop {
-                Text("\(audio.name) · \(String(format: "%.1f", audio.duration)) s")
             }
         }
     }
@@ -105,7 +81,14 @@ struct PadGridView: View {
 
     @ViewBuilder
     private func cell(_ i: Int, pad: PadID, mode: Mode, lit: Bool, frame: LiveFrame) -> some View {
-        if mode == .levels16 {
+        let ui = CrateUI.shared
+        if ui.fxLayer {
+            // FX held (or latched): the pads are the effects; tap one to pick it.
+            let fx = FXType.padLayout[i]
+            FXPadCell(number: i + 1, label: fx?.label ?? "PUNCH", hint: fx?.hint ?? "LPF + SPACE",
+                      selected: fx == state.fx && (fx != nil || state.punch > 0.04), held: lit)
+                .modifier(PadAccessibility(id: "fx-pad-\(i + 1)", label: fx?.label ?? "PUNCH") { ui.pickFX(i, state) })
+        } else if mode == .levels16 {
             let sel = state.selectedPad
             PadCell(number: i + 1,
                     name: "TUNE \(UIHelpers.signed(i - 7))",
@@ -121,16 +104,20 @@ struct PadGridView: View {
                                            label: "Tune \(i - 7)") { fire(i, velocity: 112) })
         } else {
             let name = UIHelpers.padName(state, pad)
+            let recording = ui.recordingPad == pad
             PadCell(number: i + 1,
                     name: name,
                     placeholder: pad.bank == .a ? UIHelpers.bankANames[i] : nil,
                     barColor: name != nil ? Theme.bank(pad.bank) : nil,
-                    lit: lit,
+                    lit: lit && !recording,
                     selected: state.selectedPad == pad,
                     shortcut: MusicalTyping.padKeys[i].uppercased(),
                     category: state.sound(mode == .levels16 ? state.selectedPad : pad)?.category,
                     bank: pad.bank,
-                    spinning: isSounding(i, pad: pad, frame: frame))
+                    spinning: isSounding(i, pad: pad, frame: frame),
+                    armed: ui.sampleArmed && ui.recordingPad == nil,
+                    recording: recording,
+                    recSeconds: recording ? ui.sampler?.seconds ?? 0 : 0)
                 .modifier(PadAccessibility(id: "pad-\(pad.bank.letter)-\(pad.number)",
                                            label: name ?? "Pad \(pad.number)") { fire(i, velocity: 110) })
         }
@@ -158,11 +145,22 @@ struct PadGridView: View {
             let i = (3 - row) * 4 + col
             let yIn = min(max(pt.y - CGFloat(row) * (ch + gap), 0), ch)
             let vel = Int((127 - 57 * yIn / ch).rounded())
+            let ui = CrateUI.shared
             fingers[id] = i
-            fire(i, velocity: vel)
+            if ui.fxLayer {
+                liveHits[i] = Date()
+                ui.pickFX(i, state)
+            } else if ui.sampleArmed {
+                ui.beginTake(PadID(state.bank, i))   // hold = record into this pad; lift = done
+            } else {
+                fire(i, velocity: vel)
+            }
         case .moved:
             break
         case .ended:
+            if let i = fingers[id], CrateUI.shared.recordingPad == PadID(state.bank, i) {
+                CrateUI.shared.endTake(PadID(state.bank, i))
+            }
             fingers[id] = nil
         }
     }
@@ -212,12 +210,24 @@ struct PadCell: View {
     var category: Category? = nil
     var bank: Bank = .a
     var spinning = false
+    /// SAMPLE armed: every pad blinks (hold one to record into it).
+    var armed = false
+    /// This pad is recording the mic right now.
+    var recording = false
+    var recSeconds: Double = 0
     @AppStorage(PadStyle.storageKey) private var padStyle = "plain"
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Rectangle().fill(lit ? PadFinish.pressed : PadFinish.key)
-            if lit { Rectangle().fill(Theme.orange).frame(height: 3) }
+            Rectangle().fill(recording ? Theme.orange.opacity(0.14) : (lit ? PadFinish.pressed : PadFinish.key))
+            if lit || recording { Rectangle().fill(Theme.orange).frame(height: 3) }
+            if recording {
+                Text(String(format: "● %.1f s", recSeconds))
+                    .font(Deck05.font(7.5, 700))
+                    .foregroundStyle(Theme.orange)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 7).padding(.top, 7)
+            }
             if padStyle == "records" {
                 RecordPad(category: category, bank: bank, active: spinning || lit)
                     .padding(.horizontal, 18).padding(.top, 19).padding(.bottom, 23)
@@ -243,8 +253,17 @@ struct PadCell: View {
         .clipShape(RoundedRectangle(cornerRadius: 4.5))
         .overlay(
             RoundedRectangle(cornerRadius: 4.5)
-                .strokeBorder(selected && !lit ? PadFinish.muted : PadFinish.seam, lineWidth: 1)
+                .strokeBorder(recording ? Theme.orange : (selected && !lit ? PadFinish.muted : PadFinish.seam), lineWidth: 1)
         )
-
+        .overlay {
+            if armed {
+                TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                    RoundedRectangle(cornerRadius: 4.5)
+                        .strokeBorder(Theme.orange, lineWidth: 1.5)
+                        .opacity(Int(ctx.date.timeIntervalSinceReferenceDate / 0.5) % 2 == 0 ? 0.9 : 0.15)
+                }
+                .allowsHitTesting(false)
+            }
+        }
     }
 }

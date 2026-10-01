@@ -49,7 +49,7 @@ final class KeyboardPlayer {
         guard down.insert(key).inserted else { return true }
         switch key {
         case " ": state.togglePlay()
-        case "\r": state.setRecording(!state.isRecording)
+        case "\r": CrateUI.shared.recPressed(state)
         case "\t":
             releaseAll()
             if shift {

@@ -38,7 +38,7 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
             Task { @MainActor [weak self] in
                 guard let self, self.isRecording || self.isPreparing else { return }
                 self.cancelRecording()
-                self.fail("Recording was interrupted. Hold SAMPLE RECORD to try again.")
+                self.fail("Recording was interrupted. Hold the pad to try again.")
             }
         }
     }
@@ -161,6 +161,55 @@ final class MicSampler: NSObject, AVAudioRecorderDelegate {
             fail("Couldn't chop the take: \(error.localizedDescription)")
         }
     }
+
+    @ObservationIgnored private var takeNumber = 0
+
+    /// SAMPLE + hold a pad: the take goes onto that one pad, silence trimmed, as one UNDO step. Nothing else changes.
+    func stopRecording(intoPad pad: PadID) async {
+        generation += 1
+        permissionTask?.cancel()
+        permissionTask = nil
+        isPreparing = false
+        guard isRecording, let take = recorder else { return }
+        isRecording = false
+        isProcessing = true
+        meterTask?.cancel()
+        meterTask = nil
+        seconds = max(seconds, take.currentTime)
+        take.stop()
+        recorder = nil
+        level = 0
+        restorePlayback()
+        defer { isProcessing = false }
+        do {
+            let url = take.url
+            let cut = try await Task.detached(priority: .userInitiated) { try SampleChopper.trim(url: url) }.value
+            takeNumber += 1
+            let sound = PadSound(id: "take-\(url.lastPathComponent)", name: "TAKE \(takeNumber)", category: .chop,
+                                 fileURL: url, start: cut.start, end: cut.end < cut.duration - 0.0005 ? cut.end : nil,
+                                 rootNote: 60, source: "MIC")
+            Orchestrator.current?.checkpoint("take on \(pad.bank.letter)\(pad.number)")
+            var bank: [Int: PadSound] = [:]
+            for i in 0..<16 { if let s = state.sound(PadID(pad.bank, i)) { bank[i] = s } }
+            bank[pad.index] = sound
+            try await state.engine.loadBank(pad.bank, sounds: bank)
+            guard state.engine.sound(for: pad)?.id == sound.id else { throw SampleChopError.unreadableAudio }
+            for (i, s) in bank { state.sounds[PadID(pad.bank, i)] = s }
+            state.bank = pad.bank
+            state.selectedPad = pad
+            state.hit(pad)
+            seconds = cut.duration
+            state.addLog("SAMPLE", String(format: "TAKE %d on %@%d · %.1f s · silence trimmed", takeNumber,
+                                          pad.bank.letter, pad.number, cut.end - cut.start), tint: .grey)
+            DebugLog.event("sample_take", ["pad": "\(pad.bank.letter)\(pad.number)", "sec": cut.duration,
+                                           "start": cut.start, "end": cut.end])
+        } catch {
+            fail("Couldn't use the take: \(error.localizedDescription)")
+        }
+    }
+
+    /// Asks for the microphone up front (when SAMPLE is armed), so the prompt never interrupts a held pad.
+    static func requestPermission() async -> Bool { await AVAudioApplication.requestRecordPermission() }
 
     /// Used on gesture cancellation, view disappearance and interruption; retains the WAV on disk.
     func cancelRecording() {

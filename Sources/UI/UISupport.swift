@@ -31,6 +31,125 @@ final class CrateUI {
 
     func level(_ pad: PadID) -> Double { levels[pad] ?? 0.66 }
 
+    // MARK: Sampling (SAMPLE arm, FX layer, pad editor, count-in)
+
+    /// SAMPLE is armed: the pads blink, and holding one records the mic into that pad.
+    var sampleArmed = false
+    /// The pad a finger is recording into right now.
+    var recordingPad: PadID? = nil
+    /// FX layer over the pads: up while the FX key is held, or latched by a quick tap for one pick.
+    var fxHeld = false
+    var fxLatched = false
+    var fxLayer: Bool { fxHeld || fxLatched }
+    /// The pad editor page (lid waveform + START / END knobs on the deck) for the selected pad.
+    var editorOpen = false
+    /// FLIP IT glows after a song import, until it's tapped or a new beat is dug.
+    var flipHint = false
+    /// Beats left in the count-in (4…1) before REC starts; nil when not counting in.
+    var countIn: Int? = nil
+    /// Live START / END (seconds) while a handle or knob is being dragged in the pad editor; committed on release.
+    var editPreviewStart: Double? = nil
+    var editPreviewEnd: Double? = nil
+    @ObservationIgnored var sampler: MicSampler?
+    @ObservationIgnored private var fxDownAt: Date?
+
+    /// SAMPLE key: arm or disarm. Asks for the microphone on arming, so the prompt never lands mid-take.
+    @MainActor func toggleSample(_ state: AppState) {
+        if sampleArmed {
+            sampleArmed = false
+            DebugLog.event("sample_arm", ["on": false])
+            return
+        }
+        fxLatched = false
+        Task { @MainActor in
+            guard await MicSampler.requestPermission() else {
+                state.addLog("ERR", "Microphone access is off. Turn it on for CRATE in Settings → Privacy & Security → Microphone.",
+                             tint: .red)
+                return
+            }
+            self.sampleArmed = true
+            state.addLog("SAMPLE", "hold any pad to record into it", tint: .grey)
+            DebugLog.event("sample_arm", ["on": true])
+        }
+    }
+
+    /// A finger goes down on a pad while SAMPLE is armed.
+    @MainActor func beginTake(_ pad: PadID) {
+        guard sampleArmed, recordingPad == nil, let sampler else { return }
+        recordingPad = pad
+        sampler.startRecording()
+        DebugLog.event("take_start", ["pad": "\(pad.bank.letter)\(pad.number)"])
+    }
+
+    /// The finger lifts: the take lands on that pad, SAMPLE disarms and the editor opens on the new sound.
+    @MainActor func endTake(_ pad: PadID) {
+        guard recordingPad == pad, let sampler else { return }
+        recordingPad = nil
+        sampleArmed = false
+        Task { @MainActor in
+            await sampler.stopRecording(intoPad: pad)
+            if sampler.errorMessage == nil { self.editorOpen = true }
+        }
+    }
+
+    /// ● REC. Stopped: a bar of count-in clicks, then play + record. Playing: record from now. Recording: stop
+    /// recording and keep playing. Each pass is one UNDO step.
+    @MainActor func recPressed(_ state: AppState) {
+        if CountIn.shared.isCounting {
+            CountIn.shared.cancel()
+            countIn = nil
+            return
+        }
+        if state.isRecording {
+            state.setRecording(false)
+            DebugLog.event("rec", ["on": false])
+            return
+        }
+        Orchestrator.current?.checkpoint("recording")
+        if state.engine.isPlaying {
+            state.setRecording(true)
+            DebugLog.event("rec", ["on": true, "countIn": false])
+            return
+        }
+        let bpm = state.engine.bpm.isFinite ? state.engine.bpm : state.bpm
+        CountIn.shared.start(bpm: bpm, tick: { [weak self] n in self?.countIn = n }, done: { [weak self] in
+            self?.countIn = nil
+            state.setRecording(true)
+            if !state.engine.isPlaying { state.togglePlay() }
+            DebugLog.event("rec", ["on": true, "countIn": true])
+        })
+    }
+
+    /// STOP also ends a count-in.
+    @MainActor func stopPressed(_ state: AppState) {
+        CountIn.shared.cancel()
+        countIn = nil
+        if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
+        if state.isRecording { state.setRecording(false) }
+    }
+
+    /// FX key down: the pads show the effects while it's held.
+    @MainActor func fxDown() {
+        fxDownAt = Date()
+        fxHeld = true
+        sampleArmed = false
+    }
+
+    /// FX key up. A quick tap latches the layer for one pick (useful with one hand or a mouse).
+    @MainActor func fxUp() {
+        fxHeld = false
+        if let t = fxDownAt, Date().timeIntervalSince(t) < 0.3 { fxLatched.toggle() }
+        fxDownAt = nil
+    }
+
+    /// A pad tapped on the FX layer picks that effect (at half amount if the fader is down, so it's heard).
+    @MainActor func pickFX(_ index: Int, _ state: AppState) {
+        let fx = FXType.padLayout[index]
+        state.selectFX(fx)
+        if state.punch < 0.05 { onPunch?(0.5) }
+        if fxLatched { fxLatched = false }
+    }
+
     /// Called when a fold or hinge shows up; remembered so the next launch lays out as a Duo right away.
     func markDuo() {
         DeviceInfo.rememberDuo()

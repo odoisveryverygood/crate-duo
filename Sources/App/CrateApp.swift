@@ -15,6 +15,7 @@ struct CrateApp: App {
         hinge = HingeFX(state: s)
         let hingeFX = hinge
         CrateUI.shared.onPunch = { hingeFX.apply($0) }
+        CrateUI.shared.sampler = MicSampler(state: s)   // SAMPLE + hold a pad
         let library = LibraryStore()
         orchestrator = Orchestrator(state: s, library: library)
         orchestrator.wire()

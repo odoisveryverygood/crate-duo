@@ -167,8 +167,8 @@ struct DeckView: View {
         .padding(.bottom, 14)
     }
 
-    /// Phone: one row of mode keys, the pads, then BANK | REC PLAY STOP | ✦ DIG. No LEVEL fader (it's cosmetic);
-    /// PAD FX keeps its knob, which stands in for the hinge. The project chip lives on the phone lid.
+    /// Phone: SAMPLE · KEYS · FX, the pads, the FX amount (the hinge's job on a Duo), then BANK | REC PLAY STOP | DIG.
+    /// The project chip lives on the lid.
     private func phoneDeck(_ size: CGSize) -> some View {
         let short = size.height < 400
         let key: CGFloat = short ? 24 : 28
@@ -182,6 +182,9 @@ struct DeckView: View {
             center
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, short ? 8 : 12)
+            PunchSlider(state: state)
+                .frame(height: 22)
+                .padding(.top, short ? 8 : 10)
             HStack(alignment: .top, spacing: 0) {
                 BankGrid(state: state, key: key, spacing: short ? 6 : 9)
                 Spacer(minLength: 8)
@@ -201,10 +204,9 @@ struct DeckView: View {
     /// Landscape left column: mode keys stacked (37 pt pitch, SHIFT set apart), grille + wordmark at the foot.
     private var leftColumn: some View {
         VStack(alignment: .leading, spacing: 13) {
-            ForEach(modeItems.filter { $0 != .shift }, id: \.self) { item in
+            ForEach(modeItems, id: \.self) { item in
                 modeButton(item, key: 26, labelBelow: false)
             }
-            modeButton(.shift, key: 26, labelBelow: false)
             Spacer(minLength: 0)
             BrandMark()
             ProjectChip(state: state)
@@ -247,54 +249,43 @@ struct DeckView: View {
     }
 
     private var faderLabel: some View {
-        DeckLabel(state.mode == .padFX ? "Punch" : "Level")
+        DeckLabel(CrateUI.shared.isDuo ? "FX · Hinge" : "FX")
     }
 
-    @ViewBuilder
+    /// The FX amount (what the hinge does on a Duo; pull it from high to zero for the DROP).
     private var fader: some View {
-        if state.mode == .padFX {
-            PunchFader(state: state)
-        } else {
-            let pad = state.selectedPad
-            let ui = CrateUI.shared
-            FaderView(value: ui.level(pad), id: "level-fader") { v in
-                ui.levels[pad] = v
-                ui.onLevel?(pad, v)
-            }
-        }
+        PunchFader(state: state)
     }
 
     // MARK: mode keys
 
     enum ModeItem: Hashable {
-        case mode(Mode), shift, octDown, octUp, scale
+        case arm, keys, fx, octDown, octUp, scale
 
-        var isMode: Bool {
-            if case .mode = self { return true }
-            return false
-        }
+        /// The three main keys (the KEYS row's extras go on a second row in portrait).
+        var isMode: Bool { self == .arm || self == .keys || self == .fx }
     }
 
     private var modeItems: [ModeItem] {
-        if state.mode == .keys {
-            return [.mode(.sample), .mode(.chop), .mode(.keys), .mode(.seq), .mode(.padFX), .octDown, .octUp, .scale]
-        }
-        return [.mode(.sample), .mode(.chop), .mode(.keys), .mode(.seq), .mode(.padFX), .mode(.levels16), .shift]
+        state.mode == .keys ? [.arm, .keys, .fx, .octDown, .octUp, .scale] : [.arm, .keys, .fx]
     }
 
     @ViewBuilder
     private func modeButton(_ item: ModeItem, key: CGFloat, labelBelow: Bool) -> some View {
         let ui = CrateUI.shared
         switch item {
-        case .mode(let m):
-            ModeKey(glyph: ModeGlyph(m), label: m.label, on: state.mode == m, key: key, labelBelow: labelBelow,
-                    id: "mode-" + m.label.lowercased().replacingOccurrences(of: " ", with: "")) {
-                ui.setMode(m, state)
+        case .arm:
+            ModeKey(glyph: .mic, label: "SAMPLE", on: ui.sampleArmed, key: key, labelBelow: labelBelow,
+                    live: ui.sampleArmed, id: "mode-sample") {
+                ui.toggleSample(state)
             }
-        case .shift:
-            ModeKey(glyph: .shift, label: "SHIFT", on: ui.shift, key: key, labelBelow: labelBelow,
-                    id: "mode-shift") { ui.shift.toggle() }
-                .modifier(PadStyleSwitch())
+        case .keys:
+            ModeKey(glyph: .keys, label: "KEYS", on: state.mode == .keys, key: key, labelBelow: labelBelow,
+                    id: "mode-keys") {
+                ui.setMode(state.mode == .keys ? .seq : .keys, state)
+            }
+        case .fx:
+            FXHoldKey(key: key, labelBelow: labelBelow)
         case .octDown:
             DeckButton(label: "OCT −", id: "oct-down") { state.keysOctave = max(-3, state.keysOctave - 1) }
                 .frame(width: key + 12, height: key)
@@ -352,5 +343,57 @@ struct PunchFader: View {
             }
             peak = v
         })
+    }
+}
+
+/// Phone / non-Duo FX amount: the slim horizontal version of the PUNCH fader (same hinge path, so pulling it from
+/// high to zero still fires the DROP).
+struct PunchSlider: View {
+    let state: AppState
+
+    var body: some View {
+        HStack(spacing: 10) {
+            DeckLabel(state.fx?.label ?? "FX", size: 6.5)
+                .frame(width: 58, alignment: .leading)
+            GeometryReader { g in
+                let v = min(1, max(0, state.punch))
+                let capW: CGFloat = 16
+                let travel = max(1, g.size.width - capW)
+                let x = capW / 2 + v * travel
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1).fill(Deck05.slot)
+                        .frame(height: 3)
+                        .padding(.horizontal, capW / 2)
+                    Rectangle().fill(Deck05.live)
+                        .frame(width: max(0, x - capW / 2), height: 3)
+                        .offset(x: capW / 2)
+                    ZStack {
+                        KeyFace(radius: 3)
+                        Rectangle().fill(Deck05.live).frame(width: 1.5).padding(.vertical, 5)
+                    }
+                    .frame(width: capW, height: g.size.height)
+                    .offset(x: x - capW / 2)
+                }
+                .frame(width: g.size.width, height: g.size.height)
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { d in
+                    let v = Double(min(1, max(0, (d.location.x - capW / 2) / travel)))
+                    if let hook = CrateUI.shared.onPunch { hook(v) } else { state.punch = v; state.engine.setPunch(v) }
+                })
+            }
+            Text("\(Int((min(1, max(0, state.punch)) * 100).rounded()))%")
+                .font(Deck05.font(7, 600))
+                .monospacedDigit()
+                .foregroundStyle(Deck05.ink2)
+                .frame(width: 30, alignment: .trailing)
+        }
+        .accessibilityElement()
+        .accessibilityIdentifier("fx-slider")
+        .accessibilityLabel("FX amount")
+        .accessibilityValue("\(Int((min(1, max(0, state.punch))) * 100)) percent")
+        .accessibilityAdjustableAction { dir in
+            let v = min(1, max(0, state.punch + (dir == .increment ? 0.1 : -0.1)))
+            if let hook = CrateUI.shared.onPunch { hook(v) } else { state.punch = v; state.engine.setPunch(v) }
+        }
     }
 }

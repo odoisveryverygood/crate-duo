@@ -75,6 +75,7 @@ final class AppState {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         prompt = t
+        CrateUI.shared.flipHint = false
         onDig?(t)
     }
 

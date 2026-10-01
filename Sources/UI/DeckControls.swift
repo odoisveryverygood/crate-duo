@@ -159,7 +159,7 @@ struct ChassisPressStyle: ButtonStyle {
 
 /// The mode pictograms, ported from the mock's 12×12 SVG icons.
 enum ModeGlyph {
-    case sample, chop, keys, seq, padFX, levels, shift
+    case sample, chop, keys, seq, padFX, levels, shift, mic
 
     init(_ mode: Mode) {
         switch mode {
@@ -235,6 +235,13 @@ struct ModeGlyphView: View {
             case .shift:
                 ctx.stroke(poly([(6, 0.8), (11.2, 6.3), (8.3, 6.3), (8.3, 11.2), (3.7, 11.2), (3.7, 6.3), (0.8, 6.3)]),
                            with: ink, style: line)
+            case .mic:
+                ctx.stroke(Path(roundedRect: CGRect(x: 4, y: 0.8, width: 4, height: 6.6), cornerRadius: 2), with: ink, style: line)
+                var p = Path()
+                p.move(to: pt(2.3, 5.6))
+                p.addQuadCurve(to: pt(9.7, 5.6), control: pt(6, 12.6))
+                p.move(to: pt(6, 9.3)); p.addLine(to: pt(6, 11.3))
+                ctx.stroke(p, with: ink, style: line)
             }
         }
         .frame(width: size + 3, height: size + 3)
@@ -250,6 +257,8 @@ struct ModeKey: View {
     var on = false
     var key: CGFloat = 26
     var labelBelow = false
+    /// A blinking orange dot on the key (SAMPLE armed: live state).
+    var live = false
     let id: String
     let action: () -> Void
 
@@ -281,8 +290,71 @@ struct ModeKey: View {
         ZStack {
             KeyFace(on: on)
             ModeGlyphView(glyph: glyph, color: on ? Deck05.key : Deck05.ink, size: (key * 12 / 26).rounded())
+            if live {
+                TimelineView(.periodic(from: .now, by: 0.4)) { ctx in
+                    Circle().fill(Deck05.live)
+                        .frame(width: 5, height: 5)
+                        .opacity(Int(ctx.date.timeIntervalSinceReferenceDate / 0.4) % 2 == 0 ? 1 : 0.15)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(3)
+            }
         }
         .frame(width: key, height: key)
+    }
+}
+
+/// FX key: hold it and the pads become the effects (tap one to pick it); a quick tap latches them for one pick.
+struct FXHoldKey: View {
+    var key: CGFloat = 26
+    var labelBelow = false
+    @State private var pressing = false
+
+    var body: some View {
+        let ui = CrateUI.shared
+        let on = ui.fxLayer
+        Group {
+            if labelBelow {
+                VStack(spacing: 5) {
+                    face(on)
+                    DeckLabel("FX", size: 5.8, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2.opacity(0.8))
+                }
+            } else {
+                HStack(spacing: 9) {
+                    face(on)
+                    DeckLabel("FX", size: 6.6, tracking: 0.1, color: on ? Deck05.ink : Deck05.ink2)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard !pressing else { return }
+                    pressing = true
+                    ui.fxDown()
+                }
+                .onEnded { _ in
+                    pressing = false
+                    ui.fxUp()
+                }
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier("mode-fx")
+        .accessibilityLabel("FX")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityAction { ui.fxLatched.toggle() }
+    }
+
+    private func face(_ on: Bool) -> some View {
+        ZStack {
+            KeyFace(on: on)
+            ModeGlyphView(glyph: .padFX, color: on ? Deck05.key : Deck05.ink, size: (key * 12 / 26).rounded())
+        }
+        .frame(width: key, height: key)
+        .brightness(pressing ? -0.08 : 0)
     }
 }
 
@@ -432,11 +504,13 @@ struct TransportRow: View {
             let playing = state.engine.isPlaying || state.isPlaying
             let s = height / 30
             HStack(alignment: .top, spacing: 0) {
-                transportKey(id: "rec", caption: "REC", lit: state.isRecording, inverted: false) {
-                    Circle().fill(state.isRecording ? Deck05.live : Deck05.ink)
+                let counting = CrateUI.shared.countIn != nil
+                let blink = counting && Int(Date().timeIntervalSinceReferenceDate / 0.2) % 2 == 0
+                transportKey(id: "rec", caption: "REC", lit: state.isRecording || counting, inverted: false) {
+                    Circle().fill(state.isRecording || blink ? Deck05.live : Deck05.ink)
                         .frame(width: 9 * s, height: 9 * s)
                 } action: {
-                    state.setRecording(!state.isRecording)
+                    CrateUI.shared.recPressed(state)
                 }
                 Spacer(minLength: 4)
                 transportKey(id: "play", caption: "PLAY", lit: playing, inverted: playing) {
@@ -450,8 +524,7 @@ struct TransportRow: View {
                 transportKey(id: "stop", caption: "STOP", lit: false, inverted: false) {
                     Rectangle().fill(Deck05.ink).frame(width: 8 * s, height: 8 * s)
                 } action: {
-                    if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
-                    if state.isRecording { state.setRecording(false) }
+                    CrateUI.shared.stopPressed(state)
                 }
             }
         }

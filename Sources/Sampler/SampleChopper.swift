@@ -64,6 +64,39 @@ enum SampleChopper {
             window: Double(frames) / format.sampleRate, duration: duration, chop: chop))
     }
 
+    /// SAMPLE + hold a pad: where the sound is in a take (leading / trailing silence trimmed, a little pre-roll kept).
+    static func trim(url: URL) throws -> (start: Double, end: Double, duration: Double) {
+        let file = try AVAudioFile(forReading: url)
+        let format = file.processingFormat
+        guard format.sampleRate > 0, file.length > 0 else { throw SampleChopError.emptyRecording }
+        let duration = Double(file.length) / format.sampleRate
+        guard duration >= 0.08 else { throw SampleChopError.emptyRecording }
+        let frames = AVAudioFrameCount(max(1, (format.sampleRate * 0.01).rounded()))
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else {
+            throw SampleChopError.unreadableAudio
+        }
+        var rms: [Double] = []
+        while file.framePosition < file.length {
+            let remaining = file.length - file.framePosition
+            let requested = AVAudioFrameCount(min(AVAudioFramePosition(frames), remaining))
+            try file.read(into: buffer, frameCount: requested)
+            guard let ch = buffer.floatChannelData else { throw SampleChopError.unreadableAudio }
+            var sum = 0.0
+            for c in 0..<Int(format.channelCount) {
+                for f in 0..<Int(buffer.frameLength) { let v = Double(ch[c][f]); sum += v.isFinite ? v * v : 0 }
+            }
+            rms.append(sqrt(sum / Double(max(1, Int(buffer.frameLength) * Int(format.channelCount)))))
+        }
+        let peak = rms.max() ?? 0
+        let threshold = max(0.004, peak * 0.06)
+        guard peak > 0.004, let first = rms.firstIndex(where: { $0 > threshold }),
+              let last = rms.lastIndex(where: { $0 > threshold }) else { return (0, duration, duration) }
+        let window = Double(frames) / format.sampleRate
+        let start = max(0, Double(first) * window - 0.01)
+        let end = min(duration, Double(last + 1) * window + 0.06)
+        return end - start >= 0.05 ? (start, end, duration) : (0, duration, duration)
+    }
+
     /// Full-take coverage, ordered nonempty slices, at most 16; all times are seconds.
     static func slices(rms: [Double], window: Double = 0.01,
                        duration: Double, chop: SampleChopType) -> [SampleSlice] {

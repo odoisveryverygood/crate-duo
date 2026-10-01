@@ -206,15 +206,14 @@ struct CompactView: View {
         TimelineView(.periodic(from: .now, by: 0.2)) { _ in
             let playing = state.engine.isPlaying || state.isPlaying
             HStack(spacing: 5) {
-                control("rec", symbol: "circle.fill", active: state.isRecording) {
-                    state.setRecording(!state.isRecording)
+                control("rec", symbol: "circle.fill", active: state.isRecording || CrateUI.shared.countIn != nil) {
+                    CrateUI.shared.recPressed(state)
                 }
                 control("play", symbol: "play.fill", active: playing) {
                     if !state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = true }
                 }
                 control("stop", symbol: "stop.fill", active: false) {
-                    if state.engine.isPlaying { state.togglePlay() } else { state.isPlaying = false }
-                    if state.isRecording { state.setRecording(false) }
+                    CrateUI.shared.stopPressed(state)
                 }
                 Button { CrateUI.shared.digPressed(state) } label: {
                     HStack(spacing: 5) {

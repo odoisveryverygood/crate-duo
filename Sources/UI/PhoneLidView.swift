@@ -21,27 +21,33 @@ struct PhoneLidView: View {
                     LidTitleRow(state: state, showLoop: false)
                         .padding(.top, 8)
                 }
-                LidHero(state: state, size: geo.size.height < 300 ? 32 : 38, gap: 28)
-                    .padding(.top, roomy ? 12 : 10)
+                LidHero(state: state, size: geo.size.height < 330 ? 32 : 38, gap: 28)
+                    .padding(.top, roomy ? 12 : 8)
+                PadLine(state: state)
+                    .padding(.top, 8)
                 Group {
                     if focused {
                         DigComposer(state: state)
+                    } else if CrateUI.shared.editorOpen {
+                        PadEditorView(state: state)
                     } else {
                         mainArea
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                .padding(.top, 10)
-                Group {
-                    if state.punch > 0.04 {
-                        PunchStrip(punch: state.punch, fx: state.fx)
-                    } else {
-                        LidResultLine(state: state)
+                .padding(.top, 8)
+                if !CrateUI.shared.editorOpen || roomy {
+                    Group {
+                        if state.punch > 0.04 {
+                            PunchStrip(punch: state.punch, fx: state.fx)
+                        } else {
+                            LidResultLine(state: state)
+                        }
                     }
+                    .frame(height: 16)
+                    .padding(.top, 6)
                 }
-                .frame(height: 16)
-                .padding(.top, 6)
                 if roomy {
                     LidTimingStrip(state: state)
                         .frame(height: 8)

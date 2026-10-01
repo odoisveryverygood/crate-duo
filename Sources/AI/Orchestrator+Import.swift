@@ -1,7 +1,7 @@
 import Foundation
 
-/// Drag-in song → 16 chops on bank D → a starter flip playing at once (flip tempo, song key) → gpt-6-sol re-flips the
-/// chops in the background and swaps them in on the next bar. Later DIGs (e.g. "dilla drums for this") keep the flip.
+/// Imported songs: 16 chops on bank D. ＋ / drag-in only loads them (FLIP IT glows); the old auto-flip path is kept
+/// for `crate://importflip`. Later DIGs (e.g. "dilla drums for this") keep the chops.
 extension Orchestrator {
     /// Set by `wire()` so the import path (Transfer) can reach the running orchestrator.
     static weak var current: Orchestrator?
@@ -10,9 +10,43 @@ extension Orchestrator {
     var importedFlip: Bool { session?.chops?.loop.id.hasPrefix("import-") == true }
     var chopBank: Bank { importedFlip ? .d : .b }
 
+    /// ＋ or a drag-in: the song becomes 16 chops on bank D (one UNDO step) and chop 1 auditions. FLIP IT glows;
+    /// nothing plays or flips until it's tapped (FLIP IT then re-sequences these chops, locally and with gpt-6-sol).
+    @discardableResult
+    func importChops(url: URL, name: String, duration: Double, starts raw: [Double], demo: DemoSample?) async -> Bool {
+        checkpoint("import \(name)")
+        guard let setup = await loadImportedChops(url: url, name: name, duration: duration, starts: raw, demo: demo) else {
+            return false
+        }
+        state.hit(PadID(.d, 0))
+        CrateUI.shared.flipHint = true
+        state.addLog("SAMPLE", "▸ \(setup.label) · 16 chops on D · \(setup.key ?? "?") · tap FLIP IT", ms: setup.ms, tint: .blue)
+        DebugLog.event("import_chops", ["name": setup.label, "key": setup.key ?? "", "demo": demo != nil, "ms": setup.ms])
+        return true
+    }
+
+    /// The hackathon path (`crate://importflip`): chops + an instant starter flip, then gpt-6-sol re-flips them.
     @discardableResult
     func importFlip(url: URL, name: String, duration: Double, starts raw: [Double], demo: DemoSample?) async -> Bool {
         let t0 = Date()
+        guard let setup = await loadImportedChops(url: url, name: name, duration: duration, starts: raw, demo: demo) else {
+            return false
+        }
+        let bpm = demo?.flipBpm ?? 90
+        var p = Pattern(bars: 4, swing: 58)
+        p.lanes = Self.starterFlip(bars: 4)
+        apply(p, bpm: bpm, swing: 58)
+        state.addLog("FLIP", "▸ 16 chops · \(setup.key ?? "?") · \(Int(bpm.rounded())) BPM", ms: setup.ms, tint: .blue)
+        DebugLog.event("import_flip", ["name": setup.label, "key": setup.key ?? "", "bpm": bpm, "demo": demo != nil,
+                                       "ms": Self.ms(t0)])
+        startGPT(KeywordParser.parse("flip the sample", grooves: library.grooves), take: [.chops], flip: true,
+                 serial: digSerial)
+        return true
+    }
+
+    /// Loads 16 slices of `url` onto bank D and makes them the session's chops (so FLIP IT and DIG use them).
+    private func loadImportedChops(url: URL, name: String, duration: Double, starts raw: [Double],
+                                   demo: DemoSample?) async -> (label: String, key: String?, ms: Int)? {
         digSerial += 1
         let serial = digSerial
         gptTask?.cancel()
@@ -32,8 +66,8 @@ extension Orchestrator {
                                  start: starts[i], end: i < 15 ? starts[i + 1] : duration, rootNote: root, source: "import")
         }
         let loadMs = await loadBanks([(.d, sounds)])
-        guard serial == digSerial else { return true }
-        guard (0..<16).allSatisfy({ state.engine.sound(for: PadID(.d, $0))?.id == sounds[$0]?.id }) else { return false }
+        guard serial == digSerial else { return nil }
+        guard (0..<16).allSatisfy({ state.engine.sound(for: PadID(.d, $0))?.id == sounds[$0]?.id }) else { return nil }
 
         let bars = max(1, min(8, demo?.bars ?? 4))
         let chords = (demo?.chords ?? []).map { ChordInfo.parse($0) }
@@ -55,16 +89,7 @@ extension Orchestrator {
         state.styleLabel = library.styleInfo(.dilla).label
         state.bank = .d
         state.selectedPad = PadID(.d, 0)
-
-        let bpm = demo?.flipBpm ?? 90
-        var p = Pattern(bars: 4, swing: 58)
-        p.lanes = Self.starterFlip(bars: 4)
-        apply(p, bpm: bpm, swing: 58)
-        state.addLog("FLIP", "▸ 16 chops · \(keyText ?? "?") · \(Int(bpm.rounded())) BPM", ms: loadMs, tint: .blue)
-        DebugLog.event("import_flip", ["name": label, "key": keyText ?? "", "bpm": bpm, "demo": demo != nil,
-                                       "slices": starts.map { ($0 * 1000).rounded() / 1000 }, "ms": Self.ms(t0)])
-        startGPT(KeywordParser.parse("flip the sample", grooves: library.grooves), take: [.chops], flip: true, serial: serial)
-        return true
+        return (label, keyText, loadMs)
     }
 
     /// J Dilla-ish starter flip on bank D (0-based slices; slice n = beat n of the 4-bar loop): a 2-bar phrase

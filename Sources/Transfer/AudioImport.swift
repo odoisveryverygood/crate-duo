@@ -82,6 +82,7 @@ enum AudioImport {
 
     @MainActor static func loadOnPad(_ audio: ImportedAudio, state: AppState) async {
         let pad = audio.pad
+        Orchestrator.current?.checkpoint("load \(audio.name) on \(pad.bank.letter)\(pad.number)")
         var bank = [Int: PadSound]()
         for i in 0..<16 {
             let existing = PadID(pad.bank, i)
@@ -97,14 +98,16 @@ enum AudioImport {
             guard state.engine.sound(for: pad)?.id == sound.id else { throw ImportError.loadFailed }
             for (i, item) in bank { state.sounds[PadID(pad.bank, i)] = item }
             state.selectedPad = pad
-            state.addLog("SAMPLE", "▸ dropped \(audio.name)", tint: .blue)
+            state.bank = pad.bank
+            state.hit(pad)
+            state.addLog("SAMPLE", "▸ \(audio.name) on \(pad.bank.letter)\(pad.number)", tint: .blue)
             DebugLog.event("sample_drop", ["pad": "\(pad.bank.letter)\(pad.number)", "sec": audio.duration])
         } catch {
             state.addLog("ERR", "Drop: \(error.localizedDescription)", tint: .red)
         }
     }
 
-    /// A long file that matches `demo_samples.json` goes straight to CHOP 16 + auto-flip (no dialog).
+    /// A long file that matches `demo_samples.json` (kept for the drop path; every long file now goes to CHOP 16).
     static func autoChops(_ audio: ImportedAudio) -> Bool { audio.duration > 2 && DemoSamples.match(audio.name) != nil }
 
     /// Slice starts (seconds): the demo manifest's hand-picked points → 16 transients → 16 equal regions.
@@ -114,11 +117,28 @@ enum AudioImport {
         return (0..<16).map { audio.duration * Double($0) / 16 }
     }
 
-    /// Host-file import (router `crate://import?path=`): the same copy → chop → auto-flip path as a Files drag-in.
+    /// ＋ in the prompt bar (`.fileImporter`): copy the picked file in, then a song (> 2 s) becomes 16 chops on bank D
+    /// and a short sound lands on the selected pad.
+    @MainActor static func importPicked(_ source: URL, state: AppState) async {
+        let access = source.startAccessingSecurityScopedResource()
+        defer { if access { source.stopAccessingSecurityScopedResource() } }
+        await importFile(source, name: source.deletingPathExtension().lastPathComponent, state: state,
+                         shortPad: state.selectedPad)
+    }
+
+    /// Host-file import (router `crate://import?path=`): the same path as ＋ and a Files drag-in.
     @MainActor static func importPath(_ path: String, state: AppState) async {
         let source = URL(fileURLWithPath: path)
+        await importFile(source, name: source.deletingPathExtension().lastPathComponent, state: state,
+                         shortPad: PadID(state.bank, 0))
+    }
+
+    @MainActor private static func importFile(_ source: URL, name rawName: String, state: AppState, shortPad: PadID) async {
         let files = FileManager.default
         do {
+            guard (try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) ?? 0 <= 100 * 1024 * 1024 else {
+                throw ImportError.tooLarge
+            }
             let docs = files.urls(for: .documentDirectory, in: .userDomainMask)[0]
             let directory = docs.appendingPathComponent("imported", isDirectory: true)
             try files.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -128,9 +148,9 @@ enum AudioImport {
             let file = try AVAudioFile(forReading: destination)
             let seconds = Double(file.length) / file.processingFormat.sampleRate
             guard seconds.isFinite, seconds > 0 else { throw ImportError.emptyAudio }
-            let name = source.deletingPathExtension().lastPathComponent
-            let audio = ImportedAudio(url: destination, name: name.isEmpty ? "IMPORTED" : name, duration: seconds,
-                                      pad: PadID(state.bank, 0))
+            guard seconds <= 300 else { throw ImportError.tooLarge }
+            let audio = ImportedAudio(url: destination, name: rawName.isEmpty ? "IMPORTED" : rawName, duration: seconds,
+                                      pad: shortPad)
             if seconds > 2 { await chop16(audio, state: state) } else { await loadOnPad(audio, state: state) }
         } catch {
             state.addLog("ERR", "Import: \(error.localizedDescription)", tint: .red)
@@ -141,12 +161,11 @@ enum AudioImport {
         // Manifest fast path (demo songs) → on-device analysis → transients → 16 equal regions.
         var demo = DemoSamples.match(audio.name)
         var span = audio.duration
-        state.addLog("SAMPLE", "▸ dropped \(audio.name) · 16 chops", tint: .blue)
-        if demo == nil, let a = await analyzed(audio, state: state) { demo = a.sample; span = a.end }
+                if demo == nil, let a = await analyzed(audio, state: state) { demo = a.sample; span = a.end }
         let starts = sliceStarts(audio, demo: demo)
         if let orchestrator = Orchestrator.current {
-            // Chops on bank D + an instant starter flip at the flip tempo in the song's key, then gpt-6-sol re-flips it.
-            if await orchestrator.importFlip(url: audio.url, name: audio.name, duration: span, starts: starts, demo: demo) {
+            // 16 chops on bank D, chop 1 auditions, FLIP IT glows (no auto-flip).
+            if await orchestrator.importChops(url: audio.url, name: audio.name, duration: span, starts: starts, demo: demo) {
                 DebugLog.event("sample_drop", ["bank": "D", "slices": 16, "sec": audio.duration, "demo": demo?.match ?? ""])
             } else {
                 state.addLog("ERR", "Chop: \(ImportError.loadFailed.localizedDescription)", tint: .red)

@@ -18,16 +18,20 @@ struct LidDisplayView: View {
                 LidTitleRow(state: state, narrow: narrow)
                 heroBlock(narrow: narrow, hero: hero)
                     .padding(.top, narrow ? 18 : 21.5)
+                PadLine(state: state)
+                    .padding(.top, narrow ? 14 : 16)
                 Group {
                     if focused {
                         DigComposer(state: state)
+                    } else if CrateUI.shared.editorOpen {
+                        PadEditorView(state: state)
                     } else {
                         mainArea(portrait: portrait, big: geo.size.height > 600 && !portrait)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                .padding(.top, narrow ? 22 : 26.5)
+                .padding(.top, narrow ? 12 : 14)
                 Group {
                     if state.punch > 0.04 {
                         PunchStrip(punch: state.punch, fx: state.fx)
@@ -297,6 +301,19 @@ struct LidHero: View {
     var gap: CGFloat = 44
 
     var body: some View {
+        HStack(alignment: .top, spacing: gap) {
+            if let n = CrateUI.shared.countIn {
+                readout(Text("\(n)").foregroundStyle(Theme.live), plain: "\(n)", label: "COUNT-IN", id: "count-in")
+                let b = "\(Int((state.engine.bpm.isFinite ? state.engine.bpm : state.bpm).rounded()))"
+                readout(Text(b), plain: b, label: "BPM", id: "bpm")
+            } else {
+                modeReadouts
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var modeReadouts: some View {
         HStack(alignment: .top, spacing: gap) {
             switch state.mode {
             case .keys:
@@ -740,6 +757,7 @@ struct LidPromptRow: View {
         VStack(alignment: .leading, spacing: 0) {
             Rectangle().fill(Theme.lidRule).frame(height: 0.5)
             HStack(spacing: 6) {
+                ImportButton(state: state)
                 LidPromptLine(state: state)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if showChips && !narrow {
@@ -860,8 +878,9 @@ struct LidChips: View {
         let isPerform = item.id == "chip-ai-perform"
         let isHistory = item.id == "chip-undo" || item.id == "chip-redo"
         let available = item.id == "chip-undo" ? CrateUndoSignal.shared.canUndo : CrateUndoSignal.shared.canRedo
-        // UNDO / REDO: solid white while there's something to undo/redo, outlined when not.
+        // UNDO / REDO: solid white while there's something to undo/redo, outlined when not. FLIP IT: white after an import.
         let on = (isPerform && state.performOn) || (isHistory && available)
+            || (item.id == "chip-flip-it" && CrateUI.shared.flipHint)
         let dim = isHistory && !available
         let ink = on ? Color.black : Theme.chipText
         return Button {
@@ -900,6 +919,7 @@ struct LidChips: View {
         case "chip-redo":
             Task { @MainActor in await Orchestrator.current?.redo() }
         case "chip-flip-it":
+            ui.flipHint = false
             state.onFlip?()
             DebugLog.event("flip")
         case "chip-ai-perform":
