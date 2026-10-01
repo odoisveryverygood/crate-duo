@@ -105,13 +105,25 @@ extension Project.Sound {
             return ProjectStore.documents.appendingPathComponent(String(filePath.dropFirst(Self.docsPrefix.count)))
         }
         if filePath.hasPrefix(Self.libPrefix) {
-            return AppConfig.libraryURL.appendingPathComponent(String(filePath.dropFirst(Self.libPrefix.count)))
+            let rel = String(filePath.dropFirst(Self.libPrefix.count))
+            return Self.inLibrary(rel) ?? AppConfig.libraryURL.appendingPathComponent(rel)
         }
-        if let r = filePath.range(of: "/library/", options: .backwards) {
-            let moved = AppConfig.libraryURL.appendingPathComponent(String(filePath[r.upperBound...]))
-            if FileManager.default.fileExists(atPath: moved.path) { return moved }
+        if let r = filePath.range(of: "/library/", options: .backwards),
+           let moved = Self.inLibrary(String(filePath[r.upperBound...])) {
+            return moved
         }
         return URL(fileURLWithPath: filePath)
+    }
+
+    /// A library file by relative path. The app bundles the library as AAC `.caf` (`tools/encode_library.sh`) while
+    /// older projects name the `.wav` originals, so either extension finds the file that's there.
+    private static func inLibrary(_ rel: String) -> URL? {
+        let url = AppConfig.libraryURL.appendingPathComponent(rel)
+        if FileManager.default.fileExists(atPath: url.path) { return url }
+        let ext = url.pathExtension.lowercased()
+        guard ext == "wav" || ext == "caf" else { return nil }
+        let other = url.deletingPathExtension().appendingPathExtension(ext == "wav" ? "caf" : "wav")
+        return FileManager.default.fileExists(atPath: other.path) ? other : nil
     }
 }
 

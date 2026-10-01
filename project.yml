@@ -51,7 +51,7 @@ targets:
       - path: Resources/PrivacyInfo.xcprivacy
       - path: Resources/DefaultKit
         type: folder
-      - path: /Users/shuhanzhang/duo-hack/library
+      - path: /Users/shuhanzhang/duo-hack/build/library   # AAC copy of ~/duo-hack/library: tools/encode_library.sh
         type: folder
         excludes:
           - "*.md"
