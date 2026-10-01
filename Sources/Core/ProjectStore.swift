@@ -8,7 +8,8 @@ struct Project: Codable, Identifiable, Hashable {
         var id: String
         var name: String
         var category: String
-        /// Absolute path, or "~docs/<rel>" for files inside the app's Documents (container path changes per install).
+        /// "~lib/<rel>" for the bundled sample library, "~docs/<rel>" for files in the app's Documents
+        /// (both container paths change with every install or update), otherwise an absolute path.
         var filePath: String
         var start: Double
         var end: Double?
@@ -75,21 +76,42 @@ extension Project.PatternData {
 
 extension Project.Sound {
     static let docsPrefix = "~docs/"
+    static let libPrefix = "~lib/"
 
     init(_ s: PadSound) {
         id = s.id; name = s.name; category = s.category.rawValue
         start = s.start; end = s.end; rootNote = s.rootNote; gain = s.gain
         let path = s.fileURL.standardizedFileURL.path
         let docs = ProjectStore.documents.standardizedFileURL.path + "/"
-        filePath = path.hasPrefix(docs) ? Self.docsPrefix + String(path.dropFirst(docs.count)) : path
+        let lib = AppConfig.libraryURL.standardizedFileURL.path + "/"
+        if path.hasPrefix(docs) {
+            filePath = Self.docsPrefix + String(path.dropFirst(docs.count))
+        } else if path.hasPrefix(lib) {
+            filePath = Self.libPrefix + String(path.dropFirst(lib.count))
+        } else {
+            filePath = path
+        }
     }
 
     var padSound: PadSound {
-        let url = filePath.hasPrefix(Self.docsPrefix)
-            ? ProjectStore.documents.appendingPathComponent(String(filePath.dropFirst(Self.docsPrefix.count)))
-            : URL(fileURLWithPath: filePath)
-        return PadSound(id: id, name: name, category: Category(rawValue: category) ?? .perc, fileURL: url,
-                        start: start, end: end, rootNote: rootNote, gain: gain, source: "project")
+        PadSound(id: id, name: name, category: Category(rawValue: category) ?? .perc, fileURL: fileURL,
+                 start: start, end: end, rootNote: rootNote, gain: gain, source: "project")
+    }
+
+    /// Older projects (and the bundled demo projects) hold absolute paths: the dev Mac's library or a previous
+    /// install's app bundle. Anything under a ".../library/" folder is found again in this install's library.
+    var fileURL: URL {
+        if filePath.hasPrefix(Self.docsPrefix) {
+            return ProjectStore.documents.appendingPathComponent(String(filePath.dropFirst(Self.docsPrefix.count)))
+        }
+        if filePath.hasPrefix(Self.libPrefix) {
+            return AppConfig.libraryURL.appendingPathComponent(String(filePath.dropFirst(Self.libPrefix.count)))
+        }
+        if let r = filePath.range(of: "/library/", options: .backwards) {
+            let moved = AppConfig.libraryURL.appendingPathComponent(String(filePath[r.upperBound...]))
+            if FileManager.default.fileExists(atPath: moved.path) { return moved }
+        }
+        return URL(fileURLWithPath: filePath)
     }
 }
 
