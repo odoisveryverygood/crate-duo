@@ -40,6 +40,36 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 - A tap shorter than 0.2 s while SAMPLE is armed records nothing, keeps the pad and stays armed ("too short · hold the pad while you record"). The editor opens only when a take landed. A hold past the 120 s recorder cap still lands on the pad at lift.
 - Take placement (trim → pad → editor → UNDO/REDO) was checked with `crate://take?pad=A3&path=<wav>` on the iPhone 17 Pro (iOS 26.5) sim: a 1.8 s file with 0.6 s of lead-in trimmed to 0.59–1.16 s. Not verified: the microphone capture itself on a phone. The Mac's CoreAudio is wedged by an earlier simulator mic session (`afplay` hangs; sims abort in `AURemoteIO` unless launched with `-crateSilentAudio 1`). `sudo killall coreaudiod` fixes it and needs Steven's password. Everything else was driven by taps on that sim and checked on the Duo sim.
 
+## Musician workflow pass (built 10/1 overnight, on main; tag `pre-ux-round2` = before it)
+Steven's brief: test every common MPC / SP-404 / EP-133 workflow, count taps, declutter the top, no knobs or hidden drags,
+use tap / hold / swipe / pinch; 10× easier than the hardware through the UI and the AI. Research notes (hardware + touch
+samplers) are summarised in the 10/1 session; the decisions:
+- **Phone lid = 5 rows**: one header line (project · `100 BPM` chip · bar · loop menu · ↶ ↷), pad line, grid / editor,
+  result line, `›` prompt with FLIP IT / AI PERFORM (+ KEEP JAM when there's a jam). The big hero numbers, style line and
+  timing strip are iPad/Duo only now. The step grid shows every lane of a full beat (was cut to 4).
+- **Tempo**: tap BPM (phone chip or iPad hero) → sheet with TAP TEMPO, −/+ and swing 50–70; one undo step per visit.
+  The hidden drag-the-number gesture is gone. **Loop**: tap the loop bar → 1 / 2 / 4 / 8 bars (was a hidden tap-cycle).
+- **Grid**: tap a lane name = select + hear that sound (it used to delete the lane!); hold it = clear the lane (haptic, undo).
+- **Editor**: pinch to zoom, drag to scroll when zoomed, FIT, tap a neighbouring slice to jump to it.
+- **KEEP JAM** (MPC retrospective record / Ableton Capture): pads played over the loop with REC off are remembered
+  (quantized like REC); a KEEP JAM chip appears and one tap writes the last loop of them in. Expires 60 s after the last hit.
+- **Punch-in FX** (the EP-133's signature): hold FX (or tap it to latch), hold an effect pad = on, finger height = amount,
+  lift = back to what was there (nothing on a phone, the fader's amount on iPad). The phone's FX slider row is gone.
+- **Sample ‹ ›** on chop pads (bank B from a DIG): next / previous library loop, same instrument and style, close to the
+  tempo, re-chopped under the same rhythm while the beat plays, bass re-voiced to the new chords, ~40 ms, no GPT wait.
+  The list is ranked once per browse so ‹ retraces ›. The AI session is rebuilt when a project opens (it wasn't saved,
+  so ‹ › on chops and FLIP IT silently died after a relaunch).
+- **DIG** shows style chips (dusty jazz hop, boom bap, Dilla, lofi, R&B, house, trap, drill): a whole beat in two taps.
+- **SAMPLE lock**: while holding a pad to record, slide up = the take keeps going hands-free (to play an instrument into
+  the mic); tap any pad or STOP to land it.
+- Fixed on the way: live REC and KEEP now sync the AI's copy of the pattern (FLIP IT used to drop recorded hits).
+- Tap counts (phone): new beat 2 (DIG, style) · sample into a pad 2 (SAMPLE, hold) · audition next sound / next sample 1 ·
+  keep a jam 1 · punch an effect 2 (FX, hold pad) · loop length 2 · tap tempo 2+taps · trim 1 (EDIT) + drags.
+- Verified on the iPhone 16 Pro Max (iOS 26.5) and iPhone 17 Pro sims by real taps (XcodeBuildMCP) and on the iPad Pro
+  13" sim: every item above, including the real microphone path once the Mac's audio recovered (quick tap stays armed;
+  hold lands TAKE 1; slide-up lock lands a 35.6 s TAKE 2). Not done: per-lane mute, note repeat, real-time tap-to-chop,
+  resample, reverse/pitch per pad (next candidates from the research).
+
 ## Still waiting on Steven
 1. **New OpenAI + Jev keys** are in `~/duo-hack/.secrets/keys.new.env`; Vercel still runs the old (working) keys because the agent can't write secrets to Vercel. To switch, in `~/crate-build/site`:
    ```
@@ -52,6 +82,9 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
 
 ## Repo, build, run
 - Repo: `~/crate-build` → github `Shuhan-Zhang/crate-duo`, branch `main`. Commit + push after each step.
+- **Local testing on Steven's iPhone 16 Pro Max** (paired, Developer Mode on, iOS 26.6): `tools/install_phone.sh` (Release
+  build, automatic signing with team 9R86FG9KG8, installs over Wi-Fi with retries; the Mac must be unlocked). Or open
+  `Crate.xcodeproj` in Xcode, pick the phone, Run. No physical iPad is paired; use the iPad Pro 13" simulator.
 - SwiftUI and XcodeGen. **Deployment target iOS 26.0** (`Sources/Audio/AudioCompat.swift` wraps the iOS 27-only AVAudioEngine calls; 27.1 was Duo-only, so a 27.1 target couldn't install on any iPhone or iPad).
 - Two Xcodes, both build the app:
   - `~/Downloads/Xcode.app`: **Xcode 27.1 beta** (27A9269), the only one with the Duo SDK. Use it for the Duo and day-to-day work.
@@ -81,23 +114,23 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
   - The Duo moves the app to the outer screen below about 55°.
 - **Debug command channel**:
   - Launch with `-crateCmdFile /tmp/x.txt -crateDebugLog 1 [-crateFresh 1] [-crateDebugRecord 1] [-crateSilentAudio 1]`. Append `crate://…` lines to the file to drive the app.
-  - Commands: `dig?q=`, `mode?m=`, `bank`, `pad`, `play`, `stop`, `perform`, `flip`, `punch`, `fx?t=`, `fxamt`, `latch`, `rot`, `crowdrot`, `import`, `project?cmd=new|save|saveas|open&name=`, `rec`, `padstyle`, `undo`, `redo`, `bpm?v=`, `bars?n=`, `slice?b=&i=&t=`, **`orient?o=landscape|portrait`** (iPhone only; iPadOS refuses programmatic rotation in windowed mode). Redesign: `arm?on=1`, `editor?open=1`, `swap?dir=1`, `trim?s=&e=`, `recpress`, `fxhold?on=1`, `fxpick?i=`, `take?pad=A3&path=`.
+  - Commands: `dig?q=`, `mode?m=`, `bank`, `pad`, `play`, `stop`, `perform`, `flip`, `punch`, `fx?t=`, `fxamt`, `latch`, `rot`, `crowdrot`, `import`, `project?cmd=new|save|saveas|open&name=`, `rec`, `padstyle`, `undo`, `redo`, `bpm?v=`, `bars?n=`, `slice?b=&i=&t=`, **`orient?o=landscape|portrait`** (iPhone only; iPadOS refuses programmatic rotation in windowed mode). Redesign: `arm?on=1`, `editor?open=1`, `swap?dir=1`, `trim?s=&e=`, `recpress`, `fxhold?on=1`, `fxpick?i=`, `take?pad=A3&path=`, `sampleswap?dir=1`, `keepjam`.
   - Debug events worth grepping: `layout` (size, duo, window insets), `device`, `jev_plan`, `gpt`, `engine_start` (`silent`).
   - `SIMCTL_CHILD_CRATE_DEBUG_WAV=/path.wav` records the master bus. Example script: `tools/video/bitrig_fx_take.py`. `-crateNoPaywall` does nothing (paywall is off anyway).
 - **Known sim issue: launch abort in `AURemoteIO::Initialize` / `Cleanup` → `_ReportRPCTimeout`** (simulator CoreAudio, before any app code). Causes seen: several sims booted at once, a load spike, and **the Mac lid closed** (clamshell: every sim crashed at launch overnight, even alone). For layout work launch with **`-crateSilentAudio 1`**: the engine runs in offline manual-rendering mode with no audio hardware (dev only; normal launches are unchanged). For audio work, open the lid / fix the output device, shut down extra sims and reboot the one you use. **Ask Steven before shutting down his sims or Bitrig's.**
 
 ## Device layouts (RootView)
 - **Duo** = a `.division` fold is present, a hinge event arrived, or a Duo simulator; remembered per device model (`crateDuoMachine`). Duo branches are unchanged: laptop / book / flat / counter-rotated, `CompactView` on the outer screen.
-- **iPhone**: `PhoneLidView` (project chip, LOOP bar, hero, the mode's main area, result line, `›` prompt + chips) over `DeckView(phone: true)` (mode row, pads, BANK · REC PLAY STOP · DIG; no LEVEL fader). Lid ≈ 40 % in portrait, side by side in landscape (lid 44 %). Padded by the **window's** safe-area insets (`DeviceInfo.windowEdgeInsets`; the root ignores the safe area, so its GeometryProxy reports zero). The step grid scrolls when a beat has more lanes than fit.
+- **iPhone**: `PhoneLidView` (header line · pad line · grid/editor/composer · result line · `›` prompt + chips) over `DeckView(phone: true)` (mode row, pads, BANK · REC PLAY STOP · DIG; no fader, no FX slider). Lid ≈ 40 % in portrait, side by side in landscape (lid 44 %). Padded by the **window's** safe-area insets (`DeviceInfo.windowEdgeInsets`; the root ignores the safe area, so its GeometryProxy reports zero). The step grid scrolls when a beat has more lanes than fit.
 - **iPad** (regular width): the flat split with a 1 pt hairline, deck kept above the home indicator; the step grid spreads out on the tall lid. Compact-width iPad windows get the phone layout. No counter-rotation outside the Duo, which fixed the Stage Manager 90° bug.
 - The Duo scene hooks (`sceneAccessory` camera/external crowd screens, `onHingeChange`) live in `DuoSceneHooks`, gated on iOS 27.1 and the SDK. The external-display crowd view is Duo-only for now.
-- The FX amount is the deck fader (iPad/Duo) or the slider under the pads (iPhone). The old PAD FX page with its knob and the old SAMPLE panel are off the touch deck; Shift-Tab on a hardware keyboard cycles SEQ / KEYS only. The long-press crowd rotation only works on the Duo.
+- FX: hold an effect pad on the FX layer (punch-in); the iPad/Duo deck fader also sets a lasting amount. The old PAD FX page with its knob and the old SAMPLE panel are off the touch deck; Shift-Tab on a hardware keyboard cycles SEQ / KEYS only. The long-press crowd rotation only works on the Duo.
 
 ## Verified overnight (2026-09-30)
 - Proxy runtime test on the Duo sim: `jev_plan` via proxy 524 ms (source jev), `gpt` ok in 5.3 s ("NUJ DILLA POCKET"). On the iPad: Jev 264–309 ms; GPT 5.9 s, once timed out at the 8 s arrange limit on a cold start.
 - Duo inner (laptop pose) and outer screens unchanged; iPhone 18 Pro portrait + landscape, all modes (SEQ, KEYS, PAD FX, SAMPLE, CHOP); iPad Pro 13" portrait. Screenshots were checked by eye.
 - The Release archive builds with Xcode 27.0: `DRY_RUN=1 tools/testflight.sh` → 329 MB app (min iOS is now 26.0).
-- **Not verified:** iPad landscape, iPad Split View / Stage Manager windows (no scriptable rotation or resize in DeviceHub yet; the landscape path is the Duo's existing flat-wide `book` layout), hold-to-record on the mic (sims had no audio), real devices.
+- **Not verified:** iPad landscape, iPad Split View / Stage Manager windows (no scriptable rotation or resize in DeviceHub yet; the landscape path is the Duo's existing flat-wide `book` layout). Real devices: the 10/1 build is installed on Steven's iPhone 16 Pro Max but wasn't played on it.
 
 ## App Store details
 - iPad in the device family, `Resources/PrivacyInfo.xcprivacy` (UserDefaults CA92.1, boot time 35F9.1 for `mach_absolute_time`, prompts as user content for app functionality, no tracking), `ITSAppUsesNonExemptEncryption = false`, single 1024 icon, all 4 orientations (needed for iPad multitasking). RevenueCat ships its own privacy manifest. `MARKETING_VERSION` is 0.1.
