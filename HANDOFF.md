@@ -33,6 +33,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
    vercel deploy --prod --yes
    ```
    Then move the two lines into `keys.env`, delete `keys.new.env`, and revoke the old keys. The ElevenLabs key from 9/26 still needs rotating too.
+4. **Reach iOS 26 testers?** iOS 27.0 is two weeks old, so many testers can't install a 27.0-minimum build. Branch `ios26` lowers the floor to 26.0; merge it after an audio check.
 
 ## Repo, build, run
 - Repo: `~/crate-build` → github `Shuhan-Zhang/crate-duo`, branch `main`. Commit + push after each step.
@@ -46,7 +47,7 @@ The Duo ships Oct 23, 2026. The goal is a TestFlight build for **iPhone + iPad**
   xcodebuild -project Crate.xcodeproj -scheme Crate -destination "generic/platform=iOS Simulator" -derivedDataPath build/dd build
   xcrun simctl install <UDID> build/dd/Build/Products/Debug-iphonesimulator/Crate.app   # bundle id com.shuhan.crate
   ```
-- The iOS 26.x floor would need AVAudioEngine fallbacks: `AudioEngine` uses iOS 27.0-only APIs (`connectNode`, `playAudio`, `AVReadOnlyAudioPCMBuffer`).
+- **iOS 26 support is ready on branch `ios26`** (not merged): `Sources/Audio/AudioCompat.swift` wraps the iOS 27-only AVAudioEngine calls (`connectNode`, `playAudio`, `installAudioTap` / `AVReadOnlyAudioPCMBuffer`) and falls back to the older calls on 26; min iOS 26.0. Checked on iOS 26.5 and 27.0 sims with `-crateSilentAudio` (launch, layout, DIG, pads, play). Hear it with real audio on iOS 26 before merging.
 - Simulators (keep at most 2 booted; first boot of a new sim spikes the load for minutes):
 
   | Simulator | UDID | Runtime |
