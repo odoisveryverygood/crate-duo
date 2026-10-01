@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>crate · privacy</title>
+<meta name="description" content="How the crate app handles your data.">
+<meta name="theme-color" content="#ff5300">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600&display=swap">
+<style>
+  :root { --orange: #ff5300; --ink: #141414; --soft: #5a5a5a; --narrow: "Archivo Narrow", "Arial Narrow", Arial, sans-serif; color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { background: #fff; }
+  body { margin: 0; color: var(--ink); font: 400 18px/1.55 var(--narrow); -webkit-font-smoothing: antialiased; }
+  header { background: var(--orange); color: #fff; padding: 28px 20px 24px; }
+  header a { color: #fff; text-decoration: none; font-size: 30px; letter-spacing: -.01em; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 34px; font-weight: 400; margin: 0 0 4px; letter-spacing: -.01em; }
+  .date { color: var(--soft); margin: 0 0 28px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 30px 0 6px; }
+  p, li { margin: 0 0 10px; }
+  ul { padding-left: 20px; margin: 0 0 10px; }
+  a { color: var(--ink); }
+</style>
+</head>
+<body>
+<header><a href="/">crate.</a></header>
+<main>
+  <h1>Privacy</h1>
+  <p class="date">Last updated 30 September 2026</p>
+
+  <p>crate is an AI sampler for iPhone and iPad. You type a vibe and the pads fill with sounds from the library that ships inside the app. This page explains what leaves your device and what doesn't.</p>
+
+  <h2>What we send</h2>
+  <p>When you DIG, the text you type, plus a little context about the current beat (style, tempo, key, which pads are loaded), goes to crate's server. The server passes it to OpenAI and TypeSafe, which plan and arrange the beat, and sends the result back to the app.</p>
+  <ul>
+    <li>There are no accounts. Prompts aren't tied to your name, email or Apple ID.</li>
+    <li>crate's server doesn't keep your prompts. Our hosting provider keeps standard request logs, such as IP addresses, for a short time for security.</li>
+    <li>OpenAI and TypeSafe process prompts under their API terms. OpenAI doesn't use API data to train its models and keeps it for up to 30 days for abuse monitoring.</li>
+  </ul>
+
+  <h2>What stays on your device</h2>
+  <ul>
+    <li>Anything you record with the microphone.</li>
+    <li>Songs and audio files you import.</li>
+    <li>Your projects, settings and beats.</li>
+  </ul>
+  <p>crate only uses the microphone while you're recording a sample, and asks for permission first.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>No ads, no tracking, and no third-party analytics.</li>
+    <li>No selling or sharing of your data.</li>
+    <li>No in-app purchases in the current beta.</li>
+  </ul>
+
+  <h2>Beta testing</h2>
+  <p>If you test crate through TestFlight, Apple may share crash reports and any feedback or screenshots you choose to send. Apple's TestFlight terms cover that data.</p>
+
+  <h2>Children</h2>
+  <p>crate isn't directed at children under 13.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, we'll update this page and the date above. Questions: <a href="mailto:zhangzhangyouyou@gmail.com">zhangzhangyouyou@gmail.com</a>.</p>
+</main>
+</body>
+</html>
